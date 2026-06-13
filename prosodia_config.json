@@ -1,0 +1,17 @@
+{
+  "gainValenceGain" : 0.08,
+  "speedArousalGain" : 0.08,
+  "pauseClause" : 0.25,
+  "gainMin" : 0.6,
+  "blendProximityThreshold" : 0.15,
+  "speedTensionGain" : 0.1,
+  "pauseSentence" : 0.28,
+  "speedMax" : 1.12,
+  "gainArousalGain" : 0.25,
+  "speedValenceGain" : 0.05,
+  "expressiveness" : 7.65,
+  "blendSigma" : 0.27,
+  "gainMax" : 1.2,
+  "blendMinimumFraction" : 0.05,
+  "speedMin" : 0.65
+}

@@ -1,0 +1,92 @@
+# macOS System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# AI Assistants, Agentic Tools & LLM Configs
+.gemini/
+.claude/
+.antigravity/
+.claudesettings
+.claudedata
+*.anthropic/
+anthropic.log
+.copilot/
+
+# IDEs & Text Editors (VS Code, Cursor, Xcode, etc.)
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+*.code-workspace
+.cursor/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+xcuserdata/
+*.xcuserstate
+
+# Obsidian App Config & Local State (Applies to all subdirectories)
+**/.obsidian/
+
+# Temporary & Backup Files
+*~
+*.swp
+*.sw?
+*.tmp
+*.bak
+*.log
+
+# Xcode & Swift Build Artifacts
+build/
+DerivedData/
+.build/
+Packages/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.moved-aside
+*.metallib
+timeline.xctimeline
+playground.xcworkspace
+Derived/
+graph.dot
+
+# Swift Package Manager
+Package.resolved
+.swiftpm/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Local model weights (large; fetched/installed out of band)
+*.gguf
+*.onnx
+*.safetensors
+Models/
+
+# Local credentials
+.netrc
+
+# Harness-local editable sample text. Keep the .example file committed.
+# AnimaReader/SamplePassages.txt
+
+# Subjective audition tuning feedback log
+# TuningFeedback.md
+
+# Legacy & Old backup directories
+Prosodia_Old/

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prosodia Tuner</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app" class="obsidian-theme">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <img src="icon.png" alt="Prosodia Tuner Logo">
+      </div>
+      <div class="header-title">
+        <h1>PROSODIA <span>TUNER</span></h1>
+        <p class="subtitle">Affective Wire-Format Generator</p>
+      </div>
+      <button id="popout-btn" class="icon-btn" style="margin-left: auto;" title="Pop Out to Standalone Window">↗</button>
+    </header>
+
+    <!-- File Binding Card -->
+    <div class="glass-card storage-card">
+      <div class="storage-status">
+        <div class="status-indicator">
+          <span class="status-dot orange" id="file-dot"></span>
+          <span id="file-status">No tuning file linked</span>
+        </div>
+        <button id="link-file-btn" class="icon-btn">Link File</button>
+      </div>
+    </div>
+
+    <!-- Nav Tabs -->
+    <nav class="app-tabs">
+      <button class="tab-btn active" data-tab="tuner">Tuner</button>
+      <button class="tab-btn" data-tab="reference">Reference</button>
+      <button class="tab-btn" data-tab="dataset">Session Dataset (<span id="dataset-count">0</span>)</button>
+      <button class="tab-btn" data-tab="about">About</button>
+    </nav>
+
+    <!-- Tab Contents -->
+    <main class="app-content">
+      <!-- Tuner Tab -->
+      <section id="tab-tuner" class="tab-pane active">
+        <!-- Live Visualizer & Preview -->
+        <div class="glass-card preview-card">
+          <div class="preview-header">
+            <h3><span class="icon">📊</span> Wire-Format Preview</h3>
+            <button id="mic-toggle-btn" class="text-btn">Capture Tab Audio</button>
+          </div>
+          
+          <div class="visualizer-container hide">
+            <canvas id="spectrogram-canvas"></canvas>
+            <div class="live-metrics">
+              <span>Vol (RMS): <strong id="metric-rms">0.00</strong></span>
+              <span>Pitch: <strong id="metric-pitch">0 Hz</strong></span>
+              <label class="auto-tune-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer; text-transform: none; font-size: 9px; font-weight: 500; color: var(--valence-color);">
+                <input type="checkbox" id="auto-tune-checkbox" checked style="width: auto; margin: 0; cursor: pointer;">
+                Auto-Tune
+              </label>
+            </div>
+            <div class="speaker-select-container" style="margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;">
+              <label for="speaker-select" style="font-size: 8px; flex-shrink: 0; color: var(--text-secondary);">Output Speaker:</label>
+              <select id="speaker-select" style="font-size: 9.5px; padding: 3px 6px; height: auto; background: rgba(0,0,0,0.4); border-radius: 4px; color: var(--text-primary); cursor: pointer; flex: 1;">
+                <option value="">Default Speaker</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-group discrete-emotion-input" style="margin-top: 10px; margin-bottom: 8px;">
+            <label for="emotion-label">Discrete Emotion Label (Optional)</label>
+            <input type="text" id="emotion-label" placeholder="e.g. loving, spooky, anxious, sarcastic">
+          </div>
+
+          <div class="wire-block-container">
+            <div class="code-preview" id="code-preview-block">
+              [V: 0.00 A: 0.00 T: 0.00]
+            </div>
+            <button id="copy-code-btn" class="icon-btn mini" title="Copy to Clipboard">Copy</button>
+          </div>
+
+          <div class="preview-actions-row" style="margin-top: 10px; display: flex; gap: 8px; width: 100%;">
+            <button id="log-segment-btn" class="btn primary-btn glowing" style="flex: 1; margin: 0;">Log & Save</button>
+            <button id="discard-btn" class="btn danger-btn" style="flex: 0.4; padding: 8px; margin: 0;">Discard</button>
+          </div>
+        </div>
+
+        <!-- Emotion Dials Sliders -->
+        <div class="glass-card controls-card">
+          <h3><span class="icon">🎛️</span> Affective Dials (VAD/VAT)</h3>
+          
+
+
+          <div class="slider-group valence">
+            <div class="slider-header">
+              <span class="label">Valence</span>
+              <span class="desc">Sorrow ↔ Joy</span>
+              <span class="val-badge" id="val-valence">0.00</span>
+            </div>
+            <input type="range" id="slider-valence" min="-1.00" max="1.00" step="0.05" value="0.00">
+          </div>
+
+          <div class="slider-group arousal">
+            <div class="slider-header">
+              <span class="label">Arousal</span>
+              <span class="desc">Subdued ↔ Energetic</span>
+              <span class="val-badge" id="val-arousal">0.00</span>
+            </div>
+            <input type="range" id="slider-arousal" min="-1.00" max="1.00" step="0.05" value="0.00">
+          </div>
+
+          <div class="slider-group tension">
+            <div class="slider-header">
+              <span class="label">Tension</span>
+              <span class="desc">Relaxed ↔ Suspenseful</span>
+              <span class="val-badge" id="val-tension">0.00</span>
+            </div>
+            <input type="range" id="slider-tension" min="0.00" max="1.00" step="0.05" value="0.00">
+          </div>
+        </div>
+
+        <!-- Layered Acoustic Biases -->
+        <div class="glass-card biases-card">
+          <h3><span class="icon">✨</span> Layered Acoustic Overrides</h3>
+          
+          <div class="grid-2">
+            <div class="slider-group bias">
+              <div class="slider-header">
+                <span class="label">Speed Bias</span>
+                <span class="val-badge" id="val-speed-bias">0.000</span>
+              </div>
+              <input type="range" id="slider-speed-bias" min="-0.40" max="0.40" step="0.010" value="0.000">
+            </div>
+
+            <div class="slider-group bias">
+              <div class="slider-header">
+                <span class="label">Gain Bias</span>
+                <span class="val-badge" id="val-gain-bias">0.000</span>
+              </div>
+              <input type="range" id="slider-gain-bias" min="-0.40" max="0.40" step="0.010" value="0.000">
+            </div>
+          </div>
+
+          <div class="slider-group bias row-margin">
+            <div class="slider-header">
+              <span class="label">Pause Multiplier</span>
+              <span class="val-badge" id="val-pause-mult">1.000</span>
+            </div>
+            <input type="range" id="slider-pause-mult" min="0.20" max="2.50" step="0.050" value="1.000">
+          </div>
+        </div>
+      </section>
+
+      <!-- Reference Tab -->
+      <section id="tab-reference" class="tab-pane">
+        <!-- Page Context Card -->
+        <div class="glass-card context-card">
+          <div class="card-header">
+            <h3><span class="icon">🔗</span> Reference Segment</h3>
+          </div>
+          <div class="input-group">
+            <label for="clip-source">Source Name</label>
+            <input type="text" id="clip-source" placeholder="e.g. YouTube Video, Audiobook Clip">
+          </div>
+          <div class="row">
+            <div class="input-group fluid">
+              <label for="clip-time-start">Start Time</label>
+              <input type="text" id="clip-time-start" placeholder="0:00" style="width: 100%;">
+            </div>
+            <div class="input-group fluid" style="margin-left: 12px;">
+              <label for="clip-time-end">End Time</label>
+              <input type="text" id="clip-time-end" placeholder="0:00" style="width: 100%;">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dataset Tab -->
+      <section id="tab-dataset" class="tab-pane">
+        <div class="glass-card data-actions">
+          <div class="actions-row">
+            <button id="export-json-btn" class="btn primary-btn">Export Session JSON</button>
+            <button id="clear-data-btn" class="btn danger-btn">Clear View</button>
+          </div>
+        </div>
+
+        <div class="logged-list-container">
+          <div id="empty-list-msg" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No tuned segments logged in this session yet.</p>
+            <p class="sub">Tuned segments are appended directly to your linked file on disk, and logged locally here for your review.</p>
+          </div>
+          <div id="logged-segments-list" class="segments-list">
+            <!-- Dynamic elements injected here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- About Tab -->
+      <section id="tab-about" class="tab-pane">
+        <div class="glass-card text-card-about">
+          <h3>Project Prosodia Affective Space</h3>
+          <p>This utility enables you to "reverse the flow" of narration tuning. By playing professional voice clips, podcasts, or audiobook clips, you can capture speech characteristics, assign Valence-Arousal-Tension vectors, layer acoustic offsets, and save them directly to a local project file.</p>
+          
+          <h4>Affective Wire-Format Syntax:</h4>
+          <div class="syntax-ref">
+            <code>[V: &lt;valence&gt; A: &lt;arousal&gt; T: &lt;tension&gt; ...tags] &lt;Text&gt;</code>
+          </div>
+          
+          <h4>Tuning Tags Reference:</h4>
+          <ul>
+            <li><strong>SB:</strong> Speed Bias (adds/subtracts from baseline speech speed)</li>
+            <li><strong>GB:</strong> Gain Bias (adds/subtracts from baseline speech volume)</li>
+            <li><strong>PB:</strong> Pause Multiplier (scales typographical punctuation pauses)</li>
+            <li><strong>LK:</strong> Speaker Lock (overrides dynamic voice blending)</li>
+            <li><strong>PN:</strong> Pronunciation Override (spells words phonetically)</li>
+          </ul>
+
+          <div class="footer-note">
+            <p>Built for the Mcfarlin Technologies <strong>ProsodiaStage</strong> Engine.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Floating Undo/Cancel Save Toast Notification -->
+    <div id="undo-toast" class="toast-container hide">
+      <div class="toast-content">
+        <span id="toast-message">Logged! Appending to file in 4s...</span>
+        <button id="undo-btn" class="toast-btn">Cancel Save</button>
+      </div>
+      <div class="toast-progress-container">
+        <div id="toast-progress-bar" class="toast-progress"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+module stageFFI {
+    header "stageFFI.h"
+    export *
+}

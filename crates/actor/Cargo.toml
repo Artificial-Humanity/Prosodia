@@ -1,0 +1,12 @@
+[package]
+name = "actor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+uniffi = "0.27"
+stage = { path = "../stage" }
+tokio = { version = "1", features = ["full"] }
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]

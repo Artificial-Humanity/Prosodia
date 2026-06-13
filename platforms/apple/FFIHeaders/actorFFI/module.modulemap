@@ -1,0 +1,4 @@
+module actorFFI {
+    header "actorFFI.h"
+    export *
+}

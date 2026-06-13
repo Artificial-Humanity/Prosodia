@@ -1,0 +1,4 @@
+module directorFFI {
+    header "directorFFI.h"
+    export *
+}

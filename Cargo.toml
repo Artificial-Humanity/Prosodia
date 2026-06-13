@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "crates/folioparser",
+    "crates/director",
+    "crates/actor",
+    "crates/stage"
+]
+resolver = "2"
