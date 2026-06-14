@@ -32,6 +32,20 @@ static DIRECTIVE_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\[V:\s*([-.\d]+)\s+A:\s*([-.\d]+)\s+T:\s*([-.\d]+)(.*?)\]\s*").unwrap()
 });
 
+static SPEED_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" S:\s*([-.\d]+)").unwrap());
+static SPEED_BIAS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" SB:\s*([-.\d]+)").unwrap());
+static GAIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" G:\s*([-.\d]+)").unwrap());
+static GAIN_BIAS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" GB:\s*([-.\d]+)").unwrap());
+static AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" AG:\s*([-.\d]+)").unwrap());
+static MASC_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" MA:\s*([-.\d]+)").unwrap());
+static STRAIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" ST:\s*([-.\d]+)").unwrap());
+static LOCK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" LK:\s*([^\s\]]+)").unwrap());
+static PAUSE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" PB:\s*([-.\d]+)").unwrap());
+static ALIAS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" PN:\s*([^\s\]]+)").unwrap());
+static PITCH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" P:\s*([-.\d]+)").unwrap());
+static DS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" DS:\s*([^\s\]]+)").unwrap());
+static FB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" FB:\s*([^\s\]]+)").unwrap());
+
 #[uniffi::export]
 pub fn encode_directive(directive: &ProsodyDirective, text: &str) -> String {
     format!("{}{}", encode_block(directive), text)
@@ -124,9 +138,81 @@ pub fn decode_spans(payload: &str) -> Option<DecodedPayload> {
         let a = caps[2].parse::<f64>().ok()?;
         let t = caps[3].parse::<f64>().ok()?;
         
+        let mut acoustics = ProsodyAcoustics {
+            speed_multiplier: None,
+            speed_bias: None,
+            gain_multiplier: None,
+            gain_bias: None,
+            casting_profile: None,
+            speaker_lock: None,
+            pause_multiplier: None,
+            pronunciation_override: None,
+            pitch: None,
+            token_duration_scales: None,
+            token_f0_biases: None,
+        };
+        let extra = &caps[4];
+        let mut has_acoustics = false;
+
+        if let Some(c) = SPEED_REGEX.captures(extra) {
+            acoustics.speed_multiplier = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        if let Some(c) = SPEED_BIAS_REGEX.captures(extra) {
+            acoustics.speed_bias = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        if let Some(c) = GAIN_REGEX.captures(extra) {
+            acoustics.gain_multiplier = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        if let Some(c) = GAIN_BIAS_REGEX.captures(extra) {
+            acoustics.gain_bias = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        
+        let age_val = AGE_REGEX.captures(extra).and_then(|c| c[1].parse::<f64>().ok());
+        let masc_val = MASC_REGEX.captures(extra).and_then(|c| c[1].parse::<f64>().ok());
+        let strain_val = STRAIN_REGEX.captures(extra).and_then(|c| c[1].parse::<f64>().ok());
+        if age_val.is_some() || masc_val.is_some() || strain_val.is_some() {
+            acoustics.casting_profile = Some(CastingProfile {
+                age_profile: age_val.unwrap_or(0.0),
+                masculinity: masc_val.unwrap_or(0.5),
+                strain_or_rasp: strain_val.unwrap_or(0.0),
+            });
+            has_acoustics = true;
+        }
+
+        if let Some(c) = LOCK_REGEX.captures(extra) {
+            acoustics.speaker_lock = Some(c[1].to_string());
+            has_acoustics = true;
+        }
+        if let Some(c) = PAUSE_REGEX.captures(extra) {
+            acoustics.pause_multiplier = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        if let Some(c) = ALIAS_REGEX.captures(extra) {
+            acoustics.pronunciation_override = Some(c[1].to_string());
+            has_acoustics = true;
+        }
+        if let Some(c) = PITCH_REGEX.captures(extra) {
+            acoustics.pitch = c[1].parse().ok();
+            has_acoustics = true;
+        }
+        if let Some(c) = DS_REGEX.captures(extra) {
+            let vals: Vec<f64> = c[1].split(',').filter_map(|v| v.parse().ok()).collect();
+            acoustics.token_duration_scales = Some(vals);
+            has_acoustics = true;
+        }
+        if let Some(c) = FB_REGEX.captures(extra) {
+            let vals: Vec<f64> = c[1].split(',').filter_map(|v| v.parse().ok()).collect();
+            acoustics.token_f0_biases = Some(vals);
+            has_acoustics = true;
+        }
+
         let directive = ProsodyDirective {
             emotion: EmotionVector::new(v, a, t),
-            acoustics: None, // Simplified for now
+            acoustics: if has_acoustics { Some(acoustics) } else { None },
         };
         
         let text_start = block_start + end_idx + 1;
@@ -169,4 +255,31 @@ pub fn decode_spans(payload: &str) -> Option<DecodedPayload> {
     }).collect();
     
     Some(DecodedPayload { overall, acoustics, spans })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_spans_with_acoustics() {
+        let payload = "[V: 0.1 A: -0.2 T: 0.3 S: 1.25 AG: 0.20 MA: 0.70 ST: 0.05 LK: character_lock] Hello world";
+        let decoded = decode_spans(payload).unwrap();
+        
+        assert_eq!(decoded.spans.len(), 1);
+        let span = &decoded.spans[0];
+        assert_eq!(span.text, "Hello world");
+        assert_eq!(span.emotion.valence, 0.1);
+        assert_eq!(span.emotion.arousal, -0.2);
+        assert_eq!(span.emotion.tension, 0.3);
+        
+        let acoustics = span.acoustics.as_ref().unwrap();
+        assert_eq!(acoustics.speed_multiplier, Some(1.25));
+        assert_eq!(acoustics.speaker_lock.as_deref(), Some("character_lock"));
+        
+        let casting = acoustics.casting_profile.as_ref().unwrap();
+        assert_eq!(casting.age_profile, 0.20);
+        assert_eq!(casting.masculinity, 0.70);
+        assert_eq!(casting.strain_or_rasp, 0.05);
+    }
 }

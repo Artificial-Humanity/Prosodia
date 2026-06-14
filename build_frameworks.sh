@@ -42,24 +42,33 @@ for crate in "${CRATES[@]}"; do
         generate --library "target/release/lib${crate}.dylib" \
         --language swift --out-dir "$bindgen_dir"
 
-    # 2. Assemble a flat static framework bundle.
+    # 2. Assemble a deep macOS framework bundle.
     fw="$STAGING/$module.framework"
     rm -rf "$fw"
-    mkdir -p "$fw/Headers" "$fw/Modules"
+    mkdir -p "$fw/Versions/A/Headers" "$fw/Versions/A/Modules" "$fw/Versions/A/Resources"
+    
+    # Create standard macOS framework symlinks
+    cd "$fw"
+    ln -sf A Versions/Current
+    ln -sf Versions/Current/Headers Headers
+    ln -sf Versions/Current/Modules Modules
+    ln -sf Versions/Current/Resources Resources
+    ln -sf Versions/Current/${module} ${module}
+    cd "$ROOT"
 
-    cp "$bindgen_dir/${module}.h" "$fw/Headers/${module}.h"
+    cp "$bindgen_dir/${module}.h" "$fw/Versions/A/Headers/${module}.h"
     # Framework modulemap: the binding's plain `module X {…}` becomes a
     # `framework module X {…}` discovered via the framework's Modules dir.
-    cat > "$fw/Modules/module.modulemap" <<EOF
+    cat > "$fw/Versions/A/Modules/module.modulemap" <<EOF
 framework module ${module} {
     header "${module}.h"
     export *
 }
 EOF
-    # The framework binary IS the Rust static archive, named after the module.
-    cp "target/release/lib${crate}.a" "$fw/${module}"
+    # The framework binary IS the Rust dynamic library, named after the module.
+    cp "target/release/lib${crate}.dylib" "$fw/Versions/A/${module}"
 
-    cat > "$fw/Info.plist" <<EOF
+    cat > "$fw/Versions/A/Resources/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">

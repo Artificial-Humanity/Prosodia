@@ -465,7 +465,7 @@ struct TunerContentView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             if let cp = acoustics?.castingProfile {
-                Text("Voice: \(cp.voice)")
+                Text(String(format: "Age: %.2f  Masc: %.2f  Strain: %.2f", cp.ageProfile, cp.masculinity, cp.strainOrRasp))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -908,9 +908,12 @@ struct FeedbackSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save & Log") {
-                        let blend = resolvedVoiceBlend
-                            .map { "\(Int(($0.fraction * 100).rounded()))% \($0.voice)" }
-                            .joined(separator: " + ")
+                        let blend: String
+                        if let cp = segment.directive.acoustics?.castingProfile {
+                            blend = String(format: "Age: %.2f, Masc: %.2f, Strain: %.2f", cp.ageProfile, cp.masculinity, cp.strainOrRasp)
+                        } else {
+                            blend = "Default"
+                        }
 
                         TuningFeedbackLogger.log(
                             text: segment.text,

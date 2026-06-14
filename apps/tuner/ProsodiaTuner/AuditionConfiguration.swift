@@ -93,7 +93,8 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
     var directive: ProsodyDirective {
         ProsodyDirective(emotion: emotion, acoustics: acoustics)
     }
-
+    static func from(_ preset: EmotionPreset, availableVoices: [String] = AuditionPresetStore.availableVoices) -> AuditionPreset {
+        let emotion = preset
         return AuditionPreset(
             name: preset.rawValue.capitalized,
             valence: emotion.vector.valence,
@@ -269,7 +270,7 @@ final class AuditionConfiguration {
     }
 
     /// Builds the Director implementation for the current settings.
-    func makeDirector(model: DirectorModel?) -> any DirectorInference {
+    func makeDirector(model: DirectorModel?) -> any Stage.DirectorInference {
         switch emotionMode {
         case .preset:
             return StubDirectorInference(directive: activePreset.directive)
