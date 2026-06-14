@@ -256,6 +256,21 @@ public final class VocalActorRegistry: @unchecked Sendable {
             return nil
         }
     }
+
+    /// Reports whether any registered provider can resolve a real actor for `modelURL`,
+    /// *without* constructing one.
+    ///
+    /// Lets UI gate "Speak" on genuine model availability cheaply (it only runs the
+    /// providers' lightweight `canHandle` file checks), instead of paying the cost of a
+    /// full actor build or — worse — silently falling back to a placeholder renderer.
+    ///
+    /// - Parameter modelURL: The local URL path of the model.
+    /// - Returns: True if a provider can handle the model, false otherwise.
+    public func canMakeActor(for modelURL: URL) -> Bool {
+        lock.withLock {
+            providers.contains { $0.canHandle(modelURL: modelURL) }
+        }
+    }
 }
 
 // MARK: - ActorVoiceMap
@@ -358,12 +373,17 @@ public actor StubVocalActor: VocalActor {
     private let phraser: SentencePhraser
     /// The backing list of rendered segments.
     private(set) var renderedSegments: [RenderedSegment] = []
+    /// Whether the stub actor should suppress tone generation and return silence.
+    private let isSilent: Bool
 
     /// Initializes a stub actor renderer.
     ///
-    /// - Parameter phraser: The phrasing resolver to use.
-    public init(phraser: SentencePhraser = SentencePhraser()) {
+    /// - Parameters:
+    ///   - phraser: The phrasing resolver to use.
+    ///   - isSilent: If true, suppresses tone generation during render (default is false).
+    public init(phraser: SentencePhraser = SentencePhraser(), isSilent: Bool = false) {
         self.phraser = phraser
+        self.isSilent = isSilent
     }
 
     /// Implement FFI Kit.VocalActor protocol method
@@ -384,7 +404,22 @@ public actor StubVocalActor: VocalActor {
             semaphore.signal()
         }
         semaphore.wait()
-        return [Float](repeating: 0.0, count: 2400) // Mock 0.1s audio chunk
+        
+        if isSilent {
+            return [Float](repeating: 0.0, count: 2400) // Silent mock chunk
+        }
+        
+        // Return a soft 440 Hz tone (A4) to provide audible playback feedback in stub mode.
+        // Duration: 1.0 second (24,000 samples at 24 kHz)
+        let sampleRate = 24000.0
+        let frequency = 440.0
+        let amplitude: Float = 0.1
+        var audio = [Float](repeating: 0.0, count: 24000)
+        for i in 0..<audio.count {
+            let t = Double(i) / sampleRate
+            audio[i] = Float(sin(2.0 * Double.pi * frequency * t)) * amplitude
+        }
+        return audio
     }
 
     /// Mocks rendering of the payload stream, capturing segments into an internal buffer.
