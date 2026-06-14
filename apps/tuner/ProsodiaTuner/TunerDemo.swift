@@ -28,21 +28,25 @@ final class ProductionRunner {
     private var cachedDirectorEmotionMode: EmotionSourceMode?
     private var cachedDirectorNarrationMode: Stage.NarrationMode?
 
-    private func getActor() -> any Stage.VocalActor {
+    /// Resolves the real StyleTTS2 actor, or `nil` when its model files are missing.
+    ///
+    /// Returns `nil` rather than falling back to a placeholder renderer: a missing
+    /// production model must surface as a disabled "Speak" affordance (see ``canSpeak``),
+    /// never as the stub's audible 440 Hz test tone masquerading as synthesized speech.
+    /// Only a genuinely resolved actor is cached, so dropping the model into `Models/`
+    /// and re-triggering Speak picks it up without an app relaunch.
+    private func getActor() -> (any Stage.VocalActor)? {
         if let cached = cachedActor {
             return cached
         }
-        let actor: any Stage.VocalActor
         let modelFile = Self.resolvedModelPath
         let voiceDir = Self.resolvedVoiceDirectory
-        
-        if let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) {
-            actor = resolved
-        } else {
-            actor = StubVocalActor()
+
+        guard let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) else {
+            return nil
         }
-        cachedActor = actor
-        return actor
+        cachedActor = resolved
+        return resolved
     }
 
     private func getDirector(config: AuditionConfiguration, model: DirectorModel?) -> any Stage.DirectorInference {
@@ -94,7 +98,7 @@ final class ProductionRunner {
 
         let document = InMemoryBookDocument(chapters: SamplePassageStore.shared.passages)
         let director = getDirector(config: config, model: model)
-        let renderer = StubVocalActor()
+        let renderer = StubVocalActor(isSilent: true)
 
         let controller = await Stage.StageCoordinator.run(
             document: document,
@@ -115,7 +119,8 @@ final class ProductionRunner {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // TunerDemo.swift parent (ProsodiaTuner)
             .deletingLastPathComponent() // ProsodiaTuner (outer)
-            .deletingLastPathComponent() // Project Root
+            .deletingLastPathComponent() // apps (outer)
+            .deletingLastPathComponent() // Project Root (Prosodia)
         #else
         URL(fileURLWithPath: "/dev/null")
         #endif
@@ -125,19 +130,21 @@ final class ProductionRunner {
         projectRoot.appendingPathComponent("Models")
     }
 
-    nonisolated static var mlxDirectory: URL { projectRoot.appendingPathComponent("StyleTTS2FineTune") }
-    nonisolated static var mlxModelFile: URL { mlxDirectory.appendingPathComponent("StyleTTS2/Models/LibriTTS/epochs_2nd.pth") }
-
     nonisolated static var resolvedModelPath: URL {
-        mlxModelFile
+        modelsBase.appendingPathComponent("styletts2_lite.tflite")
     }
 
     nonisolated static var resolvedVoiceDirectory: URL {
-        mlxDirectory
+        modelsBase
     }
 
+    /// Whether a real StyleTTS2 actor model is present and resolvable.
+    ///
+    /// Gates every "Speak" control. When false, the harness still previews VAD/voice-blend
+    /// metadata via the silent stub, and the section footer tells the user to add the model
+    /// under `Models/` — instead of emitting a misleading placeholder tone.
     var canSpeak: Bool {
-        FileManager.default.fileExists(atPath: Self.mlxModelFile.path)
+        VocalActorRegistry.shared.canMakeActor(for: Self.resolvedModelPath)
     }
 
     /// Synthesizes sample sentences with the configured Director and Actor.
@@ -146,6 +153,7 @@ final class ProductionRunner {
         if config.canUseMlx {
             guard let model, model.isAvailable else { return }
         }
+        guard let actor = getActor() else { return }
 
         isSpeaking = true
         activeModel = model
@@ -158,7 +166,6 @@ final class ProductionRunner {
 
         let document = InMemoryBookDocument(chapters: SamplePassageStore.shared.passages)
         let director = getDirector(config: config, model: model)
-        let actor = getActor()
         await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
         let controller = await Stage.StageCoordinator.run(
@@ -177,6 +184,7 @@ final class ProductionRunner {
         if config.canUseMlx {
             guard let model, model.isAvailable else { return }
         }
+        guard let actor = getActor() else { return }
 
         isSpeaking = true
         activeModel = model
@@ -189,7 +197,6 @@ final class ProductionRunner {
 
         let document = InMemoryBookDocument(chapters: [text])
         let director = getDirector(config: config, model: model)
-        let actor = getActor()
         await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
         let controller = await Stage.StageCoordinator.run(
@@ -249,9 +256,18 @@ final class DirectorModelStore {
     private static let selectedKey = "harnessSelectedDirectorModel"
 
     init() {
-        models = Self.load()
+        var loadedModels = Self.load()
+        var pathChanged = false
+        for i in 0..<loadedModels.count {
+            if loadedModels[i].path.contains("apps/Models") {
+                loadedModels[i].path = loadedModels[i].path.replacingOccurrences(of: "apps/Models", with: "Models")
+                pathChanged = true
+            }
+        }
+        models = loadedModels
         selectedID = UserDefaults.standard.string(forKey: Self.selectedKey)
         if models.isEmpty { seedDefaults() }
+        else if pathChanged { save() }
         reconcileSelection()
     }
 
