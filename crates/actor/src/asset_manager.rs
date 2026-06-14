@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use stage::prosody::CastingProfile;
 
-#[derive(Clone, Debug, uniffi::Record)]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct StyleVector {
     pub data: Vec<f32>,
     pub shape: Vec<u32>,
