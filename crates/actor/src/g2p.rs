@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-#[derive(Clone, Debug, uniffi::Record)]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct TokenPhonemes {
     pub phonemes: String,
     pub whitespace: String,
