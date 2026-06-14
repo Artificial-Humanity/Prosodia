@@ -1,16 +1,26 @@
-# Project Topology
+# Architecture
+
+Repository layout and module responsibilities — the single source of truth for topology.
 
 ```text
 prosodia/ (Unified Repository Root)
 ├── .github/                     # Organization health, workflows & profile profiles
+├── AGENTS.md                    # Agent manifest & behavioral rules (stack matrix, operational mandates)
 ├── Cargo.toml                   # Root Manifest defining workspace members and shared profiles
-├── CONTRIBUTING.md               # Unified contribution and CLA guidelines
-├── Documentation/               # Finalized, official notation about the project
+├── Docs/                        # PUBLIC canon documentation
+│   ├── ARCHITECTURE.md          # This file — repository layout & structure
+│   └── CONTRIBUTING.md          # Unified contribution and CLA guidelines
 ├── LICENSE                      # GNU General Public License v3.0 (GPL-3.0)
 ├── LICENSE-COMMERCIAL.md        # McFarlin Technologies Commercial License (Draft)
 ├── Models/                      # Reference models and weight matrices (Gitignored)
-├── Notes/                       # Provisional working notes and goals (Private Git Submodule)
+├── Notes/                       # PRIVATE submodule — internal / in-transit docs (git submodule update --init)
+│   ├── CHANGELOG.md             # Internal engineering changelog (pruned only on tagged releases)
+│   ├── STATE.md                 # Current project state + immediate must-do items
+│   ├── open-decisions.md        # Open decisions / deferred next steps
+│   ├── code-review-findings.md  # Code-review audit findings
+│   └── …                        # working notes & scratch (kebab-case)
 ├── README.md                    # Master architectural framework documentation
+├── ROADMAP.md                   # Public forward-looking roadmap
 │
 ├── crates/                      # ==========================================
 │   │                            # CRATERS LAYER: Safe, Local Neural Systems
