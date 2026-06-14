@@ -47,7 +47,7 @@ cargo build --release
 
 ## 📄 License
 
-Dual-licensed under the GNU General Public License v3.0 and a commercial license. See [Documentation](file:///Users/lmcfarlin/Projects/Prosodia/Documentation) folder for details.
+Dual-licensed under the GNU General Public License v3.0 and a commercial license. See the [Docs](Docs) folder for details.
 
 ---
 
