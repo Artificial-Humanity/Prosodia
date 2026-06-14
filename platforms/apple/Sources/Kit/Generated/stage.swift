@@ -381,6 +381,19 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
     typealias FfiType = Float
     typealias SwiftType = Float
@@ -443,6 +456,176 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
     }
+}
+
+
+
+
+/**
+ * Drives the narration pipeline one chunk at a time.
+ */
+public protocol StageCoordinatorProtocol : AnyObject {
+    
+    /**
+     * Number of chunks emitted so far.
+     */
+    func chunksEmitted()  -> UInt32
+    
+    /**
+     * Pull the next passage, annotate it, synthesize it, and return the result.
+     *
+     * Returns `None` once the narration source is exhausted or [`stop`] has been
+     * called. Blocks for as long as the director and actor callbacks take, so the
+     * platform should call this off the main thread.
+     *
+     * [`stop`]: StageCoordinator::stop
+     */
+    func nextChunk()  -> AudioChunk?
+    
+    /**
+     * Stop the session. Subsequent calls to [`next_chunk`] return `None`.
+     *
+     * [`next_chunk`]: StageCoordinator::next_chunk
+     */
+    func stop() 
+    
+}
+
+/**
+ * Drives the narration pipeline one chunk at a time.
+ */
+open class StageCoordinator:
+    StageCoordinatorProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_stage_fn_clone_stagecoordinator(self.pointer, $0) }
+    }
+public convenience init(source: NarrationSource, director: DirectorInference, actor: VocalActor, sampleRate: UInt32) {
+    let pointer =
+        try! rustCall() {
+    uniffi_stage_fn_constructor_stagecoordinator_new(
+        FfiConverterCallbackInterfaceNarrationSource.lower(source),
+        FfiConverterCallbackInterfaceDirectorInference.lower(director),
+        FfiConverterCallbackInterfaceVocalActor.lower(actor),
+        FfiConverterUInt32.lower(sampleRate),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_stage_fn_free_stagecoordinator(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Number of chunks emitted so far.
+     */
+open func chunksEmitted() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_stage_fn_method_stagecoordinator_chunks_emitted(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Pull the next passage, annotate it, synthesize it, and return the result.
+     *
+     * Returns `None` once the narration source is exhausted or [`stop`] has been
+     * called. Blocks for as long as the director and actor callbacks take, so the
+     * platform should call this off the main thread.
+     *
+     * [`stop`]: StageCoordinator::stop
+     */
+open func nextChunk() -> AudioChunk? {
+    return try!  FfiConverterOptionTypeAudioChunk.lift(try! rustCall() {
+    uniffi_stage_fn_method_stagecoordinator_next_chunk(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Stop the session. Subsequent calls to [`next_chunk`] return `None`.
+     *
+     * [`next_chunk`]: StageCoordinator::next_chunk
+     */
+open func stop() {try! rustCall() {
+    uniffi_stage_fn_method_stagecoordinator_stop(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+
+}
+
+public struct FfiConverterTypeStageCoordinator: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = StageCoordinator
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> StageCoordinator {
+        return StageCoordinator(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: StageCoordinator) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StageCoordinator {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: StageCoordinator, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeStageCoordinator_lift(_ pointer: UnsafeMutableRawPointer) throws -> StageCoordinator {
+    return try FfiConverterTypeStageCoordinator.lift(pointer)
+}
+
+public func FfiConverterTypeStageCoordinator_lower(_ value: StageCoordinator) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeStageCoordinator.lower(value)
 }
 
 
@@ -564,6 +747,91 @@ public func FfiConverterTypeAcousticMatrixConfig_lift(_ buf: RustBuffer) throws 
 
 public func FfiConverterTypeAcousticMatrixConfig_lower(_ value: AcousticMatrixConfig) -> RustBuffer {
     return FfiConverterTypeAcousticMatrixConfig.lower(value)
+}
+
+
+/**
+ * One unit of narration: a passage, its annotated prosody payload, and the rendered
+ * PCM audio, tagged with its zero-based emission index.
+ */
+public struct AudioChunk {
+    public var passage: String
+    public var payload: String
+    public var audio: [Float]
+    public var sampleRate: UInt32
+    public var index: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(passage: String, payload: String, audio: [Float], sampleRate: UInt32, index: UInt32) {
+        self.passage = passage
+        self.payload = payload
+        self.audio = audio
+        self.sampleRate = sampleRate
+        self.index = index
+    }
+}
+
+
+
+extension AudioChunk: Equatable, Hashable {
+    public static func ==(lhs: AudioChunk, rhs: AudioChunk) -> Bool {
+        if lhs.passage != rhs.passage {
+            return false
+        }
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        if lhs.audio != rhs.audio {
+            return false
+        }
+        if lhs.sampleRate != rhs.sampleRate {
+            return false
+        }
+        if lhs.index != rhs.index {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(passage)
+        hasher.combine(payload)
+        hasher.combine(audio)
+        hasher.combine(sampleRate)
+        hasher.combine(index)
+    }
+}
+
+
+public struct FfiConverterTypeAudioChunk: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AudioChunk {
+        return
+            try AudioChunk(
+                passage: FfiConverterString.read(from: &buf), 
+                payload: FfiConverterString.read(from: &buf), 
+                audio: FfiConverterSequenceFloat.read(from: &buf), 
+                sampleRate: FfiConverterUInt32.read(from: &buf), 
+                index: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AudioChunk, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.passage, into: &buf)
+        FfiConverterString.write(value.payload, into: &buf)
+        FfiConverterSequenceFloat.write(value.audio, into: &buf)
+        FfiConverterUInt32.write(value.sampleRate, into: &buf)
+        FfiConverterUInt32.write(value.index, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeAudioChunk_lift(_ buf: RustBuffer) throws -> AudioChunk {
+    return try FfiConverterTypeAudioChunk.lift(buf)
+}
+
+public func FfiConverterTypeAudioChunk_lower(_ value: AudioChunk) -> RustBuffer {
+    return FfiConverterTypeAudioChunk.lower(value)
 }
 
 
@@ -1219,9 +1487,14 @@ extension EmotionPreset: Equatable, Hashable {}
 
 
 
-public protocol ProsodyPhraser : AnyObject {
+/**
+ * Annotates a passage with emotion/prosody, returning the encoded prosody payload.
+ *
+ * Implemented by the platform around the on-device Gemma director (LiteRT-LM).
+ */
+public protocol DirectorInference : AnyObject {
     
-    func spans(text: String, emotion: EmotionVector)  -> [ProsodySpan]
+    func annotate(passage: String)  -> String
     
 }
 
@@ -1232,6 +1505,172 @@ private let IDX_CALLBACK_FREE: Int32 = 0
 private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
 private let UNIFFI_CALLBACK_ERROR: Int32 = 1
 private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceDirectorInference {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceDirectorInference = UniffiVTableCallbackInterfaceDirectorInference(
+        annotate: { (
+            uniffiHandle: UInt64,
+            passage: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> String in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceDirectorInference.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.annotate(
+                     passage: try FfiConverterString.lift(passage)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterCallbackInterfaceDirectorInference.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface DirectorInference: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitDirectorInference() {
+    uniffi_stage_fn_init_callback_vtable_directorinference(&UniffiCallbackInterfaceDirectorInference.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceDirectorInference {
+    fileprivate static var handleMap = UniffiHandleMap<DirectorInference>()
+}
+
+extension FfiConverterCallbackInterfaceDirectorInference : FfiConverter {
+    typealias SwiftType = DirectorInference
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
+
+
+
+/**
+ * Supplies the next passage of text to narrate, or `None` when the book is done.
+ *
+ * Implemented by the platform over a parsed `BookDocument` (sentence segmentation
+ * and paragraph grouping live on that side for now).
+ */
+public protocol NarrationSource : AnyObject {
+    
+    func nextPassage()  -> String?
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceNarrationSource {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceNarrationSource = UniffiVTableCallbackInterfaceNarrationSource(
+        nextPassage: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> String? in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceNarrationSource.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.nextPassage(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterOptionString.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterCallbackInterfaceNarrationSource.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface NarrationSource: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitNarrationSource() {
+    uniffi_stage_fn_init_callback_vtable_narrationsource(&UniffiCallbackInterfaceNarrationSource.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceNarrationSource {
+    fileprivate static var handleMap = UniffiHandleMap<NarrationSource>()
+}
+
+extension FfiConverterCallbackInterfaceNarrationSource : FfiConverter {
+    typealias SwiftType = NarrationSource
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
+
+
+
+public protocol ProsodyPhraser : AnyObject {
+    
+    func spans(text: String, emotion: EmotionVector)  -> [ProsodySpan]
+    
+}
+
+
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
 fileprivate struct UniffiCallbackInterfaceProsodyPhraser {
@@ -1305,6 +1744,92 @@ extension FfiConverterCallbackInterfaceProsodyPhraser : FfiConverter {
     }
 }
 
+
+
+
+/**
+ * Synthesizes an annotated prosody payload into PCM audio samples.
+ *
+ * Implemented by the platform around the StyleTTS2 actor (LiteRT).
+ */
+public protocol VocalActor : AnyObject {
+    
+    func render(payload: String)  -> [Float]
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceVocalActor {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceVocalActor = UniffiVTableCallbackInterfaceVocalActor(
+        render: { (
+            uniffiHandle: UInt64,
+            payload: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> [Float] in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceVocalActor.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.render(
+                     payload: try FfiConverterString.lift(payload)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterSequenceFloat.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterCallbackInterfaceVocalActor.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface VocalActor: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitVocalActor() {
+    uniffi_stage_fn_init_callback_vtable_vocalactor(&UniffiCallbackInterfaceVocalActor.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceVocalActor {
+    fileprivate static var handleMap = UniffiHandleMap<VocalActor>()
+}
+
+extension FfiConverterCallbackInterfaceVocalActor : FfiConverter {
+    typealias SwiftType = VocalActor
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
 fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
     typealias SwiftType = Double?
 
@@ -1342,6 +1867,27 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeAudioChunk: FfiConverterRustBuffer {
+    typealias SwiftType = AudioChunk?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAudioChunk.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAudioChunk.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -1683,11 +2229,35 @@ private var initializationResult: InitializationResult {
     if (uniffi_stage_checksum_func_trimming_silence() != 39293) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_stage_checksum_method_stagecoordinator_chunks_emitted() != 2915) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_stagecoordinator_next_chunk() != 45329) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_stagecoordinator_stop() != 33061) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_constructor_stagecoordinator_new() != 15540) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_directorinference_annotate() != 29732) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_narrationsource_next_passage() != 38124) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_stage_checksum_method_prosodyphraser_spans() != 4212) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_stage_checksum_method_vocalactor_render() != 14835) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
+    uniffiCallbackInitDirectorInference()
+    uniffiCallbackInitNarrationSource()
     uniffiCallbackInitProsodyPhraser()
+    uniffiCallbackInitVocalActor()
     return InitializationResult.ok
 }
 
