@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/core",
     "crates/folioparser",
     "crates/director",
     "crates/actor",

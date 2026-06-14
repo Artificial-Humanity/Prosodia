@@ -6,6 +6,9 @@ version = 4
 name = "actor"
 version = "0.1.0"
 dependencies = [
+ "once_cell",
+ "regex",
+ "serde",
  "serde_json",
  "stage",
  "thiserror",
@@ -264,6 +267,8 @@ dependencies = [
 name = "director"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tokio",
  "uniffi",
 ]
@@ -612,6 +617,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "prosodia-core"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "regex",
+ "thiserror",
+]
+
+[[package]]
 name = "quick-xml"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -813,9 +827,11 @@ name = "stage"
 version = "0.1.0"
 dependencies = [
  "once_cell",
+ "prosodia-core",
  "regex",
  "serde",
  "serde_json",
+ "thiserror",
  "uniffi",
  "uuid",
 ]

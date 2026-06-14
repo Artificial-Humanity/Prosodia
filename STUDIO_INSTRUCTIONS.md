@@ -17,6 +17,10 @@
 
 * When executing code transformations or refactoring schemas, changes extending definitions, token structures, or data definitions must map symmetrically across the Rust core, the UniFFI bridge definitions, the platform frameworks, and the downstream application UI layers within a singular, atomic commit block.
 
+### 4. Changelog Updates Requirement
+
+* Always append a detailed chronological entry describing all technical modifications, refactoring milestones, and build-system changes made during the session to [Documentation/Notes/changelog.md](file:///Users/lmcfarlin/Projects/Artificial-Humanity/Prosodia/Documentation/Notes/changelog.md) before concluding your work.
+
 ---
 
 ## Agentic Personas & Coding Guidelines

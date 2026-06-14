@@ -1,5 +1,5 @@
 import Foundation
-import Kit
+@preconcurrency import Kit
 
 // MARK: - Shared Value Types
 
@@ -95,7 +95,7 @@ public enum NarrationMode: String, Codable, CaseIterable, Sendable {
 
 /// Stage 2 — Director. Reads incoming passage chunks and emits one or more
 /// `[V: … A: … T: …]` prosody blocks per phrase (see ``ProsodyPayload``).
-public protocol DirectorInference: Sendable {
+public protocol DirectorInference: Kit.DirectorInference, Sendable {
     /// Processes a stream of chapter chunks, annotating each with VAD vectors.
     ///
     /// - Parameter chapterStream: The input stream of raw text passages.
@@ -175,7 +175,7 @@ public extension DirectorInference {
 /// matrix, and renders audio. Returns a ``PlaybackController`` immediately;
 /// rendering proceeds in a background task so the caller can interact with the
 /// session while it runs.
-public protocol VocalActor: Sendable {
+public protocol VocalActor: Kit.VocalActor, Sendable {
     /// Renders an annotated payload stream to audio.
     ///
     /// - Parameter stream: An asynchronous stream of annotated wire-format payloads.
@@ -301,6 +301,9 @@ public actor StubDirectorInference: DirectorInference {
         self.narrationMode = mode
     }
 
+    /// Reclaims memory/resources consumed by the director engine.
+    public func reclaimMemory() async {}
+
     /// Appends the stub directive to every chunk in the stream.
     ///
     /// - Parameter chapterStream: The input stream of raw text passages.
@@ -315,6 +318,22 @@ public actor StubDirectorInference: DirectorInference {
                 continuation.finish()
             }
         }
+    }
+
+    /// Annotates a single passage with the fixed directive. Required by the FFI interface.
+    public nonisolated func annotate(passage: String) -> String {
+        let semaphore = DispatchSemaphore(value: 0)
+        var result = ""
+        Task {
+            result = await self.annotateSingle(passage: passage)
+            semaphore.signal()
+        }
+        semaphore.wait()
+        return result
+    }
+
+    private func annotateSingle(passage: String) async -> String {
+        return encodeDirective(directive: self.directive, text: passage)
     }
 }
 
@@ -347,6 +366,27 @@ public actor StubVocalActor: VocalActor {
         self.phraser = phraser
     }
 
+    /// Implement FFI Kit.VocalActor protocol method
+    public nonisolated func render(payload: String) -> [Float] {
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            if let decoded = decodeSpans(payload: payload) {
+                let spans = self.phraser.resolveSpans(overall: decoded.overall, decoded: decoded.spans)
+                let directive = ProsodyDirective(emotion: decoded.overall, acoustics: decoded.acoustics)
+                let segment = RenderedSegment(
+                    directive: directive,
+                    text: spans.map(\.text).joined(separator: " "),
+                    speedMultiplier: directive.speedMultiplier,
+                    spans: spans
+                )
+                await self.append(segment)
+            }
+            semaphore.signal()
+        }
+        semaphore.wait()
+        return [Float](repeating: 0.0, count: 2400) // Mock 0.1s audio chunk
+    }
+
     /// Mocks rendering of the payload stream, capturing segments into an internal buffer.
     ///
     /// - Parameter stream: The input stream of annotated wire-format payloads.
@@ -356,15 +396,7 @@ public actor StubVocalActor: VocalActor {
         Task { [self] in
             var index = 0
             for await payload in stream {
-                guard let decoded = decodeSpans(payload: payload) else { continue }
-                let spans = self.phraser.resolveSpans(overall: decoded.overall, decoded: decoded.spans)
-                let directive = ProsodyDirective(emotion: decoded.overall, acoustics: decoded.acoustics)
-                await self.append(RenderedSegment(
-                    directive: directive,
-                    text: spans.map(\.text).joined(separator: " "),
-                    speedMultiplier: directive.speedMultiplier,
-                    spans: spans
-                ))
+                _ = render(payload: payload)
                 eventContinuation.yield(.sentenceBegan(index: index))
                 eventContinuation.yield(.sentenceScheduled(index: index, timestamps: []))
                 index += 1

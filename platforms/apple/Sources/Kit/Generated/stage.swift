@@ -394,6 +394,19 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     }
 }
 
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
+    typealias FfiType = Int32
+    typealias SwiftType = Int32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
     typealias FfiType = Float
     typealias SwiftType = Float
@@ -417,6 +430,27 @@ fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
 
     public static func write(_ value: Double, into buf: inout [UInt8]) {
         writeDouble(&buf, lower(value))
+    }
+}
+
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
     }
 }
 
@@ -456,6 +490,254 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
     }
+}
+
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
+
+
+
+public protocol BpeTokenizerProtocol : AnyObject {
+    
+    func decode(tokens: [Int32])  -> String
+    
+    func encode(text: String)  -> [Int32]
+    
+}
+
+open class BpeTokenizer:
+    BpeTokenizerProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_stage_fn_clone_bpetokenizer(self.pointer, $0) }
+    }
+public convenience init(data: Data, byteLevel: Bool, unknownTokenId: Int32?)throws  {
+    let pointer =
+        try rustCallWithError(FfiConverterTypeTokenizerError.lift) {
+    uniffi_stage_fn_constructor_bpetokenizer_new(
+        FfiConverterData.lower(data),
+        FfiConverterBool.lower(byteLevel),
+        FfiConverterOptionInt32.lower(unknownTokenId),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_stage_fn_free_bpetokenizer(pointer, $0) }
+    }
+
+    
+
+    
+open func decode(tokens: [Int32]) -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_stage_fn_method_bpetokenizer_decode(self.uniffiClonePointer(),
+        FfiConverterSequenceInt32.lower(tokens),$0
+    )
+})
+}
+    
+open func encode(text: String) -> [Int32] {
+    return try!  FfiConverterSequenceInt32.lift(try! rustCall() {
+    uniffi_stage_fn_method_bpetokenizer_encode(self.uniffiClonePointer(),
+        FfiConverterString.lower(text),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeBpeTokenizer: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = BpeTokenizer
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> BpeTokenizer {
+        return BpeTokenizer(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: BpeTokenizer) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BpeTokenizer {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: BpeTokenizer, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeBpeTokenizer_lift(_ pointer: UnsafeMutableRawPointer) throws -> BpeTokenizer {
+    return try FfiConverterTypeBpeTokenizer.lift(pointer)
+}
+
+public func FfiConverterTypeBpeTokenizer_lower(_ value: BpeTokenizer) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeBpeTokenizer.lower(value)
+}
+
+
+
+
+public protocol SentenceSegmenterProtocol : AnyObject {
+    
+    func sentences(text: String)  -> [String]
+    
+}
+
+open class SentenceSegmenter:
+    SentenceSegmenterProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_stage_fn_clone_sentencesegmenter(self.pointer, $0) }
+    }
+public convenience init() {
+    let pointer =
+        try! rustCall() {
+    uniffi_stage_fn_constructor_sentencesegmenter_new($0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_stage_fn_free_sentencesegmenter(pointer, $0) }
+    }
+
+    
+
+    
+open func sentences(text: String) -> [String] {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_stage_fn_method_sentencesegmenter_sentences(self.uniffiClonePointer(),
+        FfiConverterString.lower(text),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeSentenceSegmenter: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = SentenceSegmenter
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SentenceSegmenter {
+        return SentenceSegmenter(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: SentenceSegmenter) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SentenceSegmenter {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: SentenceSegmenter, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeSentenceSegmenter_lift(_ pointer: UnsafeMutableRawPointer) throws -> SentenceSegmenter {
+    return try FfiConverterTypeSentenceSegmenter.lift(pointer)
+}
+
+public func FfiConverterTypeSentenceSegmenter_lower(_ value: SentenceSegmenter) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeSentenceSegmenter.lower(value)
 }
 
 
@@ -522,13 +804,14 @@ open class StageCoordinator:
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_stage_fn_clone_stagecoordinator(self.pointer, $0) }
     }
-public convenience init(source: NarrationSource, director: DirectorInference, actor: VocalActor, sampleRate: UInt32) {
+public convenience init(source: NarrationSource, director: DirectorInference, actor: VocalActor, grouping: NarrationGrouping, sampleRate: UInt32) {
     let pointer =
         try! rustCall() {
     uniffi_stage_fn_constructor_stagecoordinator_new(
         FfiConverterCallbackInterfaceNarrationSource.lower(source),
         FfiConverterCallbackInterfaceDirectorInference.lower(director),
         FfiConverterCallbackInterfaceVocalActor.lower(actor),
+        FfiConverterTypeNarrationGrouping.lower(grouping),
         FfiConverterUInt32.lower(sampleRate),$0
     )
 }
@@ -543,6 +826,19 @@ public convenience init(source: NarrationSource, director: DirectorInference, ac
         try! rustCall { uniffi_stage_fn_free_stagecoordinator(pointer, $0) }
     }
 
+    
+public static func newWithLookahead(source: NarrationSource, director: DirectorInference, actor: VocalActor, grouping: NarrationGrouping, sampleRate: UInt32, lookaheadLimit: UInt32) -> StageCoordinator {
+    return try!  FfiConverterTypeStageCoordinator.lift(try! rustCall() {
+    uniffi_stage_fn_constructor_stagecoordinator_new_with_lookahead(
+        FfiConverterCallbackInterfaceNarrationSource.lower(source),
+        FfiConverterCallbackInterfaceDirectorInference.lower(director),
+        FfiConverterCallbackInterfaceVocalActor.lower(actor),
+        FfiConverterTypeNarrationGrouping.lower(grouping),
+        FfiConverterUInt32.lower(sampleRate),
+        FfiConverterUInt32.lower(lookaheadLimit),$0
+    )
+})
+}
     
 
     
@@ -1030,6 +1326,63 @@ public func FfiConverterTypeEmotionVector_lower(_ value: EmotionVector) -> RustB
 }
 
 
+public struct ParsedMarkup {
+    public var cleanText: String
+    public var characterProsody: [ProsodyState]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(cleanText: String, characterProsody: [ProsodyState]) {
+        self.cleanText = cleanText
+        self.characterProsody = characterProsody
+    }
+}
+
+
+
+extension ParsedMarkup: Equatable, Hashable {
+    public static func ==(lhs: ParsedMarkup, rhs: ParsedMarkup) -> Bool {
+        if lhs.cleanText != rhs.cleanText {
+            return false
+        }
+        if lhs.characterProsody != rhs.characterProsody {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(cleanText)
+        hasher.combine(characterProsody)
+    }
+}
+
+
+public struct FfiConverterTypeParsedMarkup: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ParsedMarkup {
+        return
+            try ParsedMarkup(
+                cleanText: FfiConverterString.read(from: &buf), 
+                characterProsody: FfiConverterSequenceTypeProsodyState.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ParsedMarkup, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.cleanText, into: &buf)
+        FfiConverterSequenceTypeProsodyState.write(value.characterProsody, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeParsedMarkup_lift(_ buf: RustBuffer) throws -> ParsedMarkup {
+    return try FfiConverterTypeParsedMarkup.lift(buf)
+}
+
+public func FfiConverterTypeParsedMarkup_lower(_ value: ParsedMarkup) -> RustBuffer {
+    return FfiConverterTypeParsedMarkup.lower(value)
+}
+
+
 public struct PhrasePauseConfig {
     public var sentence: Double
     public var clause: Double
@@ -1345,6 +1698,63 @@ public func FfiConverterTypeProsodySpan_lower(_ value: ProsodySpan) -> RustBuffe
     return FfiConverterTypeProsodySpan.lower(value)
 }
 
+
+public struct ProsodyState {
+    public var rate: Float
+    public var pitch: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(rate: Float, pitch: Float) {
+        self.rate = rate
+        self.pitch = pitch
+    }
+}
+
+
+
+extension ProsodyState: Equatable, Hashable {
+    public static func ==(lhs: ProsodyState, rhs: ProsodyState) -> Bool {
+        if lhs.rate != rhs.rate {
+            return false
+        }
+        if lhs.pitch != rhs.pitch {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(rate)
+        hasher.combine(pitch)
+    }
+}
+
+
+public struct FfiConverterTypeProsodyState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProsodyState {
+        return
+            try ProsodyState(
+                rate: FfiConverterFloat.read(from: &buf), 
+                pitch: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProsodyState, into buf: inout [UInt8]) {
+        FfiConverterFloat.write(value.rate, into: &buf)
+        FfiConverterFloat.write(value.pitch, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeProsodyState_lift(_ buf: RustBuffer) throws -> ProsodyState {
+    return try FfiConverterTypeProsodyState.lift(buf)
+}
+
+public func FfiConverterTypeProsodyState_lower(_ value: ProsodyState) -> RustBuffer {
+    return FfiConverterTypeProsodyState.lower(value)
+}
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -1483,6 +1893,112 @@ public func FfiConverterTypeEmotionPreset_lower(_ value: EmotionPreset) -> RustB
 extension EmotionPreset: Equatable, Hashable {}
 
 
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum NarrationGrouping {
+    
+    case sentence
+    case paragraph(targetCharacters: UInt32
+    )
+}
+
+
+public struct FfiConverterTypeNarrationGrouping: FfiConverterRustBuffer {
+    typealias SwiftType = NarrationGrouping
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NarrationGrouping {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .sentence
+        
+        case 2: return .paragraph(targetCharacters: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: NarrationGrouping, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .sentence:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .paragraph(targetCharacters):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt32.write(targetCharacters, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeNarrationGrouping_lift(_ buf: RustBuffer) throws -> NarrationGrouping {
+    return try FfiConverterTypeNarrationGrouping.lift(buf)
+}
+
+public func FfiConverterTypeNarrationGrouping_lower(_ value: NarrationGrouping) -> RustBuffer {
+    return FfiConverterTypeNarrationGrouping.lower(value)
+}
+
+
+
+extension NarrationGrouping: Equatable, Hashable {}
+
+
+
+
+public enum TokenizerError {
+
+    
+    
+    case Error(message: String
+    )
+}
+
+
+public struct FfiConverterTypeTokenizerError: FfiConverterRustBuffer {
+    typealias SwiftType = TokenizerError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TokenizerError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Error(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TokenizerError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Error(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+extension TokenizerError: Equatable, Hashable {}
+
+extension TokenizerError: Error { }
 
 
 
@@ -1830,6 +2346,27 @@ extension FfiConverterCallbackInterfaceVocalActor : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionInt32: FfiConverterRustBuffer {
+    typealias SwiftType = Int32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
     typealias SwiftType = Double?
 
@@ -1977,6 +2514,28 @@ fileprivate struct FfiConverterOptionSequenceDouble: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterSequenceInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [Int32]
+
+    public static func write(_ value: [Int32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Int32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterSequenceFloat: FfiConverterRustBuffer {
     typealias SwiftType = [Float]
 
@@ -2021,6 +2580,28 @@ fileprivate struct FfiConverterSequenceDouble: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterSequenceTypeProsodySpan: FfiConverterRustBuffer {
     typealias SwiftType = [ProsodySpan]
 
@@ -2038,6 +2619,28 @@ fileprivate struct FfiConverterSequenceTypeProsodySpan: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeProsodySpan.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeProsodyState: FfiConverterRustBuffer {
+    typealias SwiftType = [ProsodyState]
+
+    public static func write(_ value: [ProsodyState], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeProsodyState.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ProsodyState] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ProsodyState]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeProsodyState.read(from: &buf))
         }
         return seq
     }
@@ -2101,6 +2704,13 @@ public func neutralPayloadForPassage(passage: String) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_stage_fn_func_neutral_payload_for_passage(
         FfiConverterString.lower(passage),$0
+    )
+})
+}
+public func parseMarkup(input: String) -> ParsedMarkup {
+    return try!  FfiConverterTypeParsedMarkup.lift(try! rustCall() {
+    uniffi_stage_fn_func_parse_markup(
+        FfiConverterString.lower(input),$0
     )
 })
 }
@@ -2205,6 +2815,9 @@ private var initializationResult: InitializationResult {
     if (uniffi_stage_checksum_func_neutral_payload_for_passage() != 41504) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_stage_checksum_func_parse_markup() != 39438) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_stage_checksum_func_pause_after() != 56484) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2229,6 +2842,15 @@ private var initializationResult: InitializationResult {
     if (uniffi_stage_checksum_func_trimming_silence() != 39293) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_stage_checksum_method_bpetokenizer_decode() != 59693) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_bpetokenizer_encode() != 31666) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_sentencesegmenter_sentences() != 4859) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_stage_checksum_method_stagecoordinator_chunks_emitted() != 2915) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2238,7 +2860,16 @@ private var initializationResult: InitializationResult {
     if (uniffi_stage_checksum_method_stagecoordinator_stop() != 33061) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_stage_checksum_constructor_stagecoordinator_new() != 15540) {
+    if (uniffi_stage_checksum_constructor_bpetokenizer_new() != 14683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_constructor_sentencesegmenter_new() != 18710) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_constructor_stagecoordinator_new() != 60001) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_constructor_stagecoordinator_new_with_lookahead() != 17975) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_stage_checksum_method_directorinference_annotate() != 29732) {

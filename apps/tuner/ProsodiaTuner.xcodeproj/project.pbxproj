@@ -10,8 +10,6 @@
 		AC11111111111111111111B3 /* Actor in Frameworks */ = {isa = PBXBuildFile; productRef = AC11111111111111111111A2 /* Actor */; };
 		CC11111111111111111111D1 /* Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 5FBE0BD7F4E5599569177E04 /* Kit */; };
 		DR11111111111111111111B3 /* Director in Frameworks */ = {isa = PBXBuildFile; productRef = DR11111111111111111111D2 /* Director */; };
-		MS11111111111111111111M3 /* Misaki in Frameworks */ = {isa = PBXBuildFile; productRef = MS11111111111111111111M2 /* Misaki */; };
-		SP22222222222222222222E3 /* ActorEspeak in Frameworks */ = {isa = PBXBuildFile; productRef = SP22222222222222222222E2 /* ActorEspeak */; };
 		ST11111111111111111111B3 /* Stage in Frameworks */ = {isa = PBXBuildFile; productRef = ST11111111111111111111S2 /* Stage */; };
 /* End PBXBuildFile section */
 
@@ -37,8 +35,6 @@
 				AC11111111111111111111B3 /* Actor in Frameworks */,
 				CC11111111111111111111D1 /* Kit in Frameworks */,
 				DR11111111111111111111B3 /* Director in Frameworks */,
-				MS11111111111111111111M3 /* Misaki in Frameworks */,
-				SP22222222222222222222E3 /* ActorEspeak in Frameworks */,
 				ST11111111111111111111B3 /* Stage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -86,8 +82,6 @@
 				AC11111111111111111111A2 /* Actor */,
 				DR11111111111111111111D2 /* Director */,
 				5FBE0BD7F4E5599569177E04 /* Kit */,
-				MS11111111111111111111M2 /* Misaki */,
-				SP22222222222222222222E2 /* ActorEspeak */,
 				ST11111111111111111111S2 /* Stage */,
 			);
 			productName = ProsodiaTuner;
@@ -405,16 +399,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
 			productName = Kit;
-		};
-		MS11111111111111111111M2 /* Misaki */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
-			productName = Misaki;
-		};
-		SP22222222222222222222E2 /* ActorEspeak */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
-			productName = ActorEspeak;
 		};
 		ST11111111111111111111S2 /* Stage */ = {
 			isa = XCSwiftPackageProductDependency;

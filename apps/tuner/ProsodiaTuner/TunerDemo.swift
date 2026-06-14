@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import Kit
+import Stage
 
 // MARK: - ProductionRunner
 
@@ -20,18 +21,18 @@ final class ProductionRunner {
     private(set) var activeModel: DirectorModel?
     private var activePlaybackController: (any PlaybackController)?
     private var activePreviewController: (any PlaybackController)?
-    private var cachedActor: (any VocalActor)?
+    private var cachedActor: (any Stage.VocalActor)?
     
-    private var cachedDirector: (any DirectorInference)?
+    private var cachedDirector: (any Stage.DirectorInference)?
     private var cachedDirectorModel: DirectorModel?
     private var cachedDirectorEmotionMode: EmotionSourceMode?
-    private var cachedDirectorNarrationMode: NarrationMode?
+    private var cachedDirectorNarrationMode: Stage.NarrationMode?
 
-    private func getActor() -> any VocalActor {
+    private func getActor() -> any Stage.VocalActor {
         if let cached = cachedActor {
             return cached
         }
-        let actor: any VocalActor
+        let actor: any Stage.VocalActor
         let modelFile = Self.resolvedModelPath
         let voiceDir = Self.resolvedVoiceDirectory
         
@@ -44,7 +45,7 @@ final class ProductionRunner {
         return actor
     }
 
-    private func getDirector(config: AuditionConfiguration, model: DirectorModel?) -> any DirectorInference {
+    private func getDirector(config: AuditionConfiguration, model: DirectorModel?) -> any Stage.DirectorInference {
         if let cached = cachedDirector,
            cachedDirectorModel == model,
            cachedDirectorEmotionMode == config.emotionMode,
@@ -53,7 +54,7 @@ final class ProductionRunner {
         }
         
         let rawDirector = config.makeDirector(model: model)
-        let director: any DirectorInference
+        let director: any Stage.DirectorInference
         if config.emotionMode == .director, let model = model {
             director = CachingDirectorEngine(base: rawDirector, modelId: model.id, narrationMode: config.mlxNarrationMode)
         } else {
@@ -95,7 +96,7 @@ final class ProductionRunner {
         let director = getDirector(config: config, model: model)
         let renderer = StubVocalActor()
 
-        let controller = await StageCoordinator.run(
+        let controller = await Stage.StageCoordinator.run(
             document: document,
             director: director,
             actor: renderer,
@@ -160,7 +161,7 @@ final class ProductionRunner {
         let actor = getActor()
         await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
-        let controller = await StageCoordinator.run(
+        let controller = await Stage.StageCoordinator.run(
             document: document,
             director: director,
             actor: actor,
@@ -191,7 +192,7 @@ final class ProductionRunner {
         let actor = getActor()
         await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
-        let controller = await StageCoordinator.run(
+        let controller = await Stage.StageCoordinator.run(
             document: document,
             director: director,
             actor: actor,
@@ -323,21 +324,21 @@ final class DirectorModelStore {
 /// A wrapper around a `DirectorInference` that caches annotations in-memory
 /// by model ID and passage text, preventing redundant LLM inference when adjusting
 /// acoustic and voice blending sliders.
-actor CachingDirectorEngine: DirectorInference {
-    private let base: any DirectorInference
+actor CachingDirectorEngine: Stage.DirectorInference {
+    private let base: any Stage.DirectorInference
     private let modelId: String
-    private var narrationMode: NarrationMode = .solo
+    private var narrationMode: Stage.NarrationMode = .solo
     
     // In-memory cache shared across instances.
     private static var cache: [String: String] = [:]
     
-    init(base: any DirectorInference, modelId: String, narrationMode: NarrationMode = .solo) {
+    init(base: any Stage.DirectorInference, modelId: String, narrationMode: Stage.NarrationMode = .solo) {
         self.base = base
         self.modelId = modelId
         self.narrationMode = narrationMode
     }
 
-    func setNarrationMode(_ mode: NarrationMode) async {
+    func setNarrationMode(_ mode: Stage.NarrationMode) async {
         self.narrationMode = mode
         await base.setNarrationMode(mode)
     }
@@ -372,6 +373,30 @@ actor CachingDirectorEngine: DirectorInference {
                 }
                 continuation.finish()
             }
+        }
+    }
+
+    nonisolated func annotate(passage: String) -> String {
+        let semaphore = DispatchSemaphore(value: 0)
+        var result = ""
+        Task {
+            result = await self.annotateSingle(passage: passage)
+            semaphore.signal()
+        }
+        semaphore.wait()
+        return result
+    }
+
+    private func annotateSingle(passage: String) async -> String {
+        let cacheKey = "\(modelId)::\(narrationMode.rawValue)::\(passage)"
+        if let cached = Self.cache[cacheKey] {
+            return cached
+        } else {
+            let result = await base.annotate(passage: passage)
+            if !result.isEmpty {
+                Self.cache[cacheKey] = result
+            }
+            return result
         }
     }
     

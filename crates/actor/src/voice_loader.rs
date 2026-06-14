@@ -17,6 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::asset_manager::StyleVector;
 use crate::g2p::TokenPhonemes;
+use stage::prosody::CastingProfile;
 
 /// Default cache capacity, mirroring the Swift `LRUCache(limit: 16)`.
 const VOICE_CACHE_LIMIT: usize = 16;
@@ -290,6 +291,38 @@ struct VoiceCache {
     order: Vec<String>,
 }
 
+impl VoiceCache {
+    fn get(&mut self, name: &str) -> Option<StyleVector> {
+        if let Some(vector) = self.packs.get(name).cloned() {
+            // Move the accessed name to the end of the LRU tracking queue
+            if let Some(pos) = self.order.iter().position(|x| x == name) {
+                self.order.remove(pos);
+            }
+            self.order.push(name.to_string());
+            Some(vector)
+        } else {
+            None
+        }
+    }
+
+    fn insert(&mut self, name: String, pack: StyleVector) {
+        if self.packs.insert(name.clone(), pack).is_some() {
+            // Update accessed order if it already exists
+            if let Some(pos) = self.order.iter().position(|x| x == &name) {
+                self.order.remove(pos);
+            }
+            self.order.push(name);
+        } else {
+            // New entry: push to end of order
+            self.order.push(name);
+            while self.order.len() > VOICE_CACHE_LIMIT {
+                let oldest = self.order.remove(0);
+                self.packs.remove(&oldest);
+            }
+        }
+    }
+}
+
 #[uniffi::export]
 impl VoiceLoader {
     #[uniffi::constructor]
@@ -307,9 +340,57 @@ impl VoiceLoader {
         cache.order.clear();
     }
 
+    /// Linearly interpolates two style vectors.
+    pub fn lerp(&self, v1: &StyleVector, v2: &StyleVector, fraction: f32) -> StyleVector {
+        let f = fraction.clamp(0.0, 1.0);
+        let mut interpolated = vec![0.0; v1.data.len()];
+        for i in 0..v1.data.len() {
+            let val1 = v1.data.get(i).copied().unwrap_or(0.0);
+            let val2 = v2.data.get(i).copied().unwrap_or(0.0);
+            interpolated[i] = val1 * (1.0 - f) + val2 * f;
+        }
+        StyleVector {
+            data: interpolated,
+            shape: v1.shape.clone(),
+        }
+    }
+
+    /// Performs bilinear interpolation to resolve a custom speaker identity vector.
+    pub fn resolve_parametric_voice(&self, casting: &CastingProfile) -> Result<StyleVector, VoiceLoaderError> {
+        let v_fc = self.load_voice("anchor_female_child".to_string())?;
+        let v_mc = self.load_voice("anchor_male_child".to_string())?;
+        let v_fa = self.load_voice("anchor_female_adult".to_string())?;
+        let v_ma = self.load_voice("anchor_male_adult".to_string())?;
+        let v_fe = self.load_voice("anchor_female_elderly".to_string())?;
+        let v_me = self.load_voice("anchor_male_elderly".to_string())?;
+        
+        let age = casting.age_profile as f32;
+        let masc = casting.masculinity as f32;
+        
+        let identity = if age <= 0.5 {
+            let scale_age = age * 2.0;
+            let female_interp = self.lerp(&v_fc, &v_fa, scale_age);
+            let male_interp = self.lerp(&v_mc, &v_ma, scale_age);
+            self.lerp(&female_interp, &male_interp, masc)
+        } else {
+            let scale_age = (age - 0.5) * 2.0;
+            let female_interp = self.lerp(&v_fa, &v_fe, scale_age);
+            let male_interp = self.lerp(&v_ma, &v_me, scale_age);
+            self.lerp(&female_interp, &male_interp, masc)
+        };
+        
+        // Blend in texture anchors based on raspiness
+        if casting.strain_or_rasp > 0.05 {
+            let s_gruff = self.load_voice("anchor_style_gruff".to_string())?;
+            return Ok(self.lerp(&identity, &s_gruff, casting.strain_or_rasp as f32));
+        }
+        
+        Ok(identity)
+    }
+
     /// Load and normalize a single voice pack by name (cached).
     pub fn load_voice(&self, voice_name: String) -> Result<StyleVector, VoiceLoaderError> {
-        if let Some(cached) = self.cache.lock().unwrap().packs.get(&voice_name).cloned() {
+        if let Some(cached) = self.cache.lock().unwrap().get(&voice_name) {
             return Ok(cached);
         }
 
@@ -401,12 +482,20 @@ impl VoiceLoader {
         style_arrays.push(style_for(&voice_blends[0])?);
 
         // One block per token, each row repeated once per in-vocab phoneme.
+        let mut last_row_data: Option<Vec<f32>> = None;
         for (idx, valid) in valid_counts.iter().copied().enumerate() {
             if valid == 0 {
                 continue;
             }
             let blend_index = idx.min(voice_blends.len() - 1);
-            let row = style_for(&voice_blends[blend_index])?;
+            let mut row = style_for(&voice_blends[blend_index])?;
+            if let Some(ref prev) = last_row_data {
+                for (r, p) in row.data.iter_mut().zip(prev.iter()) {
+                    *r = 0.5 * *r + 0.5 * p;
+                }
+            }
+            last_row_data = Some(row.data.clone());
+
             let cols = row.shape[1] as usize;
             let mut repeated = Vec::with_capacity(valid * row.data.len());
             for _ in 0..valid {
@@ -441,14 +530,7 @@ impl VoiceLoader {
 
 impl VoiceLoader {
     fn cache_insert(&self, name: String, pack: StyleVector) {
-        let mut cache = self.cache.lock().unwrap();
-        if cache.packs.insert(name.clone(), pack).is_none() {
-            cache.order.push(name);
-            while cache.order.len() > VOICE_CACHE_LIMIT {
-                let oldest = cache.order.remove(0);
-                cache.packs.remove(&oldest);
-            }
-        }
+        self.cache.lock().unwrap().insert(name, pack);
     }
 }
 
@@ -667,5 +749,122 @@ mod tests {
         assert_eq!(matrix.data.len(), 5 * 2);
         // Every row is row index 3 -> [3,3].
         assert!(matrix.data.iter().all(|&v| v == 3.0));
+    }
+
+    #[test]
+    fn style_matrix_ema_smoothing() {
+        // Voice A: row 0 is [1.0, 1.0]
+        let va = build_safetensors_f32("s", &[1, 2], &[1.0, 1.0]);
+        // Voice B: row 0 is [3.0, 3.0]
+        let vb = build_safetensors_f32("s", &[1, 2], &[3.0, 3.0]);
+        let mut map = HashMap::new();
+        map.insert("a".to_string(), va);
+        map.insert("b".to_string(), vb);
+        let loader = VoiceLoader::new(Box::new(MapProvider { map }));
+
+        // Two tokens "x" and "y"
+        let tokens = vec![
+            TokenPhonemes { phonemes: "x".into(), whitespace: "".into() },
+            TokenPhonemes { phonemes: "y".into(), whitespace: "".into() },
+        ];
+        let vocab = vocab_from(&["x", "y"]);
+        // Token 0 blend: "a", Token 1 blend: "b"
+        let matrix = loader
+            .style_matrix(tokens, vec!["a".to_string(), "b".to_string()], vocab)
+            .unwrap();
+
+        // total_phonemes = 2 + 2 = 4.
+        // Rows: SOS(1) + token 0(1) + token 1(1) + EOS(1) = 4 rows, 2 cols.
+        assert_eq!(matrix.shape, vec![1, 4, 2]);
+        
+        // Token 0: style for "a" -> [1.0, 1.0]. Unsmoothed because it's first.
+        // Token 1: style for "b" -> [3.0, 3.0]. Smoothed with Token 0: 0.5 * [3.0, 3.0] + 0.5 * [1.0, 1.0] = [2.0, 2.0].
+        let row_token0 = &matrix.data[2..4]; // SOS is index 0..2
+        let row_token1 = &matrix.data[4..6];
+        
+        assert_eq!(row_token0, &[1.0, 1.0]);
+        assert_eq!(row_token1, &[2.0, 2.0]);
+    }
+
+    #[test]
+    fn test_resolve_parametric_voice() {
+        let mut map = HashMap::new();
+        map.insert("anchor_female_child".into(), build_safetensors_f32("s", &[1, 2], &[10.0, 10.0]));
+        map.insert("anchor_male_child".into(), build_safetensors_f32("s", &[1, 2], &[20.0, 20.0]));
+        map.insert("anchor_female_adult".into(), build_safetensors_f32("s", &[1, 2], &[30.0, 30.0]));
+        map.insert("anchor_male_adult".into(), build_safetensors_f32("s", &[1, 2], &[40.0, 40.0]));
+        map.insert("anchor_female_elderly".into(), build_safetensors_f32("s", &[1, 2], &[50.0, 50.0]));
+        map.insert("anchor_male_elderly".into(), build_safetensors_f32("s", &[1, 2], &[60.0, 60.0]));
+        map.insert("anchor_style_gruff".into(), build_safetensors_f32("s", &[1, 2], &[100.0, 100.0]));
+
+        let loader = VoiceLoader::new(Box::new(MapProvider { map }));
+
+        let casting = CastingProfile {
+            age_profile: 0.25,
+            masculinity: 0.5,
+            strain_or_rasp: 0.0,
+        };
+        let res = loader.resolve_parametric_voice(&casting).unwrap();
+        assert_eq!(res.data, vec![25.0, 25.0]);
+
+        let casting2 = CastingProfile {
+            age_profile: 0.75,
+            masculinity: 0.5,
+            strain_or_rasp: 0.0,
+        };
+        let res2 = loader.resolve_parametric_voice(&casting2).unwrap();
+        assert_eq!(res2.data, vec![45.0, 45.0]);
+
+        let casting3 = CastingProfile {
+            age_profile: 0.25,
+            masculinity: 0.5,
+            strain_or_rasp: 0.2,
+        };
+        let res3 = loader.resolve_parametric_voice(&casting3).unwrap();
+        assert_eq!(res3.data, vec![40.0, 40.0]);
+    }
+
+    #[test]
+    fn test_lru_cache_eviction() {
+        let mut map = HashMap::new();
+        // Create 18 distinct voices
+        for i in 0..18 {
+            let va = build_safetensors_f32("s", &[1, 2], &[i as f32, i as f32]);
+            map.insert(i.to_string(), va);
+        }
+        let loader = VoiceLoader::new(Box::new(MapProvider { map }));
+
+        // 1. Fill the cache up to capacity (VOICE_CACHE_LIMIT = 16) with voices "0" to "15"
+        for i in 0..16 {
+            loader.load_voice(i.to_string()).unwrap();
+        }
+
+        // Cache order: "0", "1", "2", ..., "15"
+        {
+            let cache = loader.cache.lock().unwrap();
+            assert_eq!(cache.order.len(), 16);
+            assert_eq!(cache.order[0], "0");
+            assert_eq!(cache.order[15], "15");
+        }
+
+        // 2. Access "0" again to make it the most recently used (should move to end of order)
+        loader.load_voice("0".to_string()).unwrap();
+        {
+            let cache = loader.cache.lock().unwrap();
+            assert_eq!(cache.order.len(), 16);
+            assert_eq!(cache.order[15], "0");
+            assert_eq!(cache.order[0], "1"); // "1" is now the oldest (least recently used)
+        }
+
+        // 3. Load a new voice "16" which triggers eviction.
+        // The oldest voice "1" should be evicted.
+        loader.load_voice("16".to_string()).unwrap();
+        {
+            let cache = loader.cache.lock().unwrap();
+            assert_eq!(cache.order.len(), 16);
+            assert!(!cache.packs.contains_key("1")); // voice "1" evicted!
+            assert!(cache.packs.contains_key("0"));  // voice "0" still present!
+            assert_eq!(cache.order[15], "16");
+        }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Kit
 
 public struct ActorEngineOutput: Sendable {
     public let audio: [Float]
@@ -11,12 +12,8 @@ public struct ActorEngineOutput: Sendable {
 }
 
 public protocol ProsodiaActorBackend: AnyObject, Sendable {
-    var vocab: [String: Int] { get }
-
-    func tokenize(_ phonemes: String) throws -> [Int]
-
     func forward(
-        phonemes: String,
+        phonemeIds: [Int32],
         refS: StyleVector,
         speed: Float,
         durationScales: [Float]?,
@@ -27,9 +24,5 @@ public protocol ProsodiaActorBackend: AnyObject, Sendable {
 }
 
 public extension ProsodiaActorBackend {
-    func tokenize(_ phonemes: String) throws -> [Int] {
-        return []
-    }
     func reclaimMemory() {}
 }
-

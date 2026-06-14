@@ -446,6 +446,27 @@ fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
     }
 }
 
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -497,116 +518,6 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
         writeInt(&buf, len)
         writeBytes(&buf, value)
     }
-}
-
-
-
-
-public protocol BasicG2pProcessorProtocol : AnyObject {
-    
-    func process(text: String)  -> [MToken]
-    
-}
-
-open class BasicG2pProcessor:
-    BasicG2pProcessorProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_actor_fn_clone_basicg2pprocessor(self.pointer, $0) }
-    }
-public convenience init() {
-    let pointer =
-        try! rustCall() {
-    uniffi_actor_fn_constructor_basicg2pprocessor_new($0
-    )
-}
-    self.init(unsafeFromRawPointer: pointer)
-}
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_actor_fn_free_basicg2pprocessor(pointer, $0) }
-    }
-
-    
-
-    
-open func process(text: String) -> [MToken] {
-    return try!  FfiConverterSequenceTypeMToken.lift(try! rustCall() {
-    uniffi_actor_fn_method_basicg2pprocessor_process(self.uniffiClonePointer(),
-        FfiConverterString.lower(text),$0
-    )
-})
-}
-    
-
-}
-
-public struct FfiConverterTypeBasicG2PProcessor: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = BasicG2pProcessor
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> BasicG2pProcessor {
-        return BasicG2pProcessor(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: BasicG2pProcessor) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BasicG2pProcessor {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: BasicG2pProcessor, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-
-
-
-public func FfiConverterTypeBasicG2PProcessor_lift(_ pointer: UnsafeMutableRawPointer) throws -> BasicG2pProcessor {
-    return try FfiConverterTypeBasicG2PProcessor.lift(pointer)
-}
-
-public func FfiConverterTypeBasicG2PProcessor_lower(_ value: BasicG2pProcessor) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeBasicG2PProcessor.lower(value)
 }
 
 
@@ -732,9 +643,140 @@ public func FfiConverterTypeDefaultModelAssetManager_lower(_ value: DefaultModel
 
 
 
+/**
+ * A ``ProsodiaSpeechEngine`` powered by the Google LiteRT (TensorFlow Lite) runtime.
+ */
+public protocol LiteRtActorEngineProtocol : AnyObject {
+    
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    
+    func reclaimMemory() 
+    
+}
+
+/**
+ * A ``ProsodiaSpeechEngine`` powered by the Google LiteRT (TensorFlow Lite) runtime.
+ */
+open class LiteRtActorEngine:
+    LiteRtActorEngineProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_actor_fn_clone_litertactorengine(self.pointer, $0) }
+    }
+public convenience init(modelPath: String) {
+    let pointer =
+        try! rustCall() {
+    uniffi_actor_fn_constructor_litertactorengine_new(
+        FfiConverterString.lower(modelPath),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_actor_fn_free_litertactorengine(pointer, $0) }
+    }
+
+    
+
+    
+open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> ActorEngineOutput {
+    return try  FfiConverterTypeActorEngineOutput.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
+    uniffi_actor_fn_method_litertactorengine_forward(self.uniffiClonePointer(),
+        FfiConverterSequenceInt32.lower(phonemeIds),
+        FfiConverterTypeStyleVector.lower(style),
+        FfiConverterFloat.lower(speed),
+        FfiConverterOptionSequenceFloat.lower(durationScales),
+        FfiConverterOptionSequenceFloat.lower(f0Bias),$0
+    )
+})
+}
+    
+open func reclaimMemory() {try! rustCall() {
+    uniffi_actor_fn_method_litertactorengine_reclaim_memory(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+
+}
+
+public struct FfiConverterTypeLiteRtActorEngine: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = LiteRtActorEngine
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> LiteRtActorEngine {
+        return LiteRtActorEngine(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: LiteRtActorEngine) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LiteRtActorEngine {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: LiteRtActorEngine, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeLiteRtActorEngine_lift(_ pointer: UnsafeMutableRawPointer) throws -> LiteRtActorEngine {
+    return try FfiConverterTypeLiteRtActorEngine.lift(pointer)
+}
+
+public func FfiConverterTypeLiteRtActorEngine_lower(_ value: LiteRtActorEngine) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeLiteRtActorEngine.lower(value)
+}
+
+
+
+
 public protocol ProsodiaActorEngineProtocol : AnyObject {
     
     func processAndSynthesize(span: ProsodySpan)  -> ActorEngineOutput
+    
+    func reclaimMemory() 
     
 }
 
@@ -796,6 +838,12 @@ open func processAndSynthesize(span: ProsodySpan) -> ActorEngineOutput {
 })
 }
     
+open func reclaimMemory() {try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorengine_reclaim_memory(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 
 }
 
@@ -846,7 +894,31 @@ public func FfiConverterTypeProsodiaActorEngine_lower(_ value: ProsodiaActorEngi
 
 public protocol ProsodiaActorPipelineProtocol : AnyObject {
     
+    func chunkPhonemes(phonemes: String, limit: UInt32)  -> [String]
+    
+    func chunkTokens(tokens: [MToken], limit: UInt32)  -> [[MToken]]
+    
+    func prewarm(speechEngine: ProsodiaSpeechEngine, voice: String) throws 
+    
     func processSpan(span: ProsodySpan)  -> PipelineOutput
+    
+    func reclaimMemory(speechEngine: ProsodiaSpeechEngine) 
+    
+    func setCustomG2p(processor: ProsodiaG2pProcessor) 
+    
+    func synthesize(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> SynthesisResult
+    
+    func synthesizeMarkup(speechEngine: ProsodiaSpeechEngine, markupText: String, voice: String, speed: Float) throws  -> SynthesisResult
+    
+    func synthesizeStream(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, callback: AudioChunkCallback) throws 
+    
+    func synthesizeStreamWithMorph(speechEngine: ProsodiaSpeechEngine, text: String, voiceBlends: [[VoiceBlend]], speed: Float, callback: AudioChunkCallback) throws 
+    
+    func synthesizeWithTimestamps(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, pitch: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> SynthesisResult
+    
+    func synthesizeWithTimestampsBlend(speechEngine: ProsodiaSpeechEngine, text: String, voiceBlends: [String], speed: Float, pitch: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> SynthesisResult
+    
+    func tokenize(phonemes: String)  -> [Int32]
     
 }
 
@@ -878,12 +950,15 @@ open class ProsodiaActorPipeline:
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_actor_fn_clone_prosodiaactorpipeline(self.pointer, $0) }
     }
-public convenience init(g2p: ProsodiaG2pProcessor, assetManager: ModelAssetManager) {
+public convenience init(g2p: ProsodiaG2pProcessor, voiceLoader: VoiceLoader, configJson: String, sampleRate: UInt32, langCode: String)throws  {
     let pointer =
-        try! rustCall() {
+        try rustCallWithError(FfiConverterTypePipelineError.lift) {
     uniffi_actor_fn_constructor_prosodiaactorpipeline_new(
         FfiConverterCallbackInterfaceProsodiaG2pProcessor.lower(g2p),
-        FfiConverterCallbackInterfaceModelAssetManager.lower(assetManager),$0
+        FfiConverterTypeVoiceLoader.lower(voiceLoader),
+        FfiConverterString.lower(configJson),
+        FfiConverterUInt32.lower(sampleRate),
+        FfiConverterString.lower(langCode),$0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -900,10 +975,132 @@ public convenience init(g2p: ProsodiaG2pProcessor, assetManager: ModelAssetManag
     
 
     
+open func chunkPhonemes(phonemes: String, limit: UInt32) -> [String] {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_chunk_phonemes(self.uniffiClonePointer(),
+        FfiConverterString.lower(phonemes),
+        FfiConverterUInt32.lower(limit),$0
+    )
+})
+}
+    
+open func chunkTokens(tokens: [MToken], limit: UInt32) -> [[MToken]] {
+    return try!  FfiConverterSequenceSequenceTypeMToken.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_chunk_tokens(self.uniffiClonePointer(),
+        FfiConverterSequenceTypeMToken.lower(tokens),
+        FfiConverterUInt32.lower(limit),$0
+    )
+})
+}
+    
+open func prewarm(speechEngine: ProsodiaSpeechEngine, voice: String)throws  {try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_prewarm(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(voice),$0
+    )
+}
+}
+    
 open func processSpan(span: ProsodySpan) -> PipelineOutput {
     return try!  FfiConverterTypePipelineOutput.lift(try! rustCall() {
     uniffi_actor_fn_method_prosodiaactorpipeline_process_span(self.uniffiClonePointer(),
         FfiConverterTypeProsodySpan_lower(span),$0
+    )
+})
+}
+    
+open func reclaimMemory(speechEngine: ProsodiaSpeechEngine) {try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_reclaim_memory(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),$0
+    )
+}
+}
+    
+open func setCustomG2p(processor: ProsodiaG2pProcessor) {try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_set_custom_g2p(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaG2pProcessor.lower(processor),$0
+    )
+}
+}
+    
+open func synthesize(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> SynthesisResult {
+    return try  FfiConverterTypeSynthesisResult.lift(try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(text),
+        FfiConverterString.lower(voice),
+        FfiConverterFloat.lower(speed),
+        FfiConverterOptionSequenceFloat.lower(durationScales),
+        FfiConverterOptionSequenceFloat.lower(f0Bias),$0
+    )
+})
+}
+    
+open func synthesizeMarkup(speechEngine: ProsodiaSpeechEngine, markupText: String, voice: String, speed: Float)throws  -> SynthesisResult {
+    return try  FfiConverterTypeSynthesisResult.lift(try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_markup(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(markupText),
+        FfiConverterString.lower(voice),
+        FfiConverterFloat.lower(speed),$0
+    )
+})
+}
+    
+open func synthesizeStream(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, callback: AudioChunkCallback)throws  {try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_stream(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(text),
+        FfiConverterString.lower(voice),
+        FfiConverterFloat.lower(speed),
+        FfiConverterCallbackInterfaceAudioChunkCallback.lower(callback),$0
+    )
+}
+}
+    
+open func synthesizeStreamWithMorph(speechEngine: ProsodiaSpeechEngine, text: String, voiceBlends: [[VoiceBlend]], speed: Float, callback: AudioChunkCallback)throws  {try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_stream_with_morph(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(text),
+        FfiConverterSequenceSequenceTypeVoiceBlend.lower(voiceBlends),
+        FfiConverterFloat.lower(speed),
+        FfiConverterCallbackInterfaceAudioChunkCallback.lower(callback),$0
+    )
+}
+}
+    
+open func synthesizeWithTimestamps(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, pitch: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> SynthesisResult {
+    return try  FfiConverterTypeSynthesisResult.lift(try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_with_timestamps(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(text),
+        FfiConverterString.lower(voice),
+        FfiConverterFloat.lower(speed),
+        FfiConverterFloat.lower(pitch),
+        FfiConverterOptionSequenceFloat.lower(durationScales),
+        FfiConverterOptionSequenceFloat.lower(f0Bias),$0
+    )
+})
+}
+    
+open func synthesizeWithTimestampsBlend(speechEngine: ProsodiaSpeechEngine, text: String, voiceBlends: [String], speed: Float, pitch: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> SynthesisResult {
+    return try  FfiConverterTypeSynthesisResult.lift(try rustCallWithError(FfiConverterTypePipelineError.lift) {
+    uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_with_timestamps_blend(self.uniffiClonePointer(),
+        FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),
+        FfiConverterString.lower(text),
+        FfiConverterSequenceString.lower(voiceBlends),
+        FfiConverterFloat.lower(speed),
+        FfiConverterFloat.lower(pitch),
+        FfiConverterOptionSequenceFloat.lower(durationScales),
+        FfiConverterOptionSequenceFloat.lower(f0Bias),$0
+    )
+})
+}
+    
+open func tokenize(phonemes: String) -> [Int32] {
+    return try!  FfiConverterSequenceInt32.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(self.uniffiClonePointer(),
+        FfiConverterString.lower(phonemes),$0
     )
 })
 }
@@ -956,6 +1153,126 @@ public func FfiConverterTypeProsodiaActorPipeline_lower(_ value: ProsodiaActorPi
 
 
 
+public protocol ProsodiaSpeechProtocol : AnyObject {
+    
+    func process(text: String)  -> [MToken]
+    
+}
+
+open class ProsodiaSpeech:
+    ProsodiaSpeechProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_actor_fn_clone_prosodiaspeech(self.pointer, $0) }
+    }
+public convenience init() {
+    let pointer =
+        try! rustCall() {
+    uniffi_actor_fn_constructor_prosodiaspeech_new($0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_actor_fn_free_prosodiaspeech(pointer, $0) }
+    }
+
+    
+public static func newWithOptions(british: Bool, unk: String, version: String?) -> ProsodiaSpeech {
+    return try!  FfiConverterTypeProsodiaSpeech.lift(try! rustCall() {
+    uniffi_actor_fn_constructor_prosodiaspeech_new_with_options(
+        FfiConverterBool.lower(british),
+        FfiConverterString.lower(unk),
+        FfiConverterOptionString.lower(version),$0
+    )
+})
+}
+    
+
+    
+open func process(text: String) -> [MToken] {
+    return try!  FfiConverterSequenceTypeMToken.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaspeech_process(self.uniffiClonePointer(),
+        FfiConverterString.lower(text),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeProsodiaSpeech: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = ProsodiaSpeech
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> ProsodiaSpeech {
+        return ProsodiaSpeech(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: ProsodiaSpeech) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProsodiaSpeech {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: ProsodiaSpeech, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeProsodiaSpeech_lift(_ pointer: UnsafeMutableRawPointer) throws -> ProsodiaSpeech {
+    return try FfiConverterTypeProsodiaSpeech.lift(pointer)
+}
+
+public func FfiConverterTypeProsodiaSpeech_lower(_ value: ProsodiaSpeech) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeProsodiaSpeech.lower(value)
+}
+
+
+
+
 /**
  * Loads, caches, blends, and slices voice style packs entirely in Rust, sourcing
  * raw bytes from a [`VoiceAssetProvider`].
@@ -968,6 +1285,11 @@ public protocol VoiceLoaderProtocol : AnyObject {
     func clearCache() 
     
     /**
+     * Linearly interpolates two style vectors.
+     */
+    func lerp(v1: StyleVector, v2: StyleVector, fraction: Float)  -> StyleVector
+    
+    /**
      * Load a weighted blend of voices, normalized by total weight.
      */
     func loadBlend(blend: [VoiceBlend]) throws  -> StyleVector
@@ -976,6 +1298,11 @@ public protocol VoiceLoaderProtocol : AnyObject {
      * Load and normalize a single voice pack by name (cached).
      */
     func loadVoice(voiceName: String) throws  -> StyleVector
+    
+    /**
+     * Performs bilinear interpolation to resolve a custom speaker identity vector.
+     */
+    func resolveParametricVoice(casting: CastingProfile) throws  -> StyleVector
     
     /**
      * Build the 3D `[1, total_rows, cols]` style matrix mapping each token to its
@@ -1054,6 +1381,19 @@ open func clearCache() {try! rustCall() {
 }
     
     /**
+     * Linearly interpolates two style vectors.
+     */
+open func lerp(v1: StyleVector, v2: StyleVector, fraction: Float) -> StyleVector {
+    return try!  FfiConverterTypeStyleVector.lift(try! rustCall() {
+    uniffi_actor_fn_method_voiceloader_lerp(self.uniffiClonePointer(),
+        FfiConverterTypeStyleVector.lower(v1),
+        FfiConverterTypeStyleVector.lower(v2),
+        FfiConverterFloat.lower(fraction),$0
+    )
+})
+}
+    
+    /**
      * Load a weighted blend of voices, normalized by total weight.
      */
 open func loadBlend(blend: [VoiceBlend])throws  -> StyleVector {
@@ -1071,6 +1411,17 @@ open func loadVoice(voiceName: String)throws  -> StyleVector {
     return try  FfiConverterTypeStyleVector.lift(try rustCallWithError(FfiConverterTypeVoiceLoaderError.lift) {
     uniffi_actor_fn_method_voiceloader_load_voice(self.uniffiClonePointer(),
         FfiConverterString.lower(voiceName),$0
+    )
+})
+}
+    
+    /**
+     * Performs bilinear interpolation to resolve a custom speaker identity vector.
+     */
+open func resolveParametricVoice(casting: CastingProfile)throws  -> StyleVector {
+    return try  FfiConverterTypeStyleVector.lift(try rustCallWithError(FfiConverterTypeVoiceLoaderError.lift) {
+    uniffi_actor_fn_method_voiceloader_resolve_parametric_voice(self.uniffiClonePointer(),
+        FfiConverterTypeCastingProfile_lower(casting),$0
     )
 })
 }
@@ -1207,12 +1558,16 @@ public func FfiConverterTypeActorEngineOutput_lower(_ value: ActorEngineOutput) 
 
 public struct MToken {
     public var text: String
-    public var phonemes: String
+    public var tag: String
+    public var whitespace: String
+    public var phonemes: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(text: String, phonemes: String) {
+    public init(text: String, tag: String, whitespace: String, phonemes: String?) {
         self.text = text
+        self.tag = tag
+        self.whitespace = whitespace
         self.phonemes = phonemes
     }
 }
@@ -1224,6 +1579,12 @@ extension MToken: Equatable, Hashable {
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.tag != rhs.tag {
+            return false
+        }
+        if lhs.whitespace != rhs.whitespace {
+            return false
+        }
         if lhs.phonemes != rhs.phonemes {
             return false
         }
@@ -1232,6 +1593,8 @@ extension MToken: Equatable, Hashable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(text)
+        hasher.combine(tag)
+        hasher.combine(whitespace)
         hasher.combine(phonemes)
     }
 }
@@ -1242,13 +1605,17 @@ public struct FfiConverterTypeMToken: FfiConverterRustBuffer {
         return
             try MToken(
                 text: FfiConverterString.read(from: &buf), 
-                phonemes: FfiConverterString.read(from: &buf)
+                tag: FfiConverterString.read(from: &buf), 
+                whitespace: FfiConverterString.read(from: &buf), 
+                phonemes: FfiConverterOptionString.read(from: &buf)
         )
     }
 
     public static func write(_ value: MToken, into buf: inout [UInt8]) {
         FfiConverterString.write(value.text, into: &buf)
-        FfiConverterString.write(value.phonemes, into: &buf)
+        FfiConverterString.write(value.tag, into: &buf)
+        FfiConverterString.write(value.whitespace, into: &buf)
+        FfiConverterOptionString.write(value.phonemes, into: &buf)
     }
 }
 
@@ -1452,6 +1819,87 @@ public func FfiConverterTypeStyleVector_lower(_ value: StyleVector) -> RustBuffe
 }
 
 
+public struct SynthesisResult {
+    public var graphemes: String
+    public var phonemes: String
+    public var audio: [Float]
+    public var sampleRate: UInt32
+    public var timestamps: [WordTimestamp]?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(graphemes: String, phonemes: String, audio: [Float], sampleRate: UInt32, timestamps: [WordTimestamp]?) {
+        self.graphemes = graphemes
+        self.phonemes = phonemes
+        self.audio = audio
+        self.sampleRate = sampleRate
+        self.timestamps = timestamps
+    }
+}
+
+
+
+extension SynthesisResult: Equatable, Hashable {
+    public static func ==(lhs: SynthesisResult, rhs: SynthesisResult) -> Bool {
+        if lhs.graphemes != rhs.graphemes {
+            return false
+        }
+        if lhs.phonemes != rhs.phonemes {
+            return false
+        }
+        if lhs.audio != rhs.audio {
+            return false
+        }
+        if lhs.sampleRate != rhs.sampleRate {
+            return false
+        }
+        if lhs.timestamps != rhs.timestamps {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(graphemes)
+        hasher.combine(phonemes)
+        hasher.combine(audio)
+        hasher.combine(sampleRate)
+        hasher.combine(timestamps)
+    }
+}
+
+
+public struct FfiConverterTypeSynthesisResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SynthesisResult {
+        return
+            try SynthesisResult(
+                graphemes: FfiConverterString.read(from: &buf), 
+                phonemes: FfiConverterString.read(from: &buf), 
+                audio: FfiConverterSequenceFloat.read(from: &buf), 
+                sampleRate: FfiConverterUInt32.read(from: &buf), 
+                timestamps: FfiConverterOptionSequenceTypeWordTimestamp.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SynthesisResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.graphemes, into: &buf)
+        FfiConverterString.write(value.phonemes, into: &buf)
+        FfiConverterSequenceFloat.write(value.audio, into: &buf)
+        FfiConverterUInt32.write(value.sampleRate, into: &buf)
+        FfiConverterOptionSequenceTypeWordTimestamp.write(value.timestamps, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSynthesisResult_lift(_ buf: RustBuffer) throws -> SynthesisResult {
+    return try FfiConverterTypeSynthesisResult.lift(buf)
+}
+
+public func FfiConverterTypeSynthesisResult_lower(_ value: SynthesisResult) -> RustBuffer {
+    return FfiConverterTypeSynthesisResult.lower(value)
+}
+
+
 /**
  * One group of tokens whose combined phoneme+whitespace length fits within the limit.
  */
@@ -1623,6 +2071,213 @@ public func FfiConverterTypeVoiceBlend_lower(_ value: VoiceBlend) -> RustBuffer 
 }
 
 
+public struct WordTimestamp {
+    public var word: String
+    public var startChar: UInt32
+    public var endChar: UInt32
+    public var startTime: Double
+    public var endTime: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(word: String, startChar: UInt32, endChar: UInt32, startTime: Double, endTime: Double) {
+        self.word = word
+        self.startChar = startChar
+        self.endChar = endChar
+        self.startTime = startTime
+        self.endTime = endTime
+    }
+}
+
+
+
+extension WordTimestamp: Equatable, Hashable {
+    public static func ==(lhs: WordTimestamp, rhs: WordTimestamp) -> Bool {
+        if lhs.word != rhs.word {
+            return false
+        }
+        if lhs.startChar != rhs.startChar {
+            return false
+        }
+        if lhs.endChar != rhs.endChar {
+            return false
+        }
+        if lhs.startTime != rhs.startTime {
+            return false
+        }
+        if lhs.endTime != rhs.endTime {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(word)
+        hasher.combine(startChar)
+        hasher.combine(endChar)
+        hasher.combine(startTime)
+        hasher.combine(endTime)
+    }
+}
+
+
+public struct FfiConverterTypeWordTimestamp: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WordTimestamp {
+        return
+            try WordTimestamp(
+                word: FfiConverterString.read(from: &buf), 
+                startChar: FfiConverterUInt32.read(from: &buf), 
+                endChar: FfiConverterUInt32.read(from: &buf), 
+                startTime: FfiConverterDouble.read(from: &buf), 
+                endTime: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WordTimestamp, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.word, into: &buf)
+        FfiConverterUInt32.write(value.startChar, into: &buf)
+        FfiConverterUInt32.write(value.endChar, into: &buf)
+        FfiConverterDouble.write(value.startTime, into: &buf)
+        FfiConverterDouble.write(value.endTime, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeWordTimestamp_lift(_ buf: RustBuffer) throws -> WordTimestamp {
+    return try FfiConverterTypeWordTimestamp.lift(buf)
+}
+
+public func FfiConverterTypeWordTimestamp_lower(_ value: WordTimestamp) -> RustBuffer {
+    return FfiConverterTypeWordTimestamp.lower(value)
+}
+
+
+public enum PipelineError {
+
+    
+    
+    case JsonParse(message: String
+    )
+    case SpeechEngine(message: String
+    )
+    case VoiceLoader(message: String
+    )
+    case InvalidSpeed(speed: Float
+    )
+}
+
+
+public struct FfiConverterTypePipelineError: FfiConverterRustBuffer {
+    typealias SwiftType = PipelineError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PipelineError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .JsonParse(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .SpeechEngine(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .VoiceLoader(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .InvalidSpeed(
+            speed: try FfiConverterFloat.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PipelineError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .JsonParse(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .SpeechEngine(message):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .VoiceLoader(message):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .InvalidSpeed(speed):
+            writeInt(&buf, Int32(4))
+            FfiConverterFloat.write(speed, into: &buf)
+            
+        }
+    }
+}
+
+
+extension PipelineError: Equatable, Hashable {}
+
+extension PipelineError: Error { }
+
+
+public enum SpeechEngineError {
+
+    
+    
+    case Inference(message: String
+    )
+}
+
+
+public struct FfiConverterTypeSpeechEngineError: FfiConverterRustBuffer {
+    typealias SwiftType = SpeechEngineError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SpeechEngineError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Inference(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SpeechEngineError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Inference(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+extension SpeechEngineError: Equatable, Hashable {}
+
+extension SpeechEngineError: Error { }
+
+
 public enum VoiceLoaderError {
 
     
@@ -1705,9 +2360,9 @@ extension VoiceLoaderError: Error { }
 
 
 
-public protocol AudioSink : AnyObject {
+public protocol AudioChunkCallback : AnyObject {
     
-    func scheduleAudio(audio: [Float], sampleRate: UInt32) 
+    func onAudioChunk(chunk: [Float]) 
     
 }
 
@@ -1718,6 +2373,87 @@ private let IDX_CALLBACK_FREE: Int32 = 0
 private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
 private let UNIFFI_CALLBACK_ERROR: Int32 = 1
 private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceAudioChunkCallback {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceAudioChunkCallback = UniffiVTableCallbackInterfaceAudioChunkCallback(
+        onAudioChunk: { (
+            uniffiHandle: UInt64,
+            chunk: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceAudioChunkCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onAudioChunk(
+                     chunk: try FfiConverterSequenceFloat.lift(chunk)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterCallbackInterfaceAudioChunkCallback.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface AudioChunkCallback: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitAudioChunkCallback() {
+    uniffi_actor_fn_init_callback_vtable_audiochunkcallback(&UniffiCallbackInterfaceAudioChunkCallback.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceAudioChunkCallback {
+    fileprivate static var handleMap = UniffiHandleMap<AudioChunkCallback>()
+}
+
+extension FfiConverterCallbackInterfaceAudioChunkCallback : FfiConverter {
+    typealias SwiftType = AudioChunkCallback
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
+
+
+
+public protocol AudioSink : AnyObject {
+    
+    func scheduleAudio(audio: [Float], sampleRate: UInt32) 
+    
+}
+
+
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
 fileprivate struct UniffiCallbackInterfaceAudioSink {
@@ -1986,6 +2722,10 @@ public protocol ProsodiaSpeechEngine : AnyObject {
     
     func synthesize(input: PipelineOutput)  -> ActorEngineOutput
     
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    
+    func reclaimMemory() 
+    
 }
 
 
@@ -2014,6 +2754,61 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeActorEngineOutput.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        forward: { (
+            uniffiHandle: UInt64,
+            phonemeIds: RustBuffer,
+            style: RustBuffer,
+            speed: Float,
+            durationScales: RustBuffer,
+            f0Bias: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> ActorEngineOutput in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceProsodiaSpeechEngine.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.forward(
+                     phonemeIds: try FfiConverterSequenceInt32.lift(phonemeIds),
+                     style: try FfiConverterTypeStyleVector.lift(style),
+                     speed: try FfiConverterFloat.lift(speed),
+                     durationScales: try FfiConverterOptionSequenceFloat.lift(durationScales),
+                     f0Bias: try FfiConverterOptionSequenceFloat.lift(f0Bias)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeActorEngineOutput.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeSpeechEngineError.lower
+            )
+        },
+        reclaimMemory: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceProsodiaSpeechEngine.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.reclaimMemory(
+                )
+            }
+
+            
+            let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -2145,6 +2940,27 @@ extension FfiConverterCallbackInterfaceVoiceAssetProvider : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data?
 
@@ -2182,6 +2998,48 @@ fileprivate struct FfiConverterOptionTypeStyleVector: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeStyleVector.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionSequenceFloat: FfiConverterRustBuffer {
+    typealias SwiftType = [Float]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceFloat.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceFloat.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionSequenceTypeWordTimestamp: FfiConverterRustBuffer {
+    typealias SwiftType = [WordTimestamp]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeWordTimestamp.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeWordTimestamp.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -2429,6 +3287,72 @@ fileprivate struct FfiConverterSequenceTypeVoiceBlend: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterSequenceTypeWordTimestamp: FfiConverterRustBuffer {
+    typealias SwiftType = [WordTimestamp]
+
+    public static func write(_ value: [WordTimestamp], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeWordTimestamp.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [WordTimestamp] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [WordTimestamp]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeWordTimestamp.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceSequenceTypeMToken: FfiConverterRustBuffer {
+    typealias SwiftType = [[MToken]]
+
+    public static func write(_ value: [[MToken]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceTypeMToken.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[MToken]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[MToken]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceTypeMToken.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceSequenceTypeVoiceBlend: FfiConverterRustBuffer {
+    typealias SwiftType = [[VoiceBlend]]
+
+    public static func write(_ value: [[VoiceBlend]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceTypeVoiceBlend.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[VoiceBlend]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[VoiceBlend]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceTypeVoiceBlend.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterDictionaryStringInt32: FfiConverterRustBuffer {
     public static func write(_ value: [String: Int32], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -2589,22 +3513,70 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_func_slice_style_row() != 25705) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_basicg2pprocessor_process() != 40712) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_actor_checksum_method_defaultmodelassetmanager_load_style_anchor() != 51774) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_method_litertactorengine_forward() != 30289) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_litertactorengine_reclaim_memory() != 58102) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 29516) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory() != 18014) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_phonemes() != 36190) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_tokens() != 1827) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_prewarm() != 53097) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_process_span() != 45063) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_reclaim_memory() != 27753) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_set_custom_g2p() != 16438) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize() != 8917) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_markup() != 55743) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_stream() != 20628) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_stream_with_morph() != 46528) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_timestamps() != 61923) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_timestamps_blend() != 29930) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 46172) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaspeech_process() != 63471) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_method_voiceloader_clear_cache() != 15688) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_voiceloader_lerp() != 7853) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_voiceloader_load_blend() != 28062) {
@@ -2613,25 +3585,37 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_voiceloader_load_voice() != 57542) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_method_voiceloader_resolve_parametric_voice() != 57365) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_method_voiceloader_style_matrix() != 21299) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_voiceloader_style_vector() != 26532) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_constructor_basicg2pprocessor_new() != 12845) {
+    if (uniffi_actor_checksum_constructor_defaultmodelassetmanager_new() != 58783) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_constructor_defaultmodelassetmanager_new() != 58783) {
+    if (uniffi_actor_checksum_constructor_litertactorengine_new() != 30265) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_constructor_prosodiaactorengine_new() != 12372) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_constructor_prosodiaactorpipeline_new() != 5389) {
+    if (uniffi_actor_checksum_constructor_prosodiaactorpipeline_new() != 47120) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_constructor_prosodiaspeech_new() != 4811) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_constructor_prosodiaspeech_new_with_options() != 57737) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_constructor_voiceloader_new() != 14807) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_audiochunkcallback_on_audio_chunk() != 43882) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_audiosink_schedule_audio() != 177) {
@@ -2649,10 +3633,17 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 46314) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_method_voiceassetprovider_load_voice_bytes() != 32360) {
         return InitializationResult.apiChecksumMismatch
     }
 
+    uniffiCallbackInitAudioChunkCallback()
     uniffiCallbackInitAudioSink()
     uniffiCallbackInitModelAssetManager()
     uniffiCallbackInitProsodiaG2PProcessor()

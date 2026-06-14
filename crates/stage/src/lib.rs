@@ -7,6 +7,9 @@ pub mod prosody_payload;
 pub mod director_annotation;
 pub mod phrasing;
 pub mod coordinator;
+pub mod markup_parser;
+pub mod tokenizer;
+pub mod segmenter;
 
 pub use prosody::*;
 pub use acoustic_matrix::*;
@@ -15,3 +18,6 @@ pub use prosody_payload::*;
 pub use director_annotation::*;
 pub use phrasing::*;
 pub use coordinator::*;
+pub use markup_parser::*;
+pub use tokenizer::*;
+pub use segmenter::*;

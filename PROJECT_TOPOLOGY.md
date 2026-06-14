@@ -53,9 +53,7 @@ prosodia/ (Unified Repository Root)
 │   │       ├── Audio/           # Hand-coded native AVAudioEngine PCM loop streams
 │   │       ├── Director/        # Swift interface driving the LiteRT-LM Gemma 4 director
 │   │       ├── Actor/           # Swift interface driving the LiteRT StyleTTS2 actor
-│   │       ├── Stage/           # Swift coordinate coordinator (StageManager, interruption controllers)
-│   │       ├── Misaki/          # Localized TTS grapheme-to-phoneme engine helper
-│   │       └── ActorEspeak/     # Espeak-ng Swift wrapper integration
+│   │       └── Stage/           # Swift coordinate coordinator (StageManager, interruption controllers)
 │   │
 │   ├── android/
 │   │   ├── build.gradle.kts     # Native Android Gradle target configurations (NDK Gradle Package)
@@ -72,7 +70,7 @@ prosodia/ (Unified Repository Root)
 └── apps/                        # ==========================================
     │                            # APPLICATIONS LAYER: Production Client Interfaces
     │                            # ==========================================
-    ├── apple-reader/            # SwiftUI local-first book interface app (iOS/macOS target) (Penciled)
+    ├── apple-reader/            # SwiftUI local-first book interface app (iOS/macOS target) (Completed)
     │
     ├── android-reader/          # Jetpack Compose local-first application framework target (Penciled)
     │
