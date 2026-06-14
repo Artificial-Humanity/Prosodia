@@ -1,5 +1,6 @@
 import Foundation
 import Kit
+import Stage
 
 #if canImport(AppKit)
 import AppKit

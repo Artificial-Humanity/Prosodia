@@ -8,6 +8,12 @@ quick-xml = "0.27"
 html-escape = "0.2"
 regex = "1.10"
 uniffi = "0.27"
+thiserror = "1.0"
+miniz_oxide = "0.8"
+
+[dev-dependencies]
+# Used only by zip_reader tests to produce raw DEFLATE streams.
+flate2 = "1.0"
 
 [lib]
 crate-type = ["cdylib", "staticlib", "lib"]

@@ -1,5 +1,6 @@
 import Foundation
 import NaturalLanguage
+import Kit
 
 // MARK: - NarrationPosition
 
@@ -229,7 +230,7 @@ public actor StageInterruptionController {
         dispatchedSentences = []
         
         // Prepare sliced chapter stream for the director
-        let chapterStream = AsyncStream<String> { [weak self] continuation in
+        let chapterStream = AsyncStream(String.self) { [weak self] continuation in
             guard let self = self else {
                 continuation.finish()
                 return

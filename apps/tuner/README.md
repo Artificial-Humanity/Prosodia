@@ -17,7 +17,7 @@ The project contains the following components:
 - `ProsodiaTuner.xcodeproj`: The Xcode configuration project.
 - `ProsodiaTunerTests`: Unit tests for validating the harness.
 
-Both targets link the engine packages `ProsodiaStage` (our Stage Manager), `ProsodiaActor` (our Actor), and `ProsodiaDirector` (our Director).
+The app links the consolidated `platforms/apple` Swift package (`../../platforms/apple`), which exposes the `Stage` (Stage Manager), `Actor`, and `Director` engine modules.
 
 ---
 
@@ -27,13 +27,9 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 
 ```text
 /Models/
-├── Kokoro-82M-bf16/                   # Containing kokoro-v1_0.safetensors and voice style vectors
 ├── gemma-4-E2B-it.litertlm           # Gemma 4 E2B LiteRT-LM (Default Director model)
 ├── gemma-4-E4B-it.litertlm           # Gemma 4 E4B LiteRT-LM
-├── gemma-4-E2B-it-MLX-4bit/          # Gemma 4 E2B MLX directory
-├── gemma-4-E4B-it-MLX-4bit/          # Gemma 4 E4B MLX directory
-├── gemma-4-E2B-it-GGUF/              # Gemma 4 E2B GGUF directory (containing a .gguf)
-└── gemma-4-E4B-it-GGUF/              # Gemma 4 E4B GGUF directory (containing a .gguf)
+└── StyleTTS2FineTune/                # StyleTTS2 Actor weights & fine-tuning pipeline
 ```
 
 The speak functionality also checks for the fine-tuning checkpoint file in our harness at `StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.

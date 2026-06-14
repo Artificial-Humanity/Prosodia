@@ -1,4 +1,5 @@
 import Foundation
+import Kit
 
 // MARK: - BoundedChannel
 
@@ -98,8 +99,8 @@ actor BoundedChannel<T: Sendable> {
 /// ```swift
 /// let controller = await StageCoordinator.run(
 ///     document: document,
-///     director: MlxDirector(modelDirectory: modelURL),
-///     actor:    MlxVocalActor(modelPath: modelURL, voiceDirectory: voiceDir)
+///     director: LiteRtLmDirector(modelPath: modelURL),
+///     actor:    LiteRtActorEngine(modelPath: modelURL, configURL: configURL)
 /// )
 /// await controller.awaitFinished()
 /// ```

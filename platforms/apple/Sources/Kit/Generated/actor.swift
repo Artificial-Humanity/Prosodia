@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(prosodia_actorFFI)
-import prosodia_actorFFI
+#if canImport(actorFFI)
+import actorFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_prosodia_actor_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_actor_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_prosodia_actor_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_actor_rustbuffer_free(self, $0) }
     }
 }
 
@@ -506,12 +506,12 @@ open class BasicG2pProcessor:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_prosodia_actor_fn_clone_basicg2pprocessor(self.pointer, $0) }
+        return try! rustCall { uniffi_actor_fn_clone_basicg2pprocessor(self.pointer, $0) }
     }
 public convenience init() {
     let pointer =
         try! rustCall() {
-    uniffi_prosodia_actor_fn_constructor_basicg2pprocessor_new($0
+    uniffi_actor_fn_constructor_basicg2pprocessor_new($0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -522,7 +522,7 @@ public convenience init() {
             return
         }
 
-        try! rustCall { uniffi_prosodia_actor_fn_free_basicg2pprocessor(pointer, $0) }
+        try! rustCall { uniffi_actor_fn_free_basicg2pprocessor(pointer, $0) }
     }
 
     
@@ -530,7 +530,7 @@ public convenience init() {
     
 open func process(text: String) -> [MToken] {
     return try!  FfiConverterSequenceTypeMToken.lift(try! rustCall() {
-    uniffi_prosodia_actor_fn_method_basicg2pprocessor_process(self.uniffiClonePointer(),
+    uniffi_actor_fn_method_basicg2pprocessor_process(self.uniffiClonePointer(),
         FfiConverterString.lower(text),$0
     )
 })
@@ -618,12 +618,12 @@ open class DefaultModelAssetManager:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_prosodia_actor_fn_clone_defaultmodelassetmanager(self.pointer, $0) }
+        return try! rustCall { uniffi_actor_fn_clone_defaultmodelassetmanager(self.pointer, $0) }
     }
 public convenience init() {
     let pointer =
         try! rustCall() {
-    uniffi_prosodia_actor_fn_constructor_defaultmodelassetmanager_new($0
+    uniffi_actor_fn_constructor_defaultmodelassetmanager_new($0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -634,7 +634,7 @@ public convenience init() {
             return
         }
 
-        try! rustCall { uniffi_prosodia_actor_fn_free_defaultmodelassetmanager(pointer, $0) }
+        try! rustCall { uniffi_actor_fn_free_defaultmodelassetmanager(pointer, $0) }
     }
 
     
@@ -642,7 +642,7 @@ public convenience init() {
     
 open func loadStyleAnchor(voiceId: String) -> StyleVector? {
     return try!  FfiConverterOptionTypeStyleVector.lift(try! rustCall() {
-    uniffi_prosodia_actor_fn_method_defaultmodelassetmanager_load_style_anchor(self.uniffiClonePointer(),
+    uniffi_actor_fn_method_defaultmodelassetmanager_load_style_anchor(self.uniffiClonePointer(),
         FfiConverterString.lower(voiceId),$0
     )
 })
@@ -650,7 +650,7 @@ open func loadStyleAnchor(voiceId: String) -> StyleVector? {
     
 open func resolveCastingProfile(profile: CastingProfile) -> StyleVector {
     return try!  FfiConverterTypeStyleVector.lift(try! rustCall() {
-    uniffi_prosodia_actor_fn_method_defaultmodelassetmanager_resolve_casting_profile(self.uniffiClonePointer(),
+    uniffi_actor_fn_method_defaultmodelassetmanager_resolve_casting_profile(self.uniffiClonePointer(),
         FfiConverterTypeCastingProfile_lower(profile),$0
     )
 })
@@ -736,12 +736,12 @@ open class ProsodiaActorEngine:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_prosodia_actor_fn_clone_prosodiaactorengine(self.pointer, $0) }
+        return try! rustCall { uniffi_actor_fn_clone_prosodiaactorengine(self.pointer, $0) }
     }
 public convenience init(pipeline: ProsodiaActorPipeline, speechEngine: ProsodiaSpeechEngine) {
     let pointer =
         try! rustCall() {
-    uniffi_prosodia_actor_fn_constructor_prosodiaactorengine_new(
+    uniffi_actor_fn_constructor_prosodiaactorengine_new(
         FfiConverterTypeProsodiaActorPipeline.lower(pipeline),
         FfiConverterCallbackInterfaceProsodiaSpeechEngine.lower(speechEngine),$0
     )
@@ -754,7 +754,7 @@ public convenience init(pipeline: ProsodiaActorPipeline, speechEngine: ProsodiaS
             return
         }
 
-        try! rustCall { uniffi_prosodia_actor_fn_free_prosodiaactorengine(pointer, $0) }
+        try! rustCall { uniffi_actor_fn_free_prosodiaactorengine(pointer, $0) }
     }
 
     
@@ -762,7 +762,7 @@ public convenience init(pipeline: ProsodiaActorPipeline, speechEngine: ProsodiaS
     
 open func processAndSynthesize(span: ProsodySpan) -> ActorEngineOutput {
     return try!  FfiConverterTypeActorEngineOutput.lift(try! rustCall() {
-    uniffi_prosodia_actor_fn_method_prosodiaactorengine_process_and_synthesize(self.uniffiClonePointer(),
+    uniffi_actor_fn_method_prosodiaactorengine_process_and_synthesize(self.uniffiClonePointer(),
         FfiConverterTypeProsodySpan_lower(span),$0
     )
 })
@@ -848,12 +848,12 @@ open class ProsodiaActorPipeline:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_prosodia_actor_fn_clone_prosodiaactorpipeline(self.pointer, $0) }
+        return try! rustCall { uniffi_actor_fn_clone_prosodiaactorpipeline(self.pointer, $0) }
     }
 public convenience init(g2p: ProsodiaG2pProcessor, assetManager: ModelAssetManager) {
     let pointer =
         try! rustCall() {
-    uniffi_prosodia_actor_fn_constructor_prosodiaactorpipeline_new(
+    uniffi_actor_fn_constructor_prosodiaactorpipeline_new(
         FfiConverterCallbackInterfaceProsodiaG2pProcessor.lower(g2p),
         FfiConverterCallbackInterfaceModelAssetManager.lower(assetManager),$0
     )
@@ -866,7 +866,7 @@ public convenience init(g2p: ProsodiaG2pProcessor, assetManager: ModelAssetManag
             return
         }
 
-        try! rustCall { uniffi_prosodia_actor_fn_free_prosodiaactorpipeline(pointer, $0) }
+        try! rustCall { uniffi_actor_fn_free_prosodiaactorpipeline(pointer, $0) }
     }
 
     
@@ -874,7 +874,7 @@ public convenience init(g2p: ProsodiaG2pProcessor, assetManager: ModelAssetManag
     
 open func processSpan(span: ProsodySpan) -> PipelineOutput {
     return try!  FfiConverterTypePipelineOutput.lift(try! rustCall() {
-    uniffi_prosodia_actor_fn_method_prosodiaactorpipeline_process_span(self.uniffiClonePointer(),
+    uniffi_actor_fn_method_prosodiaactorpipeline_process_span(self.uniffiClonePointer(),
         FfiConverterTypeProsodySpan_lower(span),$0
     )
 })
@@ -1285,7 +1285,7 @@ fileprivate struct UniffiCallbackInterfaceAudioSink {
 }
 
 private func uniffiCallbackInitAudioSink() {
-    uniffi_prosodia_actor_fn_init_callback_vtable_audiosink(&UniffiCallbackInterfaceAudioSink.vtable)
+    uniffi_actor_fn_init_callback_vtable_audiosink(&UniffiCallbackInterfaceAudioSink.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1392,7 +1392,7 @@ fileprivate struct UniffiCallbackInterfaceModelAssetManager {
 }
 
 private func uniffiCallbackInitModelAssetManager() {
-    uniffi_prosodia_actor_fn_init_callback_vtable_modelassetmanager(&UniffiCallbackInterfaceModelAssetManager.vtable)
+    uniffi_actor_fn_init_callback_vtable_modelassetmanager(&UniffiCallbackInterfaceModelAssetManager.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1473,7 +1473,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaG2PProcessor {
 }
 
 private func uniffiCallbackInitProsodiaG2PProcessor() {
-    uniffi_prosodia_actor_fn_init_callback_vtable_prosodiag2pprocessor(&UniffiCallbackInterfaceProsodiaG2PProcessor.vtable)
+    uniffi_actor_fn_init_callback_vtable_prosodiag2pprocessor(&UniffiCallbackInterfaceProsodiaG2PProcessor.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1554,7 +1554,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
 }
 
 private func uniffiCallbackInitProsodiaSpeechEngine() {
-    uniffi_prosodia_actor_fn_init_callback_vtable_prosodiaspeechengine(&UniffiCallbackInterfaceProsodiaSpeechEngine.vtable)
+    uniffi_actor_fn_init_callback_vtable_prosodiaspeechengine(&UniffiCallbackInterfaceProsodiaSpeechEngine.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1730,50 +1730,50 @@ private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_prosodia_actor_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_actor_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_basicg2pprocessor_process() != 49429) {
+    if (uniffi_actor_checksum_method_basicg2pprocessor_process() != 40712) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_defaultmodelassetmanager_load_style_anchor() != 38539) {
+    if (uniffi_actor_checksum_method_defaultmodelassetmanager_load_style_anchor() != 51774) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 5738) {
+    if (uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 58795) {
+    if (uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 29516) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_prosodiaactorpipeline_process_span() != 17239) {
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_process_span() != 45063) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_constructor_basicg2pprocessor_new() != 5749) {
+    if (uniffi_actor_checksum_constructor_basicg2pprocessor_new() != 12845) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_constructor_defaultmodelassetmanager_new() != 32384) {
+    if (uniffi_actor_checksum_constructor_defaultmodelassetmanager_new() != 58783) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_constructor_prosodiaactorengine_new() != 61985) {
+    if (uniffi_actor_checksum_constructor_prosodiaactorengine_new() != 12372) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_constructor_prosodiaactorpipeline_new() != 28451) {
+    if (uniffi_actor_checksum_constructor_prosodiaactorpipeline_new() != 5389) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_audiosink_schedule_audio() != 54249) {
+    if (uniffi_actor_checksum_method_audiosink_schedule_audio() != 177) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_modelassetmanager_load_style_anchor() != 44694) {
+    if (uniffi_actor_checksum_method_modelassetmanager_load_style_anchor() != 35773) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_modelassetmanager_resolve_casting_profile() != 29409) {
+    if (uniffi_actor_checksum_method_modelassetmanager_resolve_casting_profile() != 2622) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_prosodiag2pprocessor_process() != 59100) {
+    if (uniffi_actor_checksum_method_prosodiag2pprocessor_process() != 45565) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_actor_checksum_method_prosodiaspeechengine_synthesize() != 31861) {
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579) {
         return InitializationResult.apiChecksumMismatch
     }
 

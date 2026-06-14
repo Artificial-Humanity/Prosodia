@@ -1,26 +1,7 @@
 import Foundation
-import ProsodiaSwiftCore
+import Kit
 
 // MARK: - Shared Value Types
-
-/// A lightweight handle to a book on disk. The engine resolves the concrete
-/// parser (txt / pdf / epub / mobi) from `fileURL` at ingestion time.
-public struct BookReference: Sendable, Equatable {
-    /// The unique identifier of the book.
-    public let id: UUID
-    /// The local file URL pointing to the book on disk.
-    public let fileURL: URL
-
-    /// Initializes a new BookReference.
-    ///
-    /// - Parameters:
-    ///   - id: The unique identifier (defaults to a random UUID).
-    ///   - fileURL: The local URL pointing to the file.
-    public init(id: UUID = UUID(), fileURL: URL) {
-        self.id = id
-        self.fileURL = fileURL
-    }
-}
 
 // MARK: - Playback Position Sync
 

@@ -1,5 +1,6 @@
 import Foundation
 import NaturalLanguage
+import Kit
 
 // MARK: - Sentence Segmenter
 

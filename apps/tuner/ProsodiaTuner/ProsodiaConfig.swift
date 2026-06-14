@@ -1,6 +1,6 @@
 import Foundation
 import Kit
-import Kit
+import Stage
 
 public struct ProsodiaConfig: Codable, Equatable, Sendable {
     public var expressiveness: Double = 3.25
@@ -44,10 +44,10 @@ public func applyConfigToStageAndActors(_ config: ProsodiaConfig) {
     
     PhrasePause.sentence = config.pauseSentence
     PhrasePause.clause = config.pauseClause
-    
-    MlxVoiceMatrix.blendSigma = config.blendSigma
-    MlxVoiceMatrix.blendMinimumFraction = config.blendMinimumFraction
-    MlxVoiceMatrix.blendProximityThreshold = config.blendProximityThreshold
+
+    // Voice-blend tuning (blendSigma / blendMinimumFraction / blendProximityThreshold)
+    // previously fed the removed MLX voice matrix. Rewire to the LiteRT StyleTTS2
+    // voice-blend path once it lands.
 }
 
 public final class ProsodiaConfigManager: @unchecked Sendable {

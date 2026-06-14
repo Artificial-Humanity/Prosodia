@@ -51,8 +51,8 @@ prosodia/ (Unified Repository Root)
 │   │   └── Sources/
 │   │       ├── Kit/             # Consolidated Swift API wrapping FFI generated code & FolioParser
 │   │       ├── Audio/           # Hand-coded native AVAudioEngine PCM loop streams
-│   │       ├── Director/        # Swift interface driving GGUF, MLX, and LiteRT-LM directors
-│   │       ├── Actor/           # Swift interface driving MLX, LiteRT, and GGUF actors
+│   │       ├── Director/        # Swift interface driving the LiteRT-LM Gemma 4 director
+│   │       ├── Actor/           # Swift interface driving the LiteRT StyleTTS2 actor
 │   │       ├── Stage/           # Swift coordinate coordinator (StageManager, interruption controllers)
 │   │       ├── Misaki/          # Localized TTS grapheme-to-phoneme engine helper
 │   │       └── ActorEspeak/     # Espeak-ng Swift wrapper integration

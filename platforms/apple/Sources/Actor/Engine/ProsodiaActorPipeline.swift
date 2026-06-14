@@ -63,7 +63,7 @@ public actor ProsodiaActorPipeline {
     }
 
     /// Pre-warms the synthesis engine by executing a silent, minimal inference pass.
-    /// This compiles Metal/GPU shaders (or initializes CoreML execution graphs) to eliminate cold-start latencies.
+    /// This warms up the LiteRT interpreter/delegates to eliminate cold-start latencies.
     public func prewarm(voice: String = "anchor_female_adult") async throws {
         _ = try await synthesize(text: "a", voice: voice)
     }
@@ -288,7 +288,7 @@ public actor ProsodiaActorPipeline {
     /// Accepts a style transition closure or array of custom style blends per chunk.
     public func synthesizeStreamWithMorph(
         text: String,
-        voiceBlends: [CastingProfile],
+        voiceBlends: [[CastingProfile]],
         speed: Float = 1.0
     ) -> AsyncStream<[Float]> {
         let (stream, continuation) = AsyncStream<[Float]>.makeStream()

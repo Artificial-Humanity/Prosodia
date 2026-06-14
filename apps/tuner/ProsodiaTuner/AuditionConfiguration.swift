@@ -6,7 +6,7 @@
 import Foundation
 import Observation
 import Kit
-import Kit
+import Stage
 
 // Harness directive:
 // Tune the models for their roles. The Director directs arbitrary prose; the Actor
@@ -77,9 +77,16 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         )
         return ProsodyAcoustics(
             speedMultiplier: speed,
+            speedBias: nil,
             gainMultiplier: volume,
+            gainBias: nil,
             castingProfile: cp,
-            pitch: pitch
+            speakerLock: nil,
+            pauseMultiplier: nil,
+            pronunciationOverride: nil,
+            pitch: pitch,
+            tokenDurationScales: nil,
+            tokenF0Biases: nil
         )
     }
 
@@ -87,37 +94,18 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         ProsodyDirective(emotion: emotion, acoustics: acoustics)
     }
 
-    static func from(_ preset: EmotionPreset, availableVoices: [String] = AuditionPresetStore.availableVoices) -> AuditionPreset {
-        let emotion = preset.vector
         return AuditionPreset(
             name: preset.rawValue.capitalized,
-            valence: emotion.valence,
-            arousal: emotion.arousal,
-            tension: emotion.tension,
-            speed: AcousticMatrix.speed(for: emotion),
-            volume: AcousticMatrix.gain(for: emotion),
+            valence: emotion.vector.valence,
+            arousal: emotion.vector.arousal,
+            tension: emotion.vector.tension,
+            speed: AcousticMatrix.speed(for: emotion.vector),
+            volume: AcousticMatrix.gain(for: emotion.vector),
             pitch: 0.0,
             ageProfile: 0.0,
             masculinity: 0.0,
             vocalEnergy: 1.0,
             strainOrRasp: 0.0
-        )
-        
-        // Adjust any rounding discrepancies to make the sum exactly 100%
-        if totalPercent > 0.0 && totalPercent != 100.0,
-           let largestIdx = voiceEntries.enumerated().max(by: { $0.element.percentage < $1.element.percentage })?.offset {
-            voiceEntries[largestIdx].percentage += (100.0 - totalPercent)
-        }
-
-        return AuditionPreset(
-            name: preset.rawValue.capitalized,
-            valence: emotion.valence,
-            arousal: emotion.arousal,
-            tension: emotion.tension,
-            speed: AcousticMatrix.speed(for: emotion),
-            volume: AcousticMatrix.gain(for: emotion),
-            pitch: 0.0,
-            voices: voiceEntries
         )
     }
 }
@@ -134,7 +122,7 @@ final class AuditionPresetStore {
                 let ext = file.pathExtension.lowercased()
                 if ext == "safetensors" || ext == "npy" {
                     let name = file.deletingPathExtension().lastPathComponent
-                    if name != "kokoro-v1_0" && name != "epochs_2nd" && !name.contains("epochs_") {
+                    if !name.contains("epochs_") {
                         voices.append(name)
                     }
                 }
@@ -261,7 +249,7 @@ enum EmotionSourceMode: String, CaseIterable, Identifiable, Sendable {
         case .preset:
             return "Load a preset and tweak it with sliders. Sliders adjust Valence/Arousal/Tension continuously without auto-saving to the preset database, or you can save adjustments as a new preset."
         case .director:
-            return "The Director model reads each sentence and dynamically guides the continuous emotional reading (VAD) block on the fly (supports MLX and LiteRT-LM backends)."
+            return "The Director model reads each sentence and dynamically guides the continuous emotional reading (VAD) block on the fly (Gemma 4 via LiteRT-LM)."
         }
     }
 }
@@ -274,7 +262,7 @@ final class AuditionConfiguration {
     var loadedPresetID: UUID?
     var globalConfig: ProsodiaConfig = ProsodiaConfigManager.shared.config
     var mlxBaseVoice: String? = nil
-    var mlxNarrationMode: NarrationMode = .solo
+    var mlxNarrationMode: Stage.NarrationMode = .solo
 
     init() {
         applyConfigToStageAndActors(ProsodiaConfigManager.shared.config)
@@ -298,12 +286,5 @@ final class AuditionConfiguration {
 
     var canUseMlx: Bool {
         emotionMode == .director
-    }
-
-     ?? AuditionPresetStore.availableVoices[0]
-        activePreset.voices.append(VoiceMixEntry(voice: voice, percentage: 0))
-    }
-
-    
     }
 }

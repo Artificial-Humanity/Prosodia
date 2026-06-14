@@ -1,6 +1,6 @@
 import Foundation
 import libespeak_ng
-import ProsodiaActor
+import Actor
 import Misaki
 
 public final class NativeEspeakG2PProcessor: ProsodiaG2PProcessor, @unchecked Sendable {

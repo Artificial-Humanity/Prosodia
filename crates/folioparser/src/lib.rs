@@ -1,5 +1,8 @@
 uniffi::setup_scaffolding!();
 
+mod zip_reader;
+use zip_reader::{ZipArchive, ZipReadError};
+
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use std::collections::{HashMap, HashSet};
@@ -694,3 +697,122 @@ impl EpubTextExtractor {
         html_escape::decode_html_entities(&final_result).into_owned()
     }
 }
+
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FolioParserError {
+    #[error("IO error: {message}")]
+    IoError { message: String },
+    #[error("Zip error: {message}")]
+    ZipError { message: String },
+    #[error("XML error: {message}")]
+    XmlError { message: String },
+    #[error("Missing container.xml")]
+    MissingContainer,
+    #[error("Missing OPF file: {path}")]
+    MissingOpf { path: String },
+    #[error("Chapter not found in archive: {path}")]
+    MissingChapter { path: String },
+}
+
+impl From<std::io::Error> for FolioParserError {
+    fn from(err: std::io::Error) -> Self {
+        FolioParserError::IoError { message: err.to_string() }
+    }
+}
+
+impl From<ZipReadError> for FolioParserError {
+    fn from(err: ZipReadError) -> Self {
+        match err {
+            ZipReadError::Io(e) => FolioParserError::IoError { message: e.to_string() },
+            other => FolioParserError::ZipError { message: other.to_string() },
+        }
+    }
+}
+
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct EpubChapter {
+    pub spine_index: i32,
+    pub title: Option<String>,
+    pub text: String,
+}
+
+#[uniffi::export]
+pub fn parse_epub(epub_path: String) -> Result<Vec<EpubChapter>, FolioParserError> {
+    let archive = ZipArchive::open(&epub_path)?;
+
+    // 1. Read META-INF/container.xml
+    let container_bytes = archive.by_name("META-INF/container.xml")?;
+    let container_xml = String::from_utf8_lossy(&container_bytes).into_owned();
+
+    // Parse container XML to find OPF path
+    let container = parse_container_xml(container_xml);
+    let opf_path = container.opf_path.ok_or(FolioParserError::MissingContainer)?;
+
+    // Determine base directory of OPF (everything before the last /)
+    let opf_dir = if let Some(idx) = opf_path.rfind('/') {
+        &opf_path[..idx]
+    } else {
+        ""
+    };
+
+    // 2. Read OPF file
+    let opf_bytes = archive
+        .by_name(&opf_path)
+        .map_err(|_| FolioParserError::MissingOpf { path: opf_path.clone() })?;
+    let opf_xml = String::from_utf8_lossy(&opf_bytes).into_owned();
+
+    // Parse OPF XML to resolve spine and hrefs
+    let opf = parse_opf_xml(opf_xml);
+
+    // 3. For each spine itemref, extract the text
+    let mut chapters = Vec::new();
+    let mut spine_index = 0;
+    let extractor = EpubTextExtractor::new();
+    let options = default_epub_text_extraction_options();
+
+    for itemref in opf.spine_item_refs {
+        if let Some(href) = opf.hrefs.get(&itemref) {
+            let relative_path = resolve_zip_path(opf_dir, href);
+
+            match archive.by_name(&relative_path) {
+                Ok(bytes) => {
+                    let xhtml = String::from_utf8_lossy(&bytes).into_owned();
+                    let text = extractor.extract_plain_text(xhtml, options.clone());
+                    chapters.push(EpubChapter {
+                        spine_index,
+                        title: None,
+                        text,
+                    });
+                    spine_index += 1;
+                }
+                Err(_) => {
+                    return Err(FolioParserError::MissingChapter { path: relative_path });
+                }
+            }
+        }
+    }
+
+    Ok(chapters)
+}
+
+fn resolve_zip_path(base_dir: &str, relative_path: &str) -> String {
+    let mut parts: Vec<&str> = if base_dir.is_empty() {
+        Vec::new()
+    } else {
+        base_dir.split('/').collect()
+    };
+    
+    for part in relative_path.split('/') {
+        if part == "." || part.is_empty() {
+            continue;
+        }
+        if part == ".." {
+            parts.pop();
+        } else {
+            parts.push(part);
+        }
+    }
+    
+    parts.join("/")
+}
+

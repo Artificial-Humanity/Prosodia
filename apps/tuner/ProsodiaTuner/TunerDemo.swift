@@ -8,9 +8,6 @@
 import Foundation
 import Observation
 import Kit
-#if canImport(MLX)
-import MLX
-#endif
 
 // MARK: - ProductionRunner
 
@@ -78,9 +75,6 @@ final class ProductionRunner {
             cachedDirectorEmotionMode = nil
             cachedDirectorNarrationMode = nil
         }
-        #if canImport(MLX)
-        MLX.Memory.clearCache()
-        #endif
     }
 
     func reclaimMemory() async {
@@ -89,9 +83,6 @@ final class ProductionRunner {
             await actor.reclaimMemory()
             cachedActor = nil
         }
-        #if canImport(MLX)
-        MLX.Memory.clearCache()
-        #endif
     }
 
     /// Refreshes segment metadata (VAD, speed, voice blend) using the stub Actor.
@@ -137,35 +128,18 @@ final class ProductionRunner {
     nonisolated static var mlxModelFile: URL { mlxDirectory.appendingPathComponent("StyleTTS2/Models/LibriTTS/epochs_2nd.pth") }
 
     nonisolated static var resolvedModelPath: URL {
-        if FileManager.default.fileExists(atPath: mlxModelFile.path) {
-            return mlxModelFile
-        }
-        let coreMlDir = modelsBase.appendingPathComponent("CoreML")
-        let coreMlModel = coreMlDir.appendingPathComponent("kokoro_5s.mlmodelc")
-        if FileManager.default.fileExists(atPath: coreMlModel.path) {
-            return coreMlDir
-        }
-        return mlxModelFile
+        mlxModelFile
     }
 
     nonisolated static var resolvedVoiceDirectory: URL {
-        if FileManager.default.fileExists(atPath: mlxModelFile.path) {
-            return mlxDirectory
-        }
-        let coreMlDir = modelsBase.appendingPathComponent("CoreML")
-        let coreMlModel = coreMlDir.appendingPathComponent("kokoro_5s.mlmodelc")
-        if FileManager.default.fileExists(atPath: coreMlModel.path) {
-            return coreMlDir
-        }
-        return mlxDirectory
+        mlxDirectory
     }
 
     var canSpeak: Bool {
-        FileManager.default.fileExists(atPath: Self.mlxModelFile.path) ||
-        FileManager.default.fileExists(atPath: Self.modelsBase.appendingPathComponent("CoreML/kokoro_5s.mlmodelc").path)
+        FileManager.default.fileExists(atPath: Self.mlxModelFile.path)
     }
 
-    /// Synthesizes sample sentences with the configured Director and MLX Actor.
+    /// Synthesizes sample sentences with the configured Director and Actor.
     func speak(config: AuditionConfiguration, model: DirectorModel?) async {
         guard !isSpeaking, canSpeak else { return }
         if config.canUseMlx {
@@ -250,7 +224,7 @@ struct DirectorModel: Codable, Identifiable, Hashable, Sendable {
 
     var isAvailable: Bool {
         let ext = directory.pathExtension
-        let isFile = ext == "litertlm" || ext == "gguf" || path.hasSuffix(".litertlm") || path.hasSuffix(".gguf")
+        let isFile = ext == "litertlm" || path.hasSuffix(".litertlm")
         if isFile {
             return FileManager.default.fileExists(atPath: path)
         }
@@ -319,32 +293,14 @@ final class DirectorModelStore {
     private func seedDefaults() {
         let base = ProductionRunner.modelsBase
         
-        // Seed LiteRT-LM Defaults (Gemma 4 E2B LiteRT-LM is now first/default)
+        // Seed LiteRT-LM defaults: Gemma 4 (E2B is first/default), the only director backend.
         for file in ["gemma-4-E2B-it.litertlm", "gemma-4-E4B-it.litertlm"] {
             let url = base.appendingPathComponent(file)
             if FileManager.default.fileExists(atPath: url.path) {
                 models.append(DirectorModel(name: file, path: url.path))
             }
         }
-        
-        // Seed MLX Defaults
-        for dir in ["gemma-4-e2b-it-4bit", "gemma-4-e4b-it-4bit"] {
-            let url = base.appendingPathComponent(dir)
-            if FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path) {
-                models.append(DirectorModel(name: dir, path: url.path))
-            }
-        }
-        
-        // Seed GGUF Defaults
-        for dir in ["gemma-4-E2B-it-GGUF", "gemma-4-E4B-it-GGUF"] {
-            let url = base.appendingPathComponent(dir)
-            if let contents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
-                if let ggufFile = contents.first(where: { $0.pathExtension == "gguf" && !$0.lastPathComponent.hasPrefix("mmproj") }) {
-                    models.append(DirectorModel(name: dir, path: ggufFile.path))
-                }
-            }
-        }
-        
+
         if !models.isEmpty { save() }
     }
 

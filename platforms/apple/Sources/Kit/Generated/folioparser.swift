@@ -381,6 +381,19 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
+    typealias FfiType = Int32
+    typealias SwiftType = Int32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -678,6 +691,71 @@ public func FfiConverterTypeEpub3NavParser_lower(_ value: Epub3NavParser) -> Rus
 }
 
 
+public struct EpubChapter {
+    public var spineIndex: Int32
+    public var title: String?
+    public var text: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(spineIndex: Int32, title: String?, text: String) {
+        self.spineIndex = spineIndex
+        self.title = title
+        self.text = text
+    }
+}
+
+
+
+extension EpubChapter: Equatable, Hashable {
+    public static func ==(lhs: EpubChapter, rhs: EpubChapter) -> Bool {
+        if lhs.spineIndex != rhs.spineIndex {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(spineIndex)
+        hasher.combine(title)
+        hasher.combine(text)
+    }
+}
+
+
+public struct FfiConverterTypeEpubChapter: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EpubChapter {
+        return
+            try EpubChapter(
+                spineIndex: FfiConverterInt32.read(from: &buf), 
+                title: FfiConverterOptionString.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EpubChapter, into buf: inout [UInt8]) {
+        FfiConverterInt32.write(value.spineIndex, into: &buf)
+        FfiConverterOptionString.write(value.title, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeEpubChapter_lift(_ buf: RustBuffer) throws -> EpubChapter {
+    return try FfiConverterTypeEpubChapter.lift(buf)
+}
+
+public func FfiConverterTypeEpubChapter_lower(_ value: EpubChapter) -> RustBuffer {
+    return FfiConverterTypeEpubChapter.lower(value)
+}
+
+
 public struct EpubTextExtractionOptions {
     public var ignoredTags: [String]
     public var ignoredClasses: [String]
@@ -960,6 +1038,100 @@ public func FfiConverterTypeTocEntry_lower(_ value: TocEntry) -> RustBuffer {
     return FfiConverterTypeTocEntry.lower(value)
 }
 
+
+public enum FolioParserError {
+
+    
+    
+    case IoError(message: String
+    )
+    case ZipError(message: String
+    )
+    case XmlError(message: String
+    )
+    case MissingContainer
+    case MissingOpf(path: String
+    )
+    case MissingChapter(path: String
+    )
+}
+
+
+public struct FfiConverterTypeFolioParserError: FfiConverterRustBuffer {
+    typealias SwiftType = FolioParserError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FolioParserError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .IoError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .ZipError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .XmlError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .MissingContainer
+        case 5: return .MissingOpf(
+            path: try FfiConverterString.read(from: &buf)
+            )
+        case 6: return .MissingChapter(
+            path: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FolioParserError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .IoError(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .ZipError(message):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .XmlError(message):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case .MissingContainer:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .MissingOpf(path):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(path, into: &buf)
+            
+        
+        case let .MissingChapter(path):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(path, into: &buf)
+            
+        }
+    }
+}
+
+
+extension FolioParserError: Equatable, Hashable {}
+
+extension FolioParserError: Error { }
+
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -998,6 +1170,28 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeEpubChapter: FfiConverterRustBuffer {
+    typealias SwiftType = [EpubChapter]
+
+    public static func write(_ value: [EpubChapter], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEpubChapter.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EpubChapter] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EpubChapter]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEpubChapter.read(from: &buf))
         }
         return seq
     }
@@ -1060,6 +1254,13 @@ public func parseContainerXml(xml: String) -> ContainerXmlParser {
     )
 })
 }
+public func parseEpub(epubPath: String)throws  -> [EpubChapter] {
+    return try  FfiConverterSequenceTypeEpubChapter.lift(try rustCallWithError(FfiConverterTypeFolioParserError.lift) {
+    uniffi_folioparser_fn_func_parse_epub(
+        FfiConverterString.lower(epubPath),$0
+    )
+})
+}
 public func parseEpub2Ncx(xml: String) -> Epub2NcxParser {
     return try!  FfiConverterTypeEpub2NcxParser.lift(try! rustCall() {
     uniffi_folioparser_fn_func_parse_epub2_ncx(
@@ -1101,6 +1302,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_folioparser_checksum_func_parse_container_xml() != 21554) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_folioparser_checksum_func_parse_epub() != 62093) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_folioparser_checksum_func_parse_epub2_ncx() != 51162) {

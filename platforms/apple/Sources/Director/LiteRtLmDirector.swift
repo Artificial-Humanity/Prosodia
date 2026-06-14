@@ -1,7 +1,7 @@
 import Foundation
 import os
 @preconcurrency import LiteRTLM
-import ProsodiaStage
+import Stage
 
 /// A ``DirectorInference`` backed by a LiteRT-LM model (e.g. Gemma 4 E2B-IT or E4B-IT).
 ///

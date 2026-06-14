@@ -16,11 +16,7 @@ let package = Package(
         .library(name: "ActorEspeak", targets: ["ActorEspeak"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ml-explore/mlx-swift", revision: "dc43e62d7055353c7f99fa071a4e71d29dfddc44"),
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm", revision: "ee5320ddcf8cdc2765165e0350b1f9a76362a24a"),
-        .package(url: "https://github.com/huggingface/swift-transformers", revision: "50843f91d5563ae2f448eaf1756f148f5a291f6e"),
         .package(name: "espeak-ng", path: "./Vendor/espeak-ng-spm"),
-        .package(url: "https://github.com/weichsel/ZIPFoundation", from: "0.9.0"),
         .package(url: "https://github.com/google-ai-edge/LiteRT-LM", branch: "main")
     ],
     targets: [
@@ -68,8 +64,7 @@ let package = Package(
         .target(
             name: "Stage",
             dependencies: [
-                "Kit",
-                .product(name: "ZIPFoundation", package: "ZIPFoundation")
+                "Kit"
             ],
             path: "Sources/Stage"
         ),
@@ -78,11 +73,6 @@ let package = Package(
             dependencies: [
                 "Stage",
                 "Kit",
-                .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXLLM", package: "mlx-swift-lm"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-                .product(name: "MLXEmbedders", package: "mlx-swift-lm"),
-                .product(name: "Tokenizers", package: "swift-transformers"),
                 .product(name: "LiteRTLM", package: "LiteRT-LM")
             ],
             path: "Sources/Director"
@@ -94,9 +84,6 @@ let package = Package(
                 "Kit",
                 "Misaki",
                 "Audio",
-                .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXFast", package: "mlx-swift"),
-                .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "LiteRTLM", package: "LiteRT-LM")
             ],
             path: "Sources/Actor"

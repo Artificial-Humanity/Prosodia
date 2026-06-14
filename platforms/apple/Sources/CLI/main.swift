@@ -1,9 +1,5 @@
 import Foundation
-import ProsodiaActor
-
-#if canImport(MLX)
-import MLX
-#endif
+import Actor
 
 @main
 struct ProsodiaCLI {
@@ -20,8 +16,7 @@ struct ProsodiaCLI {
         var outputPath = "output.wav"
         var modelsPath = "StyleTTS2FineTune"
         var speed: Float = 1.0
-        var backendStr = "coreml"
-        
+
         var i = 1
         while i < args.count {
             let arg = args[i]
@@ -66,14 +61,6 @@ struct ProsodiaCLI {
                     print("Error: Invalid or missing value for --speed")
                     return
                 }
-            case "--backend", "-b":
-                if i + 1 < args.count {
-                    backendStr = args[i + 1].lowercased()
-                    i += 2
-                } else {
-                    print("Error: Missing value for --backend")
-                    return
-                }
             default:
                 print("Error: Unknown argument: \(arg)")
                 printHelp()
@@ -90,29 +77,16 @@ struct ProsodiaCLI {
         
         print("Initializing Prosodia speech synthesis engine...")
         print("Models directory: \(modelsDir.path)")
-        print("Backend selected: \(backendStr.uppercased())")
+        print("Backend: LiteRT (StyleTTS2)")
         print("Voice selected: \(voice)")
         print("Text to synthesize: \"\(textToSynthesize)\"")
-        
+
         do {
-            let backend: any ProsodiaActorBackend
-            
-            if backendStr == "mlx" {
-                #if canImport(MLX)
-                let configURL = modelsDir.appendingPathComponent("config.json")
-                let weightsURL = modelsDir.appendingPathComponent("StyleTTS2/Models/LibriTTS/epochs_2nd.pth")
-                backend = try ProsodiaActorEngine(configURL: configURL, weightsURL: weightsURL)
-                #else
-                print("Error: MLX backend is not compiled or supported on this architecture/build configuration.")
-                return
-                #endif
-            } else if backendStr == "coreml" {
-                backend = try CoreMlProsodiaActorEngine(modelsDirectory: modelsDir)
-            } else {
-                print("Error: Invalid backend '\(backendStr)'. Must be either 'coreml' or 'mlx'.")
-                return
-            }
-            
+            // The only supported actor backend: StyleTTS2 via LiteRT.
+            let modelURL = modelsDir.appendingPathComponent("styletts2_lite.tflite")
+            let configURL = modelsDir.appendingPathComponent("config.json")
+            let backend: any ProsodiaActorBackend = try LiteRtActorEngine(modelPath: modelURL, configURL: configURL)
+
             let loader = VoiceLoader(baseDirectory: modelsDir)
             let pipeline = ProsodiaActorPipeline(engine: backend, voices: loader)
             
@@ -142,7 +116,6 @@ struct ProsodiaCLI {
           -m, --models <path>     [Optional] Path to the directory containing weights and configs. (Default: StyleTTS2FineTune)
           -v, --voice <name>      [Optional] Converted voice pack name or voice blend string. (Default: narrator)
           -s, --speed <float>     [Optional] Speed multiplier for synthesis rate. (Default: 1.0)
-          -b, --backend <name>    [Optional] Synthesis backend to use: 'coreml' or 'mlx'. (Default: coreml)
           -h, --help              Show this help menu.
         """)
     }

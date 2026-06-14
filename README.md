@@ -40,7 +40,7 @@ cargo build --release
 
 ### Run the Rehearsal workbench
 1. Make sure you have models populated in the `/Models` directory.
-2. Open `apps/tuner/Tuner.xcodeproj` in Xcode.
+2. Open `apps/tuner/ProsodiaTuner.xcodeproj` in Xcode.
 3. Select the `Tuner` scheme, hit **Run**, and start playing with the VAD sliders! 🎛️
 
 ---

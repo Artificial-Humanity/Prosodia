@@ -73,22 +73,24 @@ Rules:
 - Output ONLY the blocks and phrases — no commentary, labels, or extra words.
 - In Full Cast Mode, apply the `LK:` tag to character quotes, and use no voice lock for regular prose (which defaults to the narrator)."#;
 
+/// The on-device director, driven by Gemma 4 via the LiteRT-LM runtime.
+///
+/// This is the only supported director backend: a Gemma 4 instruct model
+/// (`.litertlm`) executed through LiteRT-LM.
 #[derive(uniffi::Object)]
-pub struct GgufDirector {
+pub struct GemmaDirector {
     model_path: String,
-    gpu_layers: i32,
     context_tokens: i32,
     narration_mode: Mutex<NarrationMode>,
     prior_passages: Mutex<Vec<String>>,
 }
 
 #[uniffi::export]
-impl GgufDirector {
+impl GemmaDirector {
     #[uniffi::constructor]
-    pub fn new(model_path: String, gpu_layers: i32, context_tokens: i32, narration_mode: NarrationMode) -> Arc<Self> {
+    pub fn new(model_path: String, context_tokens: i32, narration_mode: NarrationMode) -> Arc<Self> {
         Arc::new(Self {
             model_path,
-            gpu_layers,
             context_tokens,
             narration_mode: Mutex::new(narration_mode),
             prior_passages: Mutex::new(Vec::new()),

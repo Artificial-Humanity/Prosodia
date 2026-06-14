@@ -8,8 +8,8 @@ import AVFoundation
 ///
 /// Owns the engine and a single player node, started lazily on the first
 /// scheduled buffer, and queues mono `Float` PCM buffers sequentially (no
-/// `.interrupts`) so segments play gapless. Any ``VocalActor`` — an MLX Actor,
-/// a GGUF Actor engine, … — schedules its synthesized samples through this sink, so
+/// `.interrupts`) so segments play gapless. Any ``VocalActor`` — e.g. the LiteRT
+/// StyleTTS2 actor — schedules its synthesized samples through this sink, so
 /// the transport and scheduling plumbing lives in one place rather than being
 /// duplicated per engine.
 public actor StageAudioSink {

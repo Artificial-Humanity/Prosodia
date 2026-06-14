@@ -13,6 +13,12 @@ pub fn trimming_silence(samples: &[f32], threshold: f32) -> Vec<f32> {
     }
 }
 
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PhrasePauseConfig {
+    pub sentence: f64,
+    pub clause: f64,
+}
+
 pub struct PhrasePauseState {
     pub sentence: f64,
     pub clause: f64,
@@ -24,6 +30,22 @@ pub static PHRASE_PAUSE: Lazy<RwLock<PhrasePauseState>> = Lazy::new(|| {
         clause: 0.14,
     })
 });
+
+#[uniffi::export]
+pub fn get_phrase_pause() -> PhrasePauseConfig {
+    let state = PHRASE_PAUSE.read().unwrap();
+    PhrasePauseConfig {
+        sentence: state.sentence,
+        clause: state.clause,
+    }
+}
+
+#[uniffi::export]
+pub fn set_phrase_pause(config: PhrasePauseConfig) {
+    let mut state = PHRASE_PAUSE.write().unwrap();
+    state.sentence = config.sentence;
+    state.clause = config.clause;
+}
 
 #[uniffi::export]
 pub fn pause_after(text: &str) -> f64 {

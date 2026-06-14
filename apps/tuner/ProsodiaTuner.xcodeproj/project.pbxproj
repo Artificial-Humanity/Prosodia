@@ -7,11 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC11111111111111111111C3 /* Stage in Frameworks */ = {isa = PBXBuildFile; productRef = CC11111111111111111111C2 /* Stage */; };
-		CC11111111111111111111C5 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = CC11111111111111111111C4 /* MLX */; };
-		RD22222222222222222222B3 /* Director in Frameworks */ = {isa = PBXBuildFile; productRef = RD22222222222222222222B2 /* Director */; };
-		SP22222222222222222222C3 /* Actor in Frameworks */ = {isa = PBXBuildFile; productRef = SP22222222222222222222C2 /* Actor */; };
+		AC11111111111111111111B3 /* Actor in Frameworks */ = {isa = PBXBuildFile; productRef = AC11111111111111111111A2 /* Actor */; };
+		CC11111111111111111111D1 /* Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 5FBE0BD7F4E5599569177E04 /* Kit */; };
+		DR11111111111111111111B3 /* Director in Frameworks */ = {isa = PBXBuildFile; productRef = DR11111111111111111111D2 /* Director */; };
+		MS11111111111111111111M3 /* Misaki in Frameworks */ = {isa = PBXBuildFile; productRef = MS11111111111111111111M2 /* Misaki */; };
 		SP22222222222222222222E3 /* ActorEspeak in Frameworks */ = {isa = PBXBuildFile; productRef = SP22222222222222222222E2 /* ActorEspeak */; };
+		ST11111111111111111111B3 /* Stage in Frameworks */ = {isa = PBXBuildFile; productRef = ST11111111111111111111S2 /* Stage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,11 +34,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CC11111111111111111111C3 /* Stage in Frameworks */,
-				CC11111111111111111111C5 /* MLX in Frameworks */,
-				RD22222222222222222222B3 /* Director in Frameworks */,
-				SP22222222222222222222C3 /* Actor in Frameworks */,
+				AC11111111111111111111B3 /* Actor in Frameworks */,
+				CC11111111111111111111D1 /* Kit in Frameworks */,
+				DR11111111111111111111B3 /* Director in Frameworks */,
+				MS11111111111111111111M3 /* Misaki in Frameworks */,
 				SP22222222222222222222E3 /* ActorEspeak in Frameworks */,
+				ST11111111111111111111B3 /* Stage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +83,12 @@
 			);
 			name = ProsodiaTuner;
 			packageProductDependencies = (
-				5FBE0BD7F4E5599569177E04 /* ProsodiaSwiftCore */,
+				AC11111111111111111111A2 /* Actor */,
+				DR11111111111111111111D2 /* Director */,
+				5FBE0BD7F4E5599569177E04 /* Kit */,
+				MS11111111111111111111M2 /* Misaki */,
+				SP22222222222222222222E2 /* ActorEspeak */,
+				ST11111111111111111111S2 /* Stage */,
 			);
 			productName = ProsodiaTuner;
 			productReference = CC11111111111111111111C0 /* ProsodiaTuner.app */;
@@ -112,7 +119,6 @@
 			mainGroup = ADFDEEE12FCB867E0024875D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				BB11111111111111111111B1 /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -384,47 +390,36 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		BB11111111111111111111B1 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ml-explore/mlx-swift";
-			requirement = {
-				kind = revision;
-				revision = dc43e62d7055353c7f99fa071a4e71d29dfddc44;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
+		AC11111111111111111111A2 /* Actor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
+			productName = Actor;
+		};
+		DR11111111111111111111D2 /* Director */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
+			productName = Director;
+		};
 		5FBE0BD7F4E5599569177E04 /* Kit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
 			productName = Kit;
 		};
-		CC11111111111111111111C2 /* Stage */ = {
+		MS11111111111111111111M2 /* Misaki */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
-			productName = Stage;
-		};
-		CC11111111111111111111C4 /* MLX */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = BB11111111111111111111B1 /* XCRemoteSwiftPackageReference "mlx-swift" */;
-			productName = MLX;
-		};
-		RD22222222222222222222B2 /* Director */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
-			productName = Director;
-		};
-		SP22222222222222222222C2 /* Actor */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
-			productName = Actor;
+			productName = Misaki;
 		};
 		SP22222222222222222222E2 /* ActorEspeak */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
 			productName = ActorEspeak;
+		};
+		ST11111111111111111111S2 /* Stage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6B62671761023171BC360D47 /* XCLocalSwiftPackageReference "ApplePlatform" */;
+			productName = Stage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

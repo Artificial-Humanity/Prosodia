@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(prosodia_directorFFI)
-import prosodia_directorFFI
+#if canImport(directorFFI)
+import directorFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_prosodia_director_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_director_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_prosodia_director_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_director_rustbuffer_free(self, $0) }
     }
 }
 
@@ -435,7 +435,13 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 
 
-public protocol GgufDirectorProtocol : AnyObject {
+/**
+ * The on-device director, driven by Gemma 4 via the LiteRT-LM runtime.
+ *
+ * This is the only supported director backend: a Gemma 4 instruct model
+ * (`.litertlm`) executed through LiteRT-LM.
+ */
+public protocol GemmaDirectorProtocol : AnyObject {
     
     func reclaimMemory() 
     
@@ -445,8 +451,14 @@ public protocol GgufDirectorProtocol : AnyObject {
     
 }
 
-open class GgufDirector:
-    GgufDirectorProtocol {
+/**
+ * The on-device director, driven by Gemma 4 via the LiteRT-LM runtime.
+ *
+ * This is the only supported director backend: a Gemma 4 instruct model
+ * (`.litertlm`) executed through LiteRT-LM.
+ */
+open class GemmaDirector:
+    GemmaDirectorProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -471,14 +483,13 @@ open class GgufDirector:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_prosodia_director_fn_clone_ggufdirector(self.pointer, $0) }
+        return try! rustCall { uniffi_director_fn_clone_gemmadirector(self.pointer, $0) }
     }
-public convenience init(modelPath: String, gpuLayers: Int32, contextTokens: Int32, narrationMode: NarrationMode) {
+public convenience init(modelPath: String, contextTokens: Int32, narrationMode: NarrationMode) {
     let pointer =
         try! rustCall() {
-    uniffi_prosodia_director_fn_constructor_ggufdirector_new(
+    uniffi_director_fn_constructor_gemmadirector_new(
         FfiConverterString.lower(modelPath),
-        FfiConverterInt32.lower(gpuLayers),
         FfiConverterInt32.lower(contextTokens),
         FfiConverterTypeNarrationMode.lower(narrationMode),$0
     )
@@ -491,20 +502,20 @@ public convenience init(modelPath: String, gpuLayers: Int32, contextTokens: Int3
             return
         }
 
-        try! rustCall { uniffi_prosodia_director_fn_free_ggufdirector(pointer, $0) }
+        try! rustCall { uniffi_director_fn_free_gemmadirector(pointer, $0) }
     }
 
     
 
     
 open func reclaimMemory() {try! rustCall() {
-    uniffi_prosodia_director_fn_method_ggufdirector_reclaim_memory(self.uniffiClonePointer(),$0
+    uniffi_director_fn_method_gemmadirector_reclaim_memory(self.uniffiClonePointer(),$0
     )
 }
 }
     
 open func setNarrationMode(mode: NarrationMode) {try! rustCall() {
-    uniffi_prosodia_director_fn_method_ggufdirector_set_narration_mode(self.uniffiClonePointer(),
+    uniffi_director_fn_method_gemmadirector_set_narration_mode(self.uniffiClonePointer(),
         FfiConverterTypeNarrationMode.lower(mode),$0
     )
 }
@@ -514,14 +525,14 @@ open func tagPassage(passage: String)async  -> String {
     return
         try!  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_prosodia_director_fn_method_ggufdirector_tag_passage(
+                uniffi_director_fn_method_gemmadirector_tag_passage(
                     self.uniffiClonePointer(),
                     FfiConverterString.lower(passage)
                 )
             },
-            pollFunc: ffi_prosodia_director_rust_future_poll_rust_buffer,
-            completeFunc: ffi_prosodia_director_rust_future_complete_rust_buffer,
-            freeFunc: ffi_prosodia_director_rust_future_free_rust_buffer,
+            pollFunc: ffi_director_rust_future_poll_rust_buffer,
+            completeFunc: ffi_director_rust_future_complete_rust_buffer,
+            freeFunc: ffi_director_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: nil
             
@@ -531,20 +542,20 @@ open func tagPassage(passage: String)async  -> String {
 
 }
 
-public struct FfiConverterTypeGgufDirector: FfiConverter {
+public struct FfiConverterTypeGemmaDirector: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = GgufDirector
+    typealias SwiftType = GemmaDirector
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> GgufDirector {
-        return GgufDirector(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> GemmaDirector {
+        return GemmaDirector(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: GgufDirector) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: GemmaDirector) -> UnsafeMutableRawPointer {
         return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GgufDirector {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GemmaDirector {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -555,7 +566,7 @@ public struct FfiConverterTypeGgufDirector: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: GgufDirector, into buf: inout [UInt8]) {
+    public static func write(_ value: GemmaDirector, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -565,12 +576,12 @@ public struct FfiConverterTypeGgufDirector: FfiConverter {
 
 
 
-public func FfiConverterTypeGgufDirector_lift(_ pointer: UnsafeMutableRawPointer) throws -> GgufDirector {
-    return try FfiConverterTypeGgufDirector.lift(pointer)
+public func FfiConverterTypeGemmaDirector_lift(_ pointer: UnsafeMutableRawPointer) throws -> GemmaDirector {
+    return try FfiConverterTypeGemmaDirector.lift(pointer)
 }
 
-public func FfiConverterTypeGgufDirector_lower(_ value: GgufDirector) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeGgufDirector.lower(value)
+public func FfiConverterTypeGemmaDirector_lower(_ value: GemmaDirector) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeGemmaDirector.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -675,7 +686,7 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
 }
 public func directorSystemPrompt() -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_prosodia_director_fn_func_director_system_prompt($0
+    uniffi_director_fn_func_director_system_prompt($0
     )
 })
 }
@@ -691,23 +702,23 @@ private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_prosodia_director_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_director_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_prosodia_director_checksum_func_director_system_prompt() != 4489) {
+    if (uniffi_director_checksum_func_director_system_prompt() != 26478) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_director_checksum_method_ggufdirector_reclaim_memory() != 37536) {
+    if (uniffi_director_checksum_method_gemmadirector_reclaim_memory() != 63803) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_director_checksum_method_ggufdirector_set_narration_mode() != 30648) {
+    if (uniffi_director_checksum_method_gemmadirector_set_narration_mode() != 59994) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_director_checksum_method_ggufdirector_tag_passage() != 30703) {
+    if (uniffi_director_checksum_method_gemmadirector_tag_passage() != 8392) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_director_checksum_constructor_ggufdirector_new() != 55028) {
+    if (uniffi_director_checksum_constructor_gemmadirector_new() != 15354) {
         return InitializationResult.apiChecksumMismatch
     }
 

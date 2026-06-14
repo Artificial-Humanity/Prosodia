@@ -7,7 +7,8 @@ import SwiftUI
 import Misaki
 import ActorEspeak
 import Kit
-import Kit
+import Actor
+import Director
 
 @main
 struct ProsodiaTunerApp: App {

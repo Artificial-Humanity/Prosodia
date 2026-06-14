@@ -6,7 +6,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import Kit
-import Kit
+import Stage
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -30,11 +30,11 @@ struct TunerContentView: View {
         if runner.canSpeak {
             if config.canUseMlx {
                 let name = store.selected?.displayName ?? "add a Director model below"
-                return "Preview = metadata only. Speak = MLX Actor audio via \(name)."
+                return "Preview = metadata only. Speak = StyleTTS2 actor audio via \(name)."
             }
-            return "Preview = metadata only. Speak = MLX Actor audio with the emotion above."
+            return "Preview = metadata only. Speak = StyleTTS2 actor audio with the emotion above."
         }
-        return "Preview shows VAD and voice blends. Add MLX Actor weights at ~/Projects/AI-Data/Models/mlx-community/ to enable Speak."
+        return "Preview shows VAD and voice blends. Add the StyleTTS2 actor model under /Models to enable Speak."
     }
 
     var body: some View {
@@ -282,49 +282,7 @@ struct TunerContentView: View {
                 .frame(width: 45, alignment: .trailing)
         }
     }
-
-                        config.activePreset.voices[index].voice = newVoice
-                }
-            )) {
-                ForEach(AuditionPresetStore.availableVoices, id: \.self) { voice in
-                    Text(voice).tag(voice)
-                }
-            }
-            .labelsHidden()
-
-            TextField("Percent", value: Binding(
-                get: { entry.percentage.rounded() },
-                set: { value in
-                    guard let index = config.activePreset.voices.firstIndex(where: { $0.id == entry.id }) else { return }
-                    config.activePreset.voices[index].percentage = max(0, value).rounded()
-                }
-            ), format: .number.precision(.fractionLength(0)))
-            .textFieldStyle(.roundedBorder)
-            .frame(width: 50)
-            
-            Stepper(value: Binding(
-                get: { entry.percentage.rounded() },
-                set: { value in
-                    guard let index = config.activePreset.voices.firstIndex(where: { $0.id == entry.id }) else { return }
-                    config.activePreset.voices[index].percentage = max(0, min(100, value)).rounded()
-                }
-            ), in: 0...100, step: 5) {
-                EmptyView()
-            }
-            .labelsHidden()
-            
-            Text("%")
-                .foregroundStyle(.secondary)
-
-            Button(role: .destructive) {
-                config.removeVoiceFromActive(entry)
-            } label: {
-                Image(systemName: "minus.circle")
-            }
-            .buttonStyle(.borderless)
-        }
-    }
-
+    
     @ViewBuilder
     private func directorModelSection(store: DirectorModelStore) -> some View {
         Section("Director model") {
@@ -536,28 +494,6 @@ struct TunerContentView: View {
         Vocal Energy: \(String(format: "%.2f", preset.vocalEnergy))
         Strain/Rasp: \(String(format: "%.2f", preset.strainOrRasp))
         """
-        
-        #if canImport(AppKit)
-        let pasteboard = NSPasteboard.general
-        pasteboard.declareTypes([.string], owner: nil)
-        pasteboard.setString(summary, forType: .string)
-        #elseif canImport(UIKit)
-        UIPasteboard.general.string = summary
-        #endif
-    }
-            .map { "\($0.voice): \(Int($0.percentage.rounded()))%" }
-            .joined(separator: ", ")
-            
-        let summary = """
-        Preset: \(preset.name)
-        Valence: \(String(format: "%.2f", preset.valence))
-        Arousal: \(String(format: "%.2f", preset.arousal))
-        Tension: \(String(format: "%.2f", preset.tension))
-        Speed: \(String(format: "%.2f", preset.speed))
-        Volume: \(String(format: "%.2f", preset.volume))
-        Voices: \(voiceMixString.isEmpty ? "None" : voiceMixString)
-        """
-        
         #if canImport(AppKit)
         let pasteboard = NSPasteboard.general
         pasteboard.declareTypes([.string], owner: nil)
@@ -1077,13 +1013,7 @@ private struct SegmentRow: View {
 
     private var blendDescription: String {
         guard let cp = segment.directive.acoustics?.castingProfile else { return "Auto Voice" }
-        return "Voice: \(cp.voice)"
-    } else {
-            blend = rawBlend
-        }
-        return blend
-            .map { "\(Int(($0.fraction * 100).rounded()))% \($0.voice)" }
-            .joined(separator: " + ")
+        return String(format: "Age: %.2f, Masc: %.2f, Strain: %.2f", cp.ageProfile, cp.masculinity, cp.strainOrRasp)
     }
 }
 

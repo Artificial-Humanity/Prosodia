@@ -1,5 +1,5 @@
 import Foundation
-import ProsodiaStage
+import Stage
 
 // MARK: - Director system prompts
 

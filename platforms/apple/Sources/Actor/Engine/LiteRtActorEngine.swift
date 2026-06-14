@@ -1,6 +1,6 @@
 import Foundation
 import os
-import ProsodiaStage
+import Stage
 
 // MARK: - TensorFlow Lite C-API Swift Bindings
 

@@ -123,7 +123,7 @@ public final class VoiceLoader: Sendable {
     /// - Parameter blend: The list of weighted voice blends.
     /// - Returns: The combined style vector.
     /// - Throws: An error if loading any voice in the blend fails.
-    public func loadCastingProfile(_ blend: CastingProfile) throws -> StyleVector {
+    public func loadCastingProfile(_ blend: [CastingProfile]) throws -> StyleVector {
         precondition(!blend.isEmpty, "Voice blend list must not be empty.")
         if blend.count == 1, let single = blend.first {
             return try loadVoice(named: single.voice)
@@ -165,7 +165,7 @@ public final class VoiceLoader: Sendable {
     ///   - phonemeCount: The total phoneme count used to slice the style pack.
     /// - Returns: The sliced style vector.
     /// - Throws: An error if loading the blend fails.
-    public func styleVector(for blend: CastingProfile, phonemeCount: Int) throws -> StyleVector {
+    public func styleVector(for blend: [CastingProfile], phonemeCount: Int) throws -> StyleVector {
         let pack = try loadCastingProfile(blend)
         guard pack.shape.count == 2 else {
             throw StyleTTS2Error.expected2DVoicePack(blend.first?.voice ?? "", pack.shape)
@@ -196,7 +196,7 @@ public final class VoiceLoader: Sendable {
     ///
     /// - Parameter input: The blend string.
     /// - Returns: An array of ``CastingProfile`` elements.
-    public static func parseBlendString(_ input: String) -> CastingProfile {
+    public static func parseBlendString(_ input: String) -> [CastingProfile] {
         let parts = input.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         return parts.compactMap { part in
             let voiceAndWeight = part.split(separator: ":").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -234,7 +234,7 @@ public final class VoiceLoader: Sendable {
     /// - Parameter blend: The list of weighted voice blends.
     /// - Returns: The combined style vector.
     /// - Throws: An error if loading fails.
-    public func loadCastingProfileAsync(_ blend: CastingProfile) async throws -> StyleVector {
+    public func loadCastingProfileAsync(_ blend: [CastingProfile]) async throws -> StyleVector {
         precondition(!blend.isEmpty, "Voice blend list must not be empty.")
         if blend.count == 1, let single = blend.first {
             return try await loadVoiceAsync(named: single.voice)
@@ -276,7 +276,7 @@ public final class VoiceLoader: Sendable {
     ///   - phonemeCount: The total phoneme count.
     /// - Returns: The sliced style vector.
     /// - Throws: An error if loading fails.
-    public func styleVectorAsync(for blend: CastingProfile, phonemeCount: Int) async throws -> StyleVector {
+    public func styleVectorAsync(for blend: [CastingProfile], phonemeCount: Int) async throws -> StyleVector {
         let pack = try await loadCastingProfileAsync(blend)
         guard pack.shape.count == 2 else {
             throw StyleTTS2Error.expected2DVoicePack(blend.first?.voice ?? "", pack.shape)

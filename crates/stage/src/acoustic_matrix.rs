@@ -43,6 +43,53 @@ pub fn amplified(e: &EmotionVector) -> EmotionVector {
     )
 }
 
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct AcousticMatrixConfig {
+    pub expressiveness: f64,
+    pub speed_arousal_gain: f64,
+    pub speed_tension_gain: f64,
+    pub speed_valence_gain: f64,
+    pub speed_range_min: f64,
+    pub speed_range_max: f64,
+    pub gain_arousal_gain: f64,
+    pub gain_valence_gain: f64,
+    pub gain_range_min: f64,
+    pub gain_range_max: f64,
+}
+
+#[uniffi::export]
+pub fn get_acoustic_matrix() -> AcousticMatrixConfig {
+    let state = ACOUSTIC_MATRIX.read().unwrap();
+    AcousticMatrixConfig {
+        expressiveness: state.expressiveness,
+        speed_arousal_gain: state.speed_arousal_gain,
+        speed_tension_gain: state.speed_tension_gain,
+        speed_valence_gain: state.speed_valence_gain,
+        speed_range_min: state.speed_range_min,
+        speed_range_max: state.speed_range_max,
+        gain_arousal_gain: state.gain_arousal_gain,
+        gain_valence_gain: state.gain_valence_gain,
+        gain_range_min: state.gain_range_min,
+        gain_range_max: state.gain_range_max,
+    }
+}
+
+#[uniffi::export]
+pub fn set_acoustic_matrix(config: AcousticMatrixConfig) {
+    let mut state = ACOUSTIC_MATRIX.write().unwrap();
+    state.expressiveness = config.expressiveness;
+    state.speed_arousal_gain = config.speed_arousal_gain;
+    state.speed_tension_gain = config.speed_tension_gain;
+    state.speed_valence_gain = config.speed_valence_gain;
+    state.speed_range_min = config.speed_range_min;
+    state.speed_range_max = config.speed_range_max;
+    state.gain_arousal_gain = config.gain_arousal_gain;
+    state.gain_valence_gain = config.gain_valence_gain;
+    state.gain_range_min = config.gain_range_min;
+    state.gain_range_max = config.gain_range_max;
+}
+
+#[uniffi::export]
 pub fn speed_for_emotion(emotion: &EmotionVector) -> f64 {
     let e = amplified(emotion);
     let state = ACOUSTIC_MATRIX.read().unwrap();
@@ -53,6 +100,7 @@ pub fn speed_for_emotion(emotion: &EmotionVector) -> f64 {
     raw.clamp(state.speed_range_min, state.speed_range_max)
 }
 
+#[uniffi::export]
 pub fn gain_for_emotion(emotion: &EmotionVector) -> f64 {
     let e = amplified(emotion);
     let state = ACOUSTIC_MATRIX.read().unwrap();
@@ -62,6 +110,7 @@ pub fn gain_for_emotion(emotion: &EmotionVector) -> f64 {
     raw.clamp(state.gain_range_min, state.gain_range_max)
 }
 
+#[uniffi::export]
 pub fn pitch_for_emotion(emotion: &EmotionVector) -> f64 {
     let e = amplified(emotion);
     

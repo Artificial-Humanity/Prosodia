@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(prosodia_stageFFI)
-import prosodia_stageFFI
+#if canImport(stageFFI)
+import stageFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_prosodia_stage_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_stage_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_prosodia_stage_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_stage_rustbuffer_free(self, $0) }
     }
 }
 
@@ -446,6 +446,127 @@ fileprivate struct FfiConverterString: FfiConverter {
 }
 
 
+public struct AcousticMatrixConfig {
+    public var expressiveness: Double
+    public var speedArousalGain: Double
+    public var speedTensionGain: Double
+    public var speedValenceGain: Double
+    public var speedRangeMin: Double
+    public var speedRangeMax: Double
+    public var gainArousalGain: Double
+    public var gainValenceGain: Double
+    public var gainRangeMin: Double
+    public var gainRangeMax: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(expressiveness: Double, speedArousalGain: Double, speedTensionGain: Double, speedValenceGain: Double, speedRangeMin: Double, speedRangeMax: Double, gainArousalGain: Double, gainValenceGain: Double, gainRangeMin: Double, gainRangeMax: Double) {
+        self.expressiveness = expressiveness
+        self.speedArousalGain = speedArousalGain
+        self.speedTensionGain = speedTensionGain
+        self.speedValenceGain = speedValenceGain
+        self.speedRangeMin = speedRangeMin
+        self.speedRangeMax = speedRangeMax
+        self.gainArousalGain = gainArousalGain
+        self.gainValenceGain = gainValenceGain
+        self.gainRangeMin = gainRangeMin
+        self.gainRangeMax = gainRangeMax
+    }
+}
+
+
+
+extension AcousticMatrixConfig: Equatable, Hashable {
+    public static func ==(lhs: AcousticMatrixConfig, rhs: AcousticMatrixConfig) -> Bool {
+        if lhs.expressiveness != rhs.expressiveness {
+            return false
+        }
+        if lhs.speedArousalGain != rhs.speedArousalGain {
+            return false
+        }
+        if lhs.speedTensionGain != rhs.speedTensionGain {
+            return false
+        }
+        if lhs.speedValenceGain != rhs.speedValenceGain {
+            return false
+        }
+        if lhs.speedRangeMin != rhs.speedRangeMin {
+            return false
+        }
+        if lhs.speedRangeMax != rhs.speedRangeMax {
+            return false
+        }
+        if lhs.gainArousalGain != rhs.gainArousalGain {
+            return false
+        }
+        if lhs.gainValenceGain != rhs.gainValenceGain {
+            return false
+        }
+        if lhs.gainRangeMin != rhs.gainRangeMin {
+            return false
+        }
+        if lhs.gainRangeMax != rhs.gainRangeMax {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(expressiveness)
+        hasher.combine(speedArousalGain)
+        hasher.combine(speedTensionGain)
+        hasher.combine(speedValenceGain)
+        hasher.combine(speedRangeMin)
+        hasher.combine(speedRangeMax)
+        hasher.combine(gainArousalGain)
+        hasher.combine(gainValenceGain)
+        hasher.combine(gainRangeMin)
+        hasher.combine(gainRangeMax)
+    }
+}
+
+
+public struct FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AcousticMatrixConfig {
+        return
+            try AcousticMatrixConfig(
+                expressiveness: FfiConverterDouble.read(from: &buf), 
+                speedArousalGain: FfiConverterDouble.read(from: &buf), 
+                speedTensionGain: FfiConverterDouble.read(from: &buf), 
+                speedValenceGain: FfiConverterDouble.read(from: &buf), 
+                speedRangeMin: FfiConverterDouble.read(from: &buf), 
+                speedRangeMax: FfiConverterDouble.read(from: &buf), 
+                gainArousalGain: FfiConverterDouble.read(from: &buf), 
+                gainValenceGain: FfiConverterDouble.read(from: &buf), 
+                gainRangeMin: FfiConverterDouble.read(from: &buf), 
+                gainRangeMax: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AcousticMatrixConfig, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.expressiveness, into: &buf)
+        FfiConverterDouble.write(value.speedArousalGain, into: &buf)
+        FfiConverterDouble.write(value.speedTensionGain, into: &buf)
+        FfiConverterDouble.write(value.speedValenceGain, into: &buf)
+        FfiConverterDouble.write(value.speedRangeMin, into: &buf)
+        FfiConverterDouble.write(value.speedRangeMax, into: &buf)
+        FfiConverterDouble.write(value.gainArousalGain, into: &buf)
+        FfiConverterDouble.write(value.gainValenceGain, into: &buf)
+        FfiConverterDouble.write(value.gainRangeMin, into: &buf)
+        FfiConverterDouble.write(value.gainRangeMax, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeAcousticMatrixConfig_lift(_ buf: RustBuffer) throws -> AcousticMatrixConfig {
+    return try FfiConverterTypeAcousticMatrixConfig.lift(buf)
+}
+
+public func FfiConverterTypeAcousticMatrixConfig_lower(_ value: AcousticMatrixConfig) -> RustBuffer {
+    return FfiConverterTypeAcousticMatrixConfig.lower(value)
+}
+
+
 public struct CastingProfile {
     public var ageProfile: Double
     public var masculinity: Double
@@ -638,6 +759,63 @@ public func FfiConverterTypeEmotionVector_lift(_ buf: RustBuffer) throws -> Emot
 
 public func FfiConverterTypeEmotionVector_lower(_ value: EmotionVector) -> RustBuffer {
     return FfiConverterTypeEmotionVector.lower(value)
+}
+
+
+public struct PhrasePauseConfig {
+    public var sentence: Double
+    public var clause: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sentence: Double, clause: Double) {
+        self.sentence = sentence
+        self.clause = clause
+    }
+}
+
+
+
+extension PhrasePauseConfig: Equatable, Hashable {
+    public static func ==(lhs: PhrasePauseConfig, rhs: PhrasePauseConfig) -> Bool {
+        if lhs.sentence != rhs.sentence {
+            return false
+        }
+        if lhs.clause != rhs.clause {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(sentence)
+        hasher.combine(clause)
+    }
+}
+
+
+public struct FfiConverterTypePhrasePauseConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PhrasePauseConfig {
+        return
+            try PhrasePauseConfig(
+                sentence: FfiConverterDouble.read(from: &buf), 
+                clause: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PhrasePauseConfig, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.sentence, into: &buf)
+        FfiConverterDouble.write(value.clause, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypePhrasePauseConfig_lift(_ buf: RustBuffer) throws -> PhrasePauseConfig {
+    return try FfiConverterTypePhrasePauseConfig.lift(buf)
+}
+
+public func FfiConverterTypePhrasePauseConfig_lower(_ value: PhrasePauseConfig) -> RustBuffer {
+    return FfiConverterTypePhrasePauseConfig.lower(value)
 }
 
 
@@ -1097,7 +1275,7 @@ fileprivate struct UniffiCallbackInterfaceProsodyPhraser {
 }
 
 private func uniffiCallbackInitProsodyPhraser() {
-    uniffi_prosodia_stage_fn_init_callback_vtable_prosodyphraser(&UniffiCallbackInterfaceProsodyPhraser.vtable)
+    uniffi_stage_fn_init_callback_vtable_prosodyphraser(&UniffiCallbackInterfaceProsodyPhraser.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1320,28 +1498,28 @@ fileprivate struct FfiConverterSequenceTypeProsodySpan: FfiConverterRustBuffer {
 }
 public func decodeSpans(payload: String) -> DecodedPayload? {
     return try!  FfiConverterOptionTypeDecodedPayload.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_decode_spans(
+    uniffi_stage_fn_func_decode_spans(
         FfiConverterString.lower(payload),$0
     )
 })
 }
 public func directiveGainMultiplier(directive: ProsodyDirective) -> Double {
     return try!  FfiConverterDouble.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_directive_gain_multiplier(
+    uniffi_stage_fn_func_directive_gain_multiplier(
         FfiConverterTypeProsodyDirective.lower(directive),$0
     )
 })
 }
 public func directiveSpeedMultiplier(directive: ProsodyDirective) -> Double {
     return try!  FfiConverterDouble.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_directive_speed_multiplier(
+    uniffi_stage_fn_func_directive_speed_multiplier(
         FfiConverterTypeProsodyDirective.lower(directive),$0
     )
 })
 }
 public func encodeDirective(directive: ProsodyDirective, text: String) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_encode_directive(
+    uniffi_stage_fn_func_encode_directive(
         FfiConverterTypeProsodyDirective.lower(directive),
         FfiConverterString.lower(text),$0
     )
@@ -1349,45 +1527,90 @@ public func encodeDirective(directive: ProsodyDirective, text: String) -> String
 }
 public func encodeSpans(spans: [ProsodySpan]) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_encode_spans(
+    uniffi_stage_fn_func_encode_spans(
         FfiConverterSequenceTypeProsodySpan.lower(spans),$0
+    )
+})
+}
+public func gainForEmotion(emotion: EmotionVector) -> Double {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_stage_fn_func_gain_for_emotion(
+        FfiConverterTypeEmotionVector.lower(emotion),$0
+    )
+})
+}
+public func getAcousticMatrix() -> AcousticMatrixConfig {
+    return try!  FfiConverterTypeAcousticMatrixConfig.lift(try! rustCall() {
+    uniffi_stage_fn_func_get_acoustic_matrix($0
+    )
+})
+}
+public func getPhrasePause() -> PhrasePauseConfig {
+    return try!  FfiConverterTypePhrasePauseConfig.lift(try! rustCall() {
+    uniffi_stage_fn_func_get_phrase_pause($0
     )
 })
 }
 public func neutralPayloadForPassage(passage: String) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_neutral_payload_for_passage(
+    uniffi_stage_fn_func_neutral_payload_for_passage(
         FfiConverterString.lower(passage),$0
     )
 })
 }
 public func pauseAfter(text: String) -> Double {
     return try!  FfiConverterDouble.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_pause_after(
+    uniffi_stage_fn_func_pause_after(
         FfiConverterString.lower(text),$0
     )
 })
 }
 public func payloadFromRaw(raw: String, passage: String) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_payload_from_raw(
+    uniffi_stage_fn_func_payload_from_raw(
         FfiConverterString.lower(raw),
         FfiConverterString.lower(passage),$0
     )
 })
 }
+public func pitchForEmotion(emotion: EmotionVector) -> Double {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_stage_fn_func_pitch_for_emotion(
+        FfiConverterTypeEmotionVector.lower(emotion),$0
+    )
+})
+}
 public func resolveSpans(phraser: ProsodyPhraser, overall: EmotionVector, decoded: [ProsodySpan]) -> [ProsodySpan] {
     return try!  FfiConverterSequenceTypeProsodySpan.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_resolve_spans(
+    uniffi_stage_fn_func_resolve_spans(
         FfiConverterCallbackInterfaceProsodyPhraser.lower(phraser),
         FfiConverterTypeEmotionVector.lower(overall),
         FfiConverterSequenceTypeProsodySpan.lower(decoded),$0
     )
 })
 }
+public func setAcousticMatrix(config: AcousticMatrixConfig) {try! rustCall() {
+    uniffi_stage_fn_func_set_acoustic_matrix(
+        FfiConverterTypeAcousticMatrixConfig.lower(config),$0
+    )
+}
+}
+public func setPhrasePause(config: PhrasePauseConfig) {try! rustCall() {
+    uniffi_stage_fn_func_set_phrase_pause(
+        FfiConverterTypePhrasePauseConfig.lower(config),$0
+    )
+}
+}
+public func speedForEmotion(emotion: EmotionVector) -> Double {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_stage_fn_func_speed_for_emotion(
+        FfiConverterTypeEmotionVector.lower(emotion),$0
+    )
+})
+}
 public func trimmingSilence(samples: [Float], threshold: Float) -> [Float] {
     return try!  FfiConverterSequenceFloat.lift(try! rustCall() {
-    uniffi_prosodia_stage_fn_func_trimming_silence(
+    uniffi_stage_fn_func_trimming_silence(
         FfiConverterSequenceFloat.lower(samples),
         FfiConverterFloat.lower(threshold),$0
     )
@@ -1405,41 +1628,62 @@ private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_prosodia_stage_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_stage_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_decode_spans() != 7237) {
+    if (uniffi_stage_checksum_func_decode_spans() != 49496) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_directive_gain_multiplier() != 60258) {
+    if (uniffi_stage_checksum_func_directive_gain_multiplier() != 19232) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_directive_speed_multiplier() != 43746) {
+    if (uniffi_stage_checksum_func_directive_speed_multiplier() != 10471) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_encode_directive() != 41236) {
+    if (uniffi_stage_checksum_func_encode_directive() != 40895) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_encode_spans() != 5941) {
+    if (uniffi_stage_checksum_func_encode_spans() != 42324) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_neutral_payload_for_passage() != 27468) {
+    if (uniffi_stage_checksum_func_gain_for_emotion() != 58724) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_pause_after() != 43878) {
+    if (uniffi_stage_checksum_func_get_acoustic_matrix() != 12772) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_payload_from_raw() != 20463) {
+    if (uniffi_stage_checksum_func_get_phrase_pause() != 53482) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_resolve_spans() != 52451) {
+    if (uniffi_stage_checksum_func_neutral_payload_for_passage() != 41504) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_func_trimming_silence() != 17187) {
+    if (uniffi_stage_checksum_func_pause_after() != 56484) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_prosodia_stage_checksum_method_prosodyphraser_spans() != 63725) {
+    if (uniffi_stage_checksum_func_payload_from_raw() != 40712) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_pitch_for_emotion() != 52546) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_resolve_spans() != 61517) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_set_acoustic_matrix() != 49959) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_set_phrase_pause() != 24998) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_speed_for_emotion() != 44670) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_trimming_silence() != 39293) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_method_prosodyphraser_spans() != 4212) {
         return InitializationResult.apiChecksumMismatch
     }
 
