@@ -251,11 +251,48 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureStr
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_DIRECTOR_INFERENCE_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_DIRECTOR_INFERENCE_METHOD0
+typedef void (*UniffiCallbackInterfaceDirectorInferenceMethod0)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_NARRATION_SOURCE_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_NARRATION_SOURCE_METHOD0
+typedef void (*UniffiCallbackInterfaceNarrationSourceMethod0)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODY_PHRASER_METHOD0
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODY_PHRASER_METHOD0
 typedef void (*UniffiCallbackInterfaceProsodyPhraserMethod0)(uint64_t, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOCAL_ACTOR_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOCAL_ACTOR_METHOD0
+typedef void (*UniffiCallbackInterfaceVocalActorMethod0)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_DIRECTOR_INFERENCE
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_DIRECTOR_INFERENCE
+typedef struct UniffiVTableCallbackInterfaceDirectorInference {
+    UniffiCallbackInterfaceDirectorInferenceMethod0 _Nonnull annotate;
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+} UniffiVTableCallbackInterfaceDirectorInference;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_NARRATION_SOURCE
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_NARRATION_SOURCE
+typedef struct UniffiVTableCallbackInterfaceNarrationSource {
+    UniffiCallbackInterfaceNarrationSourceMethod0 _Nonnull nextPassage;
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+} UniffiVTableCallbackInterfaceNarrationSource;
 
 #endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PROSODY_PHRASER
@@ -266,9 +303,62 @@ typedef struct UniffiVTableCallbackInterfaceProsodyPhraser {
 } UniffiVTableCallbackInterfaceProsodyPhraser;
 
 #endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VOCAL_ACTOR
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VOCAL_ACTOR
+typedef struct UniffiVTableCallbackInterfaceVocalActor {
+    UniffiCallbackInterfaceVocalActorMethod0 _Nonnull render;
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+} UniffiVTableCallbackInterfaceVocalActor;
+
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_CLONE_STAGECOORDINATOR
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_CLONE_STAGECOORDINATOR
+void*_Nonnull uniffi_stage_fn_clone_stagecoordinator(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FREE_STAGECOORDINATOR
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FREE_STAGECOORDINATOR
+void uniffi_stage_fn_free_stagecoordinator(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_CONSTRUCTOR_STAGECOORDINATOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_CONSTRUCTOR_STAGECOORDINATOR_NEW
+void*_Nonnull uniffi_stage_fn_constructor_stagecoordinator_new(uint64_t source, uint64_t director, uint64_t actor, uint32_t sample_rate, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_CHUNKS_EMITTED
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_CHUNKS_EMITTED
+uint32_t uniffi_stage_fn_method_stagecoordinator_chunks_emitted(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_NEXT_CHUNK
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_NEXT_CHUNK
+RustBuffer uniffi_stage_fn_method_stagecoordinator_next_chunk(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_STOP
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_METHOD_STAGECOORDINATOR_STOP
+void uniffi_stage_fn_method_stagecoordinator_stop(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_DIRECTORINFERENCE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_DIRECTORINFERENCE
+void uniffi_stage_fn_init_callback_vtable_directorinference(UniffiVTableCallbackInterfaceDirectorInference* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_NARRATIONSOURCE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_NARRATIONSOURCE
+void uniffi_stage_fn_init_callback_vtable_narrationsource(UniffiVTableCallbackInterfaceNarrationSource* _Nonnull vtable
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_PROSODYPHRASER
 #define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_PROSODYPHRASER
 void uniffi_stage_fn_init_callback_vtable_prosodyphraser(UniffiVTableCallbackInterfaceProsodyPhraser* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_VOCALACTOR
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_INIT_CALLBACK_VTABLE_VOCALACTOR
+void uniffi_stage_fn_init_callback_vtable_vocalactor(UniffiVTableCallbackInterfaceVocalActor* _Nonnull vtable
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FUNC_DECODE_SPANS
@@ -740,9 +830,51 @@ uint16_t uniffi_stage_checksum_func_trimming_silence(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_CHUNKS_EMITTED
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_CHUNKS_EMITTED
+uint16_t uniffi_stage_checksum_method_stagecoordinator_chunks_emitted(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_NEXT_CHUNK
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_NEXT_CHUNK
+uint16_t uniffi_stage_checksum_method_stagecoordinator_next_chunk(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_STOP
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_STAGECOORDINATOR_STOP
+uint16_t uniffi_stage_checksum_method_stagecoordinator_stop(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_CONSTRUCTOR_STAGECOORDINATOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_CONSTRUCTOR_STAGECOORDINATOR_NEW
+uint16_t uniffi_stage_checksum_constructor_stagecoordinator_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_DIRECTORINFERENCE_ANNOTATE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_DIRECTORINFERENCE_ANNOTATE
+uint16_t uniffi_stage_checksum_method_directorinference_annotate(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_NARRATIONSOURCE_NEXT_PASSAGE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_NARRATIONSOURCE_NEXT_PASSAGE
+uint16_t uniffi_stage_checksum_method_narrationsource_next_passage(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_PROSODYPHRASER_SPANS
 #define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_PROSODYPHRASER_SPANS
 uint16_t uniffi_stage_checksum_method_prosodyphraser_spans(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_VOCALACTOR_RENDER
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_METHOD_VOCALACTOR_RENDER
+uint16_t uniffi_stage_checksum_method_vocalactor_render(void
     
 );
 #endif

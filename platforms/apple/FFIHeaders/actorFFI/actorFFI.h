@@ -286,6 +286,13 @@ typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod0)(uint64_t, Rus
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER_METHOD0
+typedef void (*UniffiCallbackInterfaceVoiceAssetProviderMethod0)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_AUDIO_SINK
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_AUDIO_SINK
 typedef struct UniffiVTableCallbackInterfaceAudioSink {
@@ -317,6 +324,14 @@ typedef struct UniffiVTableCallbackInterfaceProsodiaSpeechEngine {
     UniffiCallbackInterfaceProsodiaSpeechEngineMethod0 _Nonnull synthesize;
     UniffiCallbackInterfaceFree _Nonnull uniffiFree;
 } UniffiVTableCallbackInterfaceProsodiaSpeechEngine;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER
+typedef struct UniffiVTableCallbackInterfaceVoiceAssetProvider {
+    UniffiCallbackInterfaceVoiceAssetProviderMethod0 _Nonnull loadVoiceBytes;
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+} UniffiVTableCallbackInterfaceVoiceAssetProvider;
 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_BASICG2PPROCESSOR
@@ -406,6 +421,46 @@ void*_Nonnull uniffi_actor_fn_constructor_prosodiaactorpipeline_new(uint64_t g2p
 RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_process_span(void*_Nonnull ptr, RustBuffer span, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_VOICELOADER
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_VOICELOADER
+void*_Nonnull uniffi_actor_fn_clone_voiceloader(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FREE_VOICELOADER
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FREE_VOICELOADER
+void uniffi_actor_fn_free_voiceloader(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CONSTRUCTOR_VOICELOADER_NEW
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CONSTRUCTOR_VOICELOADER_NEW
+void*_Nonnull uniffi_actor_fn_constructor_voiceloader_new(uint64_t provider, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_CLEAR_CACHE
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_CLEAR_CACHE
+void uniffi_actor_fn_method_voiceloader_clear_cache(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_LOAD_BLEND
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_LOAD_BLEND
+RustBuffer uniffi_actor_fn_method_voiceloader_load_blend(void*_Nonnull ptr, RustBuffer blend, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_LOAD_VOICE
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_LOAD_VOICE
+RustBuffer uniffi_actor_fn_method_voiceloader_load_voice(void*_Nonnull ptr, RustBuffer voice_name, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_STYLE_MATRIX
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_STYLE_MATRIX
+RustBuffer uniffi_actor_fn_method_voiceloader_style_matrix(void*_Nonnull ptr, RustBuffer tokens, RustBuffer voice_blends, RustBuffer vocab, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_STYLE_VECTOR
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_VOICELOADER_STYLE_VECTOR
+RustBuffer uniffi_actor_fn_method_voiceloader_style_vector(void*_Nonnull ptr, RustBuffer voice, int64_t phoneme_count, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_AUDIOSINK
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_AUDIOSINK
 void uniffi_actor_fn_init_callback_vtable_audiosink(UniffiVTableCallbackInterfaceAudioSink* _Nonnull vtable
@@ -424,6 +479,46 @@ void uniffi_actor_fn_init_callback_vtable_prosodiag2pprocessor(UniffiVTableCallb
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_PROSODIASPEECHENGINE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_PROSODIASPEECHENGINE
 void uniffi_actor_fn_init_callback_vtable_prosodiaspeechengine(UniffiVTableCallbackInterfaceProsodiaSpeechEngine* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_VOICEASSETPROVIDER
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_INIT_CALLBACK_VTABLE_VOICEASSETPROVIDER
+void uniffi_actor_fn_init_callback_vtable_voiceassetprovider(UniffiVTableCallbackInterfaceVoiceAssetProvider* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_BLEND_STYLE_PACKS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_BLEND_STYLE_PACKS
+RustBuffer uniffi_actor_fn_func_blend_style_packs(RustBuffer packs, RustBuffer fractions, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_CHUNK_PHONEMES
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_CHUNK_PHONEMES
+RustBuffer uniffi_actor_fn_func_chunk_phonemes(RustBuffer phonemes, uint32_t limit, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_CHUNK_TOKENS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_CHUNK_TOKENS
+RustBuffer uniffi_actor_fn_func_chunk_tokens(RustBuffer tokens, uint32_t limit, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_NORMALIZE_STYLE_PACK
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_NORMALIZE_STYLE_PACK
+RustBuffer uniffi_actor_fn_func_normalize_style_pack(RustBuffer pack, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_BLEND_STRING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_BLEND_STRING
+RustBuffer uniffi_actor_fn_func_parse_blend_string(RustBuffer input, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_SAFETENSORS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_SAFETENSORS
+RustBuffer uniffi_actor_fn_func_parse_safetensors(RustBuffer bytes, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_SLICE_STYLE_ROW
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_SLICE_STYLE_ROW
+RustBuffer uniffi_actor_fn_func_slice_style_row(RustBuffer pack, int64_t phoneme_count, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_ACTOR_RUSTBUFFER_ALLOC
@@ -706,6 +801,48 @@ void ffi_actor_rust_future_free_void(uint64_t handle
 void ffi_actor_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_BLEND_STYLE_PACKS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_BLEND_STYLE_PACKS
+uint16_t uniffi_actor_checksum_func_blend_style_packs(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_CHUNK_PHONEMES
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_CHUNK_PHONEMES
+uint16_t uniffi_actor_checksum_func_chunk_phonemes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_CHUNK_TOKENS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_CHUNK_TOKENS
+uint16_t uniffi_actor_checksum_func_chunk_tokens(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_NORMALIZE_STYLE_PACK
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_NORMALIZE_STYLE_PACK
+uint16_t uniffi_actor_checksum_func_normalize_style_pack(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_BLEND_STRING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_BLEND_STRING
+uint16_t uniffi_actor_checksum_func_parse_blend_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_SAFETENSORS
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_SAFETENSORS
+uint16_t uniffi_actor_checksum_func_parse_safetensors(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_SLICE_STYLE_ROW
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_SLICE_STYLE_ROW
+uint16_t uniffi_actor_checksum_func_slice_style_row(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_BASICG2PPROCESSOR_PROCESS
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_BASICG2PPROCESSOR_PROCESS
 uint16_t uniffi_actor_checksum_method_basicg2pprocessor_process(void
@@ -736,6 +873,36 @@ uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_process_span(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_CLEAR_CACHE
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_CLEAR_CACHE
+uint16_t uniffi_actor_checksum_method_voiceloader_clear_cache(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_LOAD_BLEND
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_LOAD_BLEND
+uint16_t uniffi_actor_checksum_method_voiceloader_load_blend(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_LOAD_VOICE
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_LOAD_VOICE
+uint16_t uniffi_actor_checksum_method_voiceloader_load_voice(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_STYLE_MATRIX
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_STYLE_MATRIX
+uint16_t uniffi_actor_checksum_method_voiceloader_style_matrix(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_STYLE_VECTOR
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICELOADER_STYLE_VECTOR
+uint16_t uniffi_actor_checksum_method_voiceloader_style_vector(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_BASICG2PPROCESSOR_NEW
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_BASICG2PPROCESSOR_NEW
 uint16_t uniffi_actor_checksum_constructor_basicg2pprocessor_new(void
@@ -757,6 +924,12 @@ uint16_t uniffi_actor_checksum_constructor_prosodiaactorengine_new(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_PROSODIAACTORPIPELINE_NEW
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_PROSODIAACTORPIPELINE_NEW
 uint16_t uniffi_actor_checksum_constructor_prosodiaactorpipeline_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_VOICELOADER_NEW
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_VOICELOADER_NEW
+uint16_t uniffi_actor_checksum_constructor_voiceloader_new(void
     
 );
 #endif
@@ -787,6 +960,12 @@ uint16_t uniffi_actor_checksum_method_prosodiag2pprocessor_process(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_SYNTHESIZE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_SYNTHESIZE
 uint16_t uniffi_actor_checksum_method_prosodiaspeechengine_synthesize(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICEASSETPROVIDER_LOAD_VOICE_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_VOICEASSETPROVIDER_LOAD_VOICE_BYTES
+uint16_t uniffi_actor_checksum_method_voiceassetprovider_load_voice_bytes(void
     
 );
 #endif
