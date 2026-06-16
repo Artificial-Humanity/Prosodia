@@ -52,12 +52,12 @@ fn serialize_silver(dict: HashMap<String, String>) -> Vec<u8> {
     let mut index_bytes = Vec::new();
 
     for (key, val) in &entries {
-        let key_offset = string_pool.len() as u32;
-        let key_len = key.len() as u16;
+        let key_offset = u32::try_from(string_pool.len()).expect("G2P silver string pool offset exceeds u32::MAX");
+        let key_len = u16::try_from(key.len()).expect("G2P silver key length exceeds u16::MAX");
         string_pool.extend_from_slice(key.as_bytes());
 
-        let val_offset = string_pool.len() as u32;
-        let val_len = val.len() as u16;
+        let val_offset = u32::try_from(string_pool.len()).expect("G2P silver string pool offset exceeds u32::MAX");
+        let val_len = u16::try_from(val.len()).expect("G2P silver value length exceeds u16::MAX");
         string_pool.extend_from_slice(val.as_bytes());
 
         index_bytes.extend_from_slice(&key_offset.to_le_bytes());
@@ -66,10 +66,11 @@ fn serialize_silver(dict: HashMap<String, String>) -> Vec<u8> {
         index_bytes.extend_from_slice(&val_len.to_le_bytes());
     }
 
-    let num_entries = entries.len() as u32;
-    let pool_size = string_pool.len() as u32;
+    let num_entries = u32::try_from(entries.len()).expect("G2P silver entries count exceeds u32::MAX");
+    let pool_size = u32::try_from(string_pool.len()).expect("G2P silver string pool size exceeds u32::MAX");
 
     let mut out = Vec::new();
+    out.extend_from_slice(b"PSL1"); // Prosodia Silver Lexicon v1 magic
     out.extend_from_slice(&num_entries.to_le_bytes());
     out.extend_from_slice(&pool_size.to_le_bytes());
     out.extend_from_slice(&index_bytes);
@@ -87,8 +88,8 @@ fn serialize_gold(dict: HashMap<String, LexiconValue>) -> Vec<u8> {
     let mut index_bytes = Vec::new();
 
     let mut get_string_offset = |s: &str| -> (u32, u16) {
-        let offset = string_pool.len() as u32;
-        let len = s.len() as u16;
+        let offset = u32::try_from(string_pool.len()).expect("G2P gold string pool offset exceeds u32::MAX");
+        let len = u16::try_from(s.len()).expect("G2P gold string length exceeds u16::MAX");
         string_pool.extend_from_slice(s.as_bytes());
         (offset, len)
     };
@@ -109,8 +110,8 @@ fn serialize_gold(dict: HashMap<String, LexiconValue>) -> Vec<u8> {
             }
             LexiconValue::Variants(variants) => {
                 val_type = 1;
-                val_data_offset = values_pool.len() as u32;
-                val_data_len = variants.len() as u16;
+                val_data_offset = u32::try_from(values_pool.len()).expect("G2P gold values pool offset exceeds u32::MAX");
+                val_data_len = u16::try_from(variants.len()).expect("G2P gold variants count exceeds u16::MAX");
 
                 for (tag, opt_val) in variants {
                     let (tag_offset, tag_len) = get_string_offset(tag);
@@ -139,11 +140,12 @@ fn serialize_gold(dict: HashMap<String, LexiconValue>) -> Vec<u8> {
         index_bytes.extend_from_slice(&val_data_len.to_le_bytes());
     }
 
-    let num_entries = entries.len() as u32;
-    let pool_size = string_pool.len() as u32;
-    let val_pool_size = values_pool.len() as u32;
+    let num_entries = u32::try_from(entries.len()).expect("G2P gold entries count exceeds u32::MAX");
+    let pool_size = u32::try_from(string_pool.len()).expect("G2P gold string pool size exceeds u32::MAX");
+    let val_pool_size = u32::try_from(values_pool.len()).expect("G2P gold values pool size exceeds u32::MAX");
 
     let mut out = Vec::new();
+    out.extend_from_slice(b"PGL1"); // Prosodia Gold Lexicon v1 magic
     out.extend_from_slice(&num_entries.to_le_bytes());
     out.extend_from_slice(&pool_size.to_le_bytes());
     out.extend_from_slice(&val_pool_size.to_le_bytes());

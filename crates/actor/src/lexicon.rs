@@ -48,9 +48,27 @@ impl BinSilverMap {
         Self { data }
     }
 
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.data.len() < 12 {
+            return Err("Binary too small for PSL1 header");
+        }
+        if &self.data[0..4] != b"PSL1" {
+            return Err("Invalid PSL1 magic header");
+        }
+        let num_entries = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
+        let pool_size = u32::from_le_bytes(self.data[8..12].try_into().unwrap()) as usize;
+        let index_start = 12;
+        let string_pool_start = index_start + num_entries * 12;
+        let expected_len = string_pool_start + pool_size;
+        if self.data.len() != expected_len {
+            return Err("PSL1 size mismatch");
+        }
+        Ok(())
+    }
+
     pub fn get(&self, query: &str) -> Option<&'static str> {
-        let num_entries = u32::from_le_bytes(self.data[0..4].try_into().unwrap()) as usize;
-        let index_start = 8;
+        let num_entries = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
+        let index_start = 12;
         let string_pool_start = index_start + num_entries * 12;
         let string_pool = &self.data[string_pool_start..];
 
@@ -140,12 +158,33 @@ impl BinGoldMap {
         Self { data }
     }
 
-    pub fn get(&self, query: &str) -> Option<BinLexiconValue> {
-        let num_entries = u32::from_le_bytes(self.data[0..4].try_into().unwrap()) as usize;
-        let pool_size = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
-        let val_pool_size = u32::from_le_bytes(self.data[8..12].try_into().unwrap()) as usize;
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.data.len() < 16 {
+            return Err("Binary too small for PGL1 header");
+        }
+        if &self.data[0..4] != b"PGL1" {
+            return Err("Invalid PGL1 magic header");
+        }
+        let num_entries = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
+        let pool_size = u32::from_le_bytes(self.data[8..12].try_into().unwrap()) as usize;
+        let val_pool_size = u32::from_le_bytes(self.data[12..16].try_into().unwrap()) as usize;
+        
+        let index_start = 16;
+        let string_pool_start = index_start + num_entries * 14;
+        let values_pool_start = string_pool_start + pool_size;
+        let expected_len = values_pool_start + val_pool_size;
+        if self.data.len() != expected_len {
+            return Err("PGL1 size mismatch");
+        }
+        Ok(())
+    }
 
-        let index_start = 12;
+    pub fn get(&self, query: &str) -> Option<BinLexiconValue> {
+        let num_entries = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
+        let pool_size = u32::from_le_bytes(self.data[8..12].try_into().unwrap()) as usize;
+        let val_pool_size = u32::from_le_bytes(self.data[12..16].try_into().unwrap()) as usize;
+
+        let index_start = 16;
         let string_pool_start = index_start + num_entries * 14;
         let values_pool_start = string_pool_start + pool_size;
 
@@ -211,6 +250,9 @@ impl Lexicon {
     pub fn new(british: bool) -> Self {
         let golds = if british { BinGoldMap::new(GB_GOLD_BIN) } else { BinGoldMap::new(US_GOLD_BIN) };
         let silvers = if british { BinSilverMap::new(GB_SILVER_BIN) } else { BinSilverMap::new(US_SILVER_BIN) };
+
+        golds.validate().expect("GB/US Gold Lexicon binary is corrupt or invalid");
+        silvers.validate().expect("GB/US Silver Lexicon binary is corrupt or invalid");
 
         let mut currencies = HashMap::new();
         currencies.insert("$".to_string(), ("dollar", "cent"));

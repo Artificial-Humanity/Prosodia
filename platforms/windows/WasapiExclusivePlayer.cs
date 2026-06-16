@@ -35,6 +35,14 @@ namespace Prosodia.Platforms.Windows
             InitializeWasapi();
         }
 
+        private static void CheckHr(int hr)
+        {
+            if (hr < 0)
+            {
+                Marshal.ThrowExceptionForHR(hr);
+            }
+        }
+
         public void EnqueueSamples(float[] samples)
         {
             if (samples == null || samples.Length == 0) return;
@@ -45,7 +53,15 @@ namespace Prosodia.Platforms.Windows
         {
             if (_isPlaying) return;
             _isPlaying = true;
-            _audioClient.Start();
+
+            // Pre-fill buffer with silence to kick-start clock event and avoid glitching
+            IntPtr bufferPtr;
+            CheckHr(_renderClient.GetBuffer((uint)_bufferFrameCount, out bufferPtr));
+            var silence = new byte[_bufferFrameCount * _channels * 4];
+            Marshal.Copy(silence, 0, bufferPtr, silence.Length);
+            CheckHr(_renderClient.ReleaseBuffer((uint)_bufferFrameCount, 0));
+            
+            CheckHr(_audioClient.Start());
             
             _renderThread = new Thread(RenderLoop)
             {
@@ -60,9 +76,14 @@ namespace Prosodia.Platforms.Windows
         {
             if (!_isPlaying) return;
             _isPlaying = false;
-            _audioClient.Stop();
+            
+            CheckHr(_audioClient.Stop());
             _renderThread?.Join();
-            _audioClient.Reset();
+            CheckHr(_audioClient.Reset());
+
+            _currentBuffer = null;
+            _currentBufferOffset = 0;
+            while (_audioQueue.TryDequeue(out _)) { }
         }
 
         private void InitializeWasapi()
@@ -72,11 +93,11 @@ namespace Prosodia.Platforms.Windows
             _deviceEnumerator = (IMMDeviceEnumerator)Activator.CreateInstance(enumeratorType);
             
             // Get default playback endpoint
-            _deviceEnumerator.GetDefaultAudioEndpoint(0, 1, out _device); // 0 = eRender, 1 = eMultimedia
+            CheckHr(_deviceEnumerator.GetDefaultAudioEndpoint(0, 1, out _device)); // 0 = eRender, 1 = eMultimedia
             
             // Activate AudioClient
             var audioClientGuid = new Guid("1CB9AD4C-DBA0-4C15-9C8A-42558517A7D8");
-            _device.Activate(ref audioClientGuid, 23, IntPtr.Zero, out var clientObj); // 23 = CLSCTX_ALL
+            CheckHr(_device.Activate(ref audioClientGuid, 23, IntPtr.Zero, out var clientObj)); // 23 = CLSCTX_ALL
             _audioClient = (IAudioClient)clientObj;
 
             // Formulate wave format (IEEE float)
@@ -88,6 +109,12 @@ namespace Prosodia.Platforms.Windows
             {
                 // In Exclusive mode, we must query if the device supports the exact format
                 int hr = _audioClient.IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, wfxPtr, out var closestMatch);
+                if (closestMatch != IntPtr.Zero)
+                {
+                    Marshal.FreeCoTaskMem(closestMatch);
+                    closestMatch = IntPtr.Zero;
+                }
+
                 if (hr != 0)
                 {
                     // Fall back to typical 48kHz stereo float if 24kHz mono is rejected by exclusive driver
@@ -96,6 +123,11 @@ namespace Prosodia.Platforms.Windows
                     wfx = new WaveFormatExtensible(_sampleRate, 32, _channels);
                     Marshal.StructureToPtr(wfx, wfxPtr, false);
                     hr = _audioClient.IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, wfxPtr, out closestMatch);
+                    if (closestMatch != IntPtr.Zero)
+                    {
+                        Marshal.FreeCoTaskMem(closestMatch);
+                        closestMatch = IntPtr.Zero;
+                    }
                     if (hr != 0)
                     {
                         throw new NotSupportedException("Device does not support exclusive mode with IEEE float formats.");
@@ -103,22 +135,36 @@ namespace Prosodia.Platforms.Windows
                 }
 
                 // Query recommended device period (typically 3-10ms)
-                _audioClient.GetDevicePeriod(out var defaultPeriod, out var minimumPeriod);
+                CheckHr(_audioClient.GetDevicePeriod(out var defaultPeriod, out var minimumPeriod));
                 
                 // Initialize in Exclusive, Event-Driven mode
-                _audioClient.Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, minimumPeriod, minimumPeriod, wfxPtr, Guid.Empty);
+                hr = _audioClient.Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, minimumPeriod, minimumPeriod, wfxPtr, Guid.Empty);
+                if (hr == unchecked((int)0x88890019)) // AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED
+                {
+                    CheckHr(_audioClient.GetBufferSize(out var alignedFrameCount));
+                    long newBufferDuration = (long)(10000000.0 * alignedFrameCount / _sampleRate);
+                    
+                    Marshal.ReleaseComObject(_audioClient);
+                    _audioClient = null;
+                    
+                    CheckHr(_device.Activate(ref audioClientGuid, 23, IntPtr.Zero, out clientObj));
+                    _audioClient = (IAudioClient)clientObj;
+                    
+                    hr = _audioClient.Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, newBufferDuration, newBufferDuration, wfxPtr, Guid.Empty);
+                }
+                CheckHr(hr);
                 
                 // Retrieve actual buffer size (in frames)
-                _audioClient.GetBufferSize(out var bufferSize);
+                CheckHr(_audioClient.GetBufferSize(out var bufferSize));
                 _bufferFrameCount = (int)bufferSize;
                 
                 // Register event handler callback
                 _bufferEvent = new AutoResetEvent(false);
-                _audioClient.SetEventHandle(_bufferEvent.SafeWaitHandle.DangerousGetHandle());
+                CheckHr(_audioClient.SetEventHandle(_bufferEvent.SafeWaitHandle.DangerousGetHandle()));
                 
                 // Get Render Client
                 var renderClientGuid = new Guid("F294ACFC-3146-4483-A7BF-ADDCA7C260E2");
-                _audioClient.GetService(ref renderClientGuid, out var renderObj);
+                CheckHr(_audioClient.GetService(ref renderClientGuid, out var renderObj));
                 _renderClient = (IAudioRenderClient)renderObj;
             }
             finally
@@ -129,20 +175,14 @@ namespace Prosodia.Platforms.Windows
 
         private void RenderLoop()
         {
-            // Pre-fill buffer with silence to kick-start clock event
-            IntPtr bufferPtr;
-            _renderClient.GetBuffer((uint)_bufferFrameCount, out bufferPtr);
-            var silence = new byte[_bufferFrameCount * _channels * 4];
-            Marshal.Copy(silence, 0, bufferPtr, silence.Length);
-            _renderClient.ReleaseBuffer((uint)_bufferFrameCount, 0);
-
             while (_isPlaying)
             {
                 // Wait for WASAPI hardware buffer request event
                 if (!_bufferEvent.WaitOne(500)) continue;
                 if (!_isPlaying) break;
 
-                _renderClient.GetBuffer((uint)_bufferFrameCount, out bufferPtr);
+                IntPtr bufferPtr;
+                CheckHr(_renderClient.GetBuffer((uint)_bufferFrameCount, out bufferPtr));
                 
                 int totalSamplesNeeded = _bufferFrameCount * _channels;
                 float[] renderBuffer = new float[totalSamplesNeeded];
@@ -154,7 +194,30 @@ namespace Prosodia.Platforms.Windows
                     {
                         if (_audioQueue.TryDequeue(out var nextBuffer))
                         {
-                            _currentBuffer = nextBuffer;
+                            if (_sampleRate == 48000 && _channels == 2)
+                            {
+                                // Resample 24 kHz mono to 48 kHz stereo on the fly
+                                float[] converted = new float[nextBuffer.Length * 4];
+                                for (int i = 0; i < nextBuffer.Length; i++)
+                                {
+                                    float current = nextBuffer[i];
+                                    float next = (i + 1 < nextBuffer.Length) ? nextBuffer[i + 1] : current;
+
+                                    // Frame 1 (48 kHz sample 1): Left/Right copy
+                                    converted[i * 4 + 0] = current;
+                                    converted[i * 4 + 1] = current;
+
+                                    // Frame 2 (48 kHz sample 2): Left/Right linear interpolation
+                                    float interp = (current + next) * 0.5f;
+                                    converted[i * 4 + 2] = interp;
+                                    converted[i * 4 + 3] = interp;
+                                }
+                                _currentBuffer = converted;
+                            }
+                            else
+                            {
+                                _currentBuffer = nextBuffer;
+                            }
                             _currentBufferOffset = 0;
                         }
                         else
@@ -172,7 +235,7 @@ namespace Prosodia.Platforms.Windows
 
                 // Copy float buffer into unmanaged COM audio buffer
                 Marshal.Copy(renderBuffer, 0, bufferPtr, totalSamplesNeeded);
-                _renderClient.ReleaseBuffer((uint)_bufferFrameCount, 0);
+                CheckHr(_renderClient.ReleaseBuffer((uint)_bufferFrameCount, 0));
             }
         }
 
@@ -220,14 +283,14 @@ namespace Prosodia.Platforms.Windows
             }
         }
 
-        [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-        private class MMDeviceEnumeratorCoClass { }
-
         [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IMMDeviceEnumerator
         {
+            [PreserveSig]
             int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
+            [PreserveSig]
             int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+            [PreserveSig]
             int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string pwstrId, out IMMDevice device);
         }
 
@@ -236,8 +299,11 @@ namespace Prosodia.Platforms.Windows
         {
             [PreserveSig]
             int Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
+            [PreserveSig]
             int OpenPropertyStore(uint stgmAccess, out IntPtr properties);
+            [PreserveSig]
             int GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
+            [PreserveSig]
             int GetState(out uint pdwState);
         }
 

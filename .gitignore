@@ -90,3 +90,7 @@ Models/
 
 # Legacy & Old backup directories
 Prosodia_Old/
+
+# Android build cache
+apps/android-reader/.gradle/
+
