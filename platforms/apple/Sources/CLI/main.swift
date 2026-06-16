@@ -138,7 +138,7 @@ struct ProsodiaCLI {
                 g2p: g2p,
                 voiceLoader: voiceLoader,
                 configJson: configJson,
-                sampleRate: 24000,
+                sampleRate: Kit.getSampleRate(),
                 langCode: "en-us"
             )
             

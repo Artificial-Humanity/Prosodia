@@ -65,7 +65,7 @@ interface BookDocument {
 // MARK: - Stub Implementations
 
 class InMemoryBookDocument(private val chapters: List<BookChapter>) : BookDocument {
-    constructor(chapterTexts: List<String>) : this(
+    constructor(chapterTexts: Iterable<String>) : this(
         chapterTexts.mapIndexed { index, text -> BookChapter(index, null, text) }
     )
 

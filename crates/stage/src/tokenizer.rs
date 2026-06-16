@@ -3,14 +3,14 @@ use prosodia_core::{BpeTokenizer as CoreTokenizer, BpeError as CoreError};
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum TokenizerError {
-    #[error("Tokenizer error: {message}")]
-    Error { message: String },
+    #[error("Tokenizer error: {msg}")]
+    Error { msg: String },
 }
 
 impl From<CoreError> for TokenizerError {
     fn from(err: CoreError) -> Self {
         Self::Error {
-            message: err.to_string(),
+            msg: err.to_string(),
         }
     }
 }

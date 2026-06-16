@@ -62,7 +62,7 @@ enum class ReaderTheme(
 ) {
     DARK(
         title = "Slate Dark",
-        backgroundColor = Color(0 PallidSlateDarkBg), // #0C0E12
+        backgroundColor = Color(0xFF0C0E12), // #0C0E12
         textColor = Color(0xFFEAEAEA),
         highlightColor = Color(0x289C27B0), // Purple opacity 0.15
         highlightBorderColor = Color(0x9C27B0FF.toInt()), // Purple border

@@ -278,7 +278,7 @@ void uniffi_director_fn_method_gemmadirector_set_narration_mode(void*_Nonnull pt
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DIRECTOR_FN_METHOD_GEMMADIRECTOR_TAG_PASSAGE
 #define UNIFFI_FFIDEF_UNIFFI_DIRECTOR_FN_METHOD_GEMMADIRECTOR_TAG_PASSAGE
-uint64_t uniffi_director_fn_method_gemmadirector_tag_passage(void*_Nonnull ptr, RustBuffer passage
+RustBuffer uniffi_director_fn_method_gemmadirector_tag_passage(void*_Nonnull ptr, RustBuffer passage, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DIRECTOR_FN_FUNC_DIRECTOR_SYSTEM_PROMPT

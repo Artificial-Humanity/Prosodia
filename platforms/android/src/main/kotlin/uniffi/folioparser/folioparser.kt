@@ -1588,26 +1588,26 @@ sealed class FolioParserException: Exception() {
     
     class IoException(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : FolioParserException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class ZipException(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : FolioParserException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class XmlException(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : FolioParserException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class MissingContainer(
@@ -1670,17 +1670,17 @@ public object FfiConverterTypeFolioParserError : FfiConverterRustBuffer<FolioPar
             is FolioParserException.IoException -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is FolioParserException.ZipException -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is FolioParserException.XmlException -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is FolioParserException.MissingContainer -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -1703,17 +1703,17 @@ public object FfiConverterTypeFolioParserError : FfiConverterRustBuffer<FolioPar
         when(value) {
             is FolioParserException.IoException -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is FolioParserException.ZipException -> {
                 buf.putInt(2)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is FolioParserException.XmlException -> {
                 buf.putInt(3)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is FolioParserException.MissingContainer -> {

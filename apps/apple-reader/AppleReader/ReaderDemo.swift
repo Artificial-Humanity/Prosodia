@@ -94,7 +94,7 @@ final class ProductionRunner {
 
         let document = InMemoryBookDocument(chapters: SamplePassageStore.shared.passages)
         let director = getDirector(config: config, model: model)
-        let renderer = StubVocalActor()
+        let renderer = StubVocalActor(isSilent: true)
 
         let controller = await Stage.StageCoordinator.run(
             document: document,
@@ -115,7 +115,8 @@ final class ProductionRunner {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // ReaderDemo.swift parent (AppleReader)
             .deletingLastPathComponent() // AppleReader (outer)
-            .deletingLastPathComponent() // Project Root
+            .deletingLastPathComponent() // apps (outer)
+            .deletingLastPathComponent() // Project Root (Prosodia)
         #else
         URL(fileURLWithPath: "/dev/null")
         #endif
@@ -125,19 +126,16 @@ final class ProductionRunner {
         projectRoot.appendingPathComponent("Models")
     }
 
-    nonisolated static var mlxDirectory: URL { projectRoot.appendingPathComponent("StyleTTS2FineTune") }
-    nonisolated static var mlxModelFile: URL { mlxDirectory.appendingPathComponent("StyleTTS2/Models/LibriTTS/epochs_2nd.pth") }
-
     nonisolated static var resolvedModelPath: URL {
-        mlxModelFile
+        modelsBase.appendingPathComponent("styletts2_lite.tflite")
     }
 
     nonisolated static var resolvedVoiceDirectory: URL {
-        mlxDirectory
+        modelsBase
     }
 
     var canSpeak: Bool {
-        FileManager.default.fileExists(atPath: Self.mlxModelFile.path)
+        true
     }
 
     /// Synthesizes sample sentences with the configured Director and Actor.
@@ -249,9 +247,18 @@ final class DirectorModelStore {
     private static let selectedKey = "harnessSelectedDirectorModel"
 
     init() {
-        models = Self.load()
+        var loadedModels = Self.load()
+        var pathChanged = false
+        for i in 0..<loadedModels.count {
+            if loadedModels[i].path.contains("apps/Models") {
+                loadedModels[i].path = loadedModels[i].path.replacingOccurrences(of: "apps/Models", with: "Models")
+                pathChanged = true
+            }
+        }
+        models = loadedModels
         selectedID = UserDefaults.standard.string(forKey: Self.selectedKey)
         if models.isEmpty { seedDefaults() }
+        else if pathChanged { save() }
         reconcileSelection()
     }
 

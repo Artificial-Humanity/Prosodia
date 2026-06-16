@@ -1957,7 +1957,7 @@ public enum TokenizerError {
 
     
     
-    case Error(message: String
+    case Error(msg: String
     )
 }
 
@@ -1973,7 +1973,7 @@ public struct FfiConverterTypeTokenizerError: FfiConverterRustBuffer {
 
         
         case 1: return .Error(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -1987,9 +1987,9 @@ public struct FfiConverterTypeTokenizerError: FfiConverterRustBuffer {
 
         
         
-        case let .Error(message):
+        case let .Error(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         }
     }
@@ -2700,6 +2700,12 @@ public func getPhrasePause() -> PhrasePauseConfig {
     )
 })
 }
+public func getSampleRate() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_stage_fn_func_get_sample_rate($0
+    )
+})
+}
 public func neutralPayloadForPassage(passage: String) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_stage_fn_func_neutral_payload_for_passage(
@@ -2810,6 +2816,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_stage_checksum_func_get_phrase_pause() != 53482) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_stage_checksum_func_get_sample_rate() != 61707) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_stage_checksum_func_neutral_payload_for_passage() != 41504) {

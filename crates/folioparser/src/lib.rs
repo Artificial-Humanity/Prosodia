@@ -700,12 +700,12 @@ impl EpubTextExtractor {
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum FolioParserError {
-    #[error("IO error: {message}")]
-    IoError { message: String },
-    #[error("Zip error: {message}")]
-    ZipError { message: String },
-    #[error("XML error: {message}")]
-    XmlError { message: String },
+    #[error("IO error: {msg}")]
+    IoError { msg: String },
+    #[error("Zip error: {msg}")]
+    ZipError { msg: String },
+    #[error("XML error: {msg}")]
+    XmlError { msg: String },
     #[error("Missing container.xml")]
     MissingContainer,
     #[error("Missing OPF file: {path}")]
@@ -716,15 +716,15 @@ pub enum FolioParserError {
 
 impl From<std::io::Error> for FolioParserError {
     fn from(err: std::io::Error) -> Self {
-        FolioParserError::IoError { message: err.to_string() }
+        FolioParserError::IoError { msg: err.to_string() }
     }
 }
 
 impl From<ZipReadError> for FolioParserError {
     fn from(err: ZipReadError) -> Self {
         match err {
-            ZipReadError::Io(e) => FolioParserError::IoError { message: e.to_string() },
-            other => FolioParserError::ZipError { message: other.to_string() },
+            ZipReadError::Io(e) => FolioParserError::IoError { msg: e.to_string() },
+            other => FolioParserError::ZipError { msg: other.to_string() },
         }
     }
 }

@@ -42,10 +42,10 @@ object StageCoordinator {
             director = director,
             actor = actor,
             grouping = grouping,
-            sampleRate = 24000
+            sampleRate = uniffi.stage.getSampleRate()
         )
 
-        val audioSink = StageAudioSink(sampleRate = 24000)
+        val audioSink = StageAudioSink(sampleRate = uniffi.stage.getSampleRate().toInt())
         val controller = RustCoordinatedPlaybackController(rustCoordinator, audioSink)
         controller.start()
         return controller

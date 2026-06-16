@@ -837,6 +837,8 @@ internal open class UniffiVTableCallbackInterfaceVocalActor(
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -916,6 +918,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_stage_fn_func_get_phrase_pause(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_stage_fn_func_get_sample_rate(uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_stage_fn_func_neutral_payload_for_passage(`passage`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_stage_fn_func_parse_markup(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1064,6 +1068,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_stage_checksum_func_get_phrase_pause(
     ): Short
+    fun uniffi_stage_checksum_func_get_sample_rate(
+    ): Short
     fun uniffi_stage_checksum_func_neutral_payload_for_passage(
     ): Short
     fun uniffi_stage_checksum_func_parse_markup(
@@ -1151,6 +1157,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_stage_checksum_func_get_phrase_pause() != 53482.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_stage_checksum_func_get_sample_rate() != 61707.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_stage_checksum_func_neutral_payload_for_passage() != 41504.toShort()) {
@@ -2834,10 +2843,10 @@ sealed class TokenizerException: Exception() {
     
     class Exception(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : TokenizerException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
 
@@ -2865,7 +2874,7 @@ public object FfiConverterTypeTokenizerError : FfiConverterRustBuffer<TokenizerE
             is TokenizerException.Exception -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
         }
     }
@@ -2874,7 +2883,7 @@ public object FfiConverterTypeTokenizerError : FfiConverterRustBuffer<TokenizerE
         when(value) {
             is TokenizerException.Exception -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -3569,6 +3578,15 @@ public object FfiConverterSequenceTypeProsodyState: FfiConverterRustBuffer<List<
             return FfiConverterTypePhrasePauseConfig.lift(
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_stage_fn_func_get_phrase_pause(
+        _status)
+}
+    )
+    }
+    
+ fun `getSampleRate`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_stage_fn_func_get_sample_rate(
         _status)
 }
     )

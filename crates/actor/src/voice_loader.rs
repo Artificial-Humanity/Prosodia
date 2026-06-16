@@ -40,8 +40,8 @@ pub struct NamedStyleVector {
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum VoiceLoaderError {
-    #[error("safetensors error: {message}")]
-    Safetensors { message: String },
+    #[error("safetensors error: {msg}")]
+    Safetensors { msg: String },
     #[error("expected a 2D voice pack, got shape {shape:?}")]
     NotTwoDimensional { shape: Vec<u32> },
     #[error("voice shapes in a blend must all match")]
@@ -67,23 +67,23 @@ pub enum VoiceLoaderError {
 pub fn parse_safetensors(bytes: Vec<u8>) -> Result<Vec<NamedStyleVector>, VoiceLoaderError> {
     if bytes.len() < 8 {
         return Err(VoiceLoaderError::Safetensors {
-            message: "file too small".into(),
+            msg: "file too small".into(),
         });
     }
     let header_len = u64::from_le_bytes(bytes[0..8].try_into().unwrap()) as usize;
     let header_end = 8 + header_len;
     if bytes.len() < header_end {
         return Err(VoiceLoaderError::Safetensors {
-            message: "invalid header length".into(),
+            msg: "invalid header length".into(),
         });
     }
 
     let header: serde_json::Value =
         serde_json::from_slice(&bytes[8..header_end]).map_err(|e| VoiceLoaderError::Safetensors {
-            message: format!("failed to parse JSON header: {e}"),
+            msg: format!("failed to parse JSON header: {e}"),
         })?;
     let obj = header.as_object().ok_or_else(|| VoiceLoaderError::Safetensors {
-        message: "header is not a JSON object".into(),
+        msg: "header is not a JSON object".into(),
     })?;
 
     let mut result = Vec::new();
@@ -112,7 +112,7 @@ pub fn parse_safetensors(bytes: Vec<u8>) -> Result<Vec<NamedStyleVector>, VoiceL
         let end = header_end + offsets_json[1].as_u64().unwrap_or(0) as usize;
         if bytes.len() < end || end < start {
             return Err(VoiceLoaderError::Safetensors {
-                message: "data offsets out of bounds".into(),
+                msg: "data offsets out of bounds".into(),
             });
         }
         let tensor = &bytes[start..end];
@@ -128,7 +128,7 @@ pub fn parse_safetensors(bytes: Vec<u8>) -> Result<Vec<NamedStyleVector>, VoiceL
                 .collect(),
             other => {
                 return Err(VoiceLoaderError::Safetensors {
-                    message: format!("unsupported dtype: {other}"),
+                    msg: format!("unsupported dtype: {other}"),
                 })
             }
         };
@@ -281,7 +281,7 @@ pub trait VoiceAssetProvider: Send + Sync {
 #[derive(uniffi::Object)]
 pub struct VoiceLoader {
     provider: Box<dyn VoiceAssetProvider>,
-    /// Parsed, normalized packs keyed by voice name, with FIFO eviction at the limit.
+    /// Parsed, normalized packs keyed by voice name, with LRU eviction at the limit.
     cache: Mutex<VoiceCache>,
 }
 

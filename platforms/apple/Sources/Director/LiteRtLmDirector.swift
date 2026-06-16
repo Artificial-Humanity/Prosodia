@@ -10,7 +10,7 @@ public actor LiteRtLmDirector: Stage.DirectorInference {
     private static let log = Logger(subsystem: "com.mcfarlin.ProsodiaStage", category: "LiteRtLmDirector")
 
     /// The UniFFI Rust-backed GemmaDirector instance.
-    private let rustDirector: GemmaDirector
+    nonisolated private let rustDirector: GemmaDirector
 
     /// Initializes a new instance of the LiteRT-LM Director.
     ///
@@ -58,10 +58,10 @@ public actor LiteRtLmDirector: Stage.DirectorInference {
     /// - Returns: An asynchronous stream of annotated payloads.
     public func annotate(chapterStream: AsyncStream<String>) async -> AsyncStream<String> {
         AsyncStream { continuation in
-            let task = Task { [self] in
+            let task = Task {
                 for await passage in chapterStream {
                     if Task.isCancelled { break }
-                    let payload = await self.annotateSingle(passage: passage)
+                    let payload = self.annotateSingle(passage: passage)
                     continuation.yield(payload)
                 }
                 continuation.finish()
@@ -70,21 +70,14 @@ public actor LiteRtLmDirector: Stage.DirectorInference {
         }
     }
 
-    private func annotateSingle(passage: String) async -> String {
-        let raw = await rustDirector.tagPassage(passage: passage)
+    private nonisolated func annotateSingle(passage: String) -> String {
+        let raw = rustDirector.tagPassage(passage: passage)
         return Kit.payloadFromRaw(raw: raw, passage: passage)
     }
 
     // MARK: - Kit.DirectorInference (Rust FFI Callback Interface)
 
     public nonisolated func annotate(passage: String) -> String {
-        let semaphore = DispatchSemaphore(value: 0)
-        var result = ""
-        Task {
-            result = await self.annotateSingle(passage: passage)
-            semaphore.signal()
-        }
-        semaphore.wait()
-        return result
+        return self.annotateSingle(passage: passage)
     }
 }

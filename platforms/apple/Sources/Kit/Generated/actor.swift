@@ -2156,11 +2156,11 @@ public enum PipelineError {
 
     
     
-    case JsonParse(message: String
+    case JsonParse(msg: String
     )
-    case SpeechEngine(message: String
+    case SpeechEngine(msg: String
     )
-    case VoiceLoader(message: String
+    case VoiceLoader(msg: String
     )
     case InvalidSpeed(speed: Float
     )
@@ -2178,13 +2178,13 @@ public struct FfiConverterTypePipelineError: FfiConverterRustBuffer {
 
         
         case 1: return .JsonParse(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 2: return .SpeechEngine(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 3: return .VoiceLoader(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 4: return .InvalidSpeed(
             speed: try FfiConverterFloat.read(from: &buf)
@@ -2201,19 +2201,19 @@ public struct FfiConverterTypePipelineError: FfiConverterRustBuffer {
 
         
         
-        case let .JsonParse(message):
+        case let .JsonParse(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .SpeechEngine(message):
+        case let .SpeechEngine(msg):
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .VoiceLoader(message):
+        case let .VoiceLoader(msg):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
         case let .InvalidSpeed(speed):
@@ -2234,7 +2234,7 @@ public enum SpeechEngineError {
 
     
     
-    case Inference(message: String
+    case Inference(msg: String
     )
 }
 
@@ -2250,7 +2250,7 @@ public struct FfiConverterTypeSpeechEngineError: FfiConverterRustBuffer {
 
         
         case 1: return .Inference(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -2264,9 +2264,9 @@ public struct FfiConverterTypeSpeechEngineError: FfiConverterRustBuffer {
 
         
         
-        case let .Inference(message):
+        case let .Inference(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         }
     }
@@ -2282,7 +2282,7 @@ public enum VoiceLoaderError {
 
     
     
-    case Safetensors(message: String
+    case Safetensors(msg: String
     )
     case NotTwoDimensional(shape: [UInt32]
     )
@@ -2304,7 +2304,7 @@ public struct FfiConverterTypeVoiceLoaderError: FfiConverterRustBuffer {
 
         
         case 1: return .Safetensors(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 2: return .NotTwoDimensional(
             shape: try FfiConverterSequenceUInt32.read(from: &buf)
@@ -2326,9 +2326,9 @@ public struct FfiConverterTypeVoiceLoaderError: FfiConverterRustBuffer {
 
         
         
-        case let .Safetensors(message):
+        case let .Safetensors(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
         case let .NotTwoDimensional(shape):

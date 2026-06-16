@@ -26,8 +26,8 @@ pub struct PhrasePauseState {
 
 pub static PHRASE_PAUSE: Lazy<RwLock<PhrasePauseState>> = Lazy::new(|| {
     RwLock::new(PhrasePauseState {
-        sentence: 0.24,
-        clause: 0.14,
+        sentence: 0.28,
+        clause: 0.25,
     })
 });
 

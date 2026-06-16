@@ -159,7 +159,7 @@ impl GemmaDirector {
         self.prior_passages.lock().unwrap().clear();
     }
 
-    pub async fn tag_passage(&self, passage: String) -> String {
+    pub fn tag_passage(&self, passage: String) -> String {
         let mode = *self.narration_mode.lock().unwrap();
         let system_prompt = director_prompt(mode);
         
@@ -178,7 +178,7 @@ impl GemmaDirector {
         };
 
         // Try to perform inference using LiteRT-LM
-        match self.generate_inference(&system_prompt, &full_user_message).await {
+        match self.generate_inference(&system_prompt, &full_user_message) {
             Ok(annotated_payload) => {
                 let mut prior = self.prior_passages.lock().unwrap();
                 prior.push(passage.clone());
@@ -196,7 +196,7 @@ impl GemmaDirector {
 }
 
 impl GemmaDirector {
-    async fn get_or_init_engine(&self) -> Result<Arc<EngineWrapper>, String> {
+    fn get_or_init_engine(&self) -> Result<Arc<EngineWrapper>, String> {
         let mut engine_lock = self.engine.lock().unwrap();
         if let Some(ref engine) = *engine_lock {
             return Ok(Arc::clone(engine));
@@ -238,8 +238,8 @@ impl GemmaDirector {
         }
     }
 
-    async fn generate_inference(&self, system_prompt: &str, user_message: &str) -> Result<String, String> {
-        let engine = self.get_or_init_engine().await?;
+    fn generate_inference(&self, system_prompt: &str, user_message: &str) -> Result<String, String> {
+        let engine = self.get_or_init_engine()?;
 
         unsafe {
             // 1. Create session config and set sampler parameters
