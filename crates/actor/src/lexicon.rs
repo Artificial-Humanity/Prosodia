@@ -18,11 +18,10 @@ pub const SECONDARY_STRESS: char = 'ˌ';
 const _US_VOCAB: &str = "AIOWYbdfhijklmnpstuvwzæðŋɑɔəɛɜɡɪɹɾʃʊʌʒʤʧˈˌθᵊᵻʔ";
 const _GB_VOCAB: &str = "AIQWYabdfhijklmnpstuvwzðŋɑɒɔəɛɜɡɪɹʃʊʌʒʤʧˈˌːθᵊ";
 
-// Embedded resources
-const US_GOLD_JSON: &str = include_str!("../resources/us_gold.json");
-const US_SILVER_JSON: &str = include_str!("../resources/us_silver.json");
-const GB_GOLD_JSON: &str = include_str!("../resources/gb_gold.json");
-const GB_SILVER_JSON: &str = include_str!("../resources/gb_silver.json");
+const US_GOLD_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/us_gold.bin"));
+const GB_GOLD_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/gb_gold.bin"));
+const US_SILVER_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/us_silver.bin"));
+const GB_SILVER_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/gb_silver.bin"));
 
 #[derive(Clone, Debug)]
 pub struct TokenContext {
@@ -39,72 +38,169 @@ impl Default for TokenContext {
     }
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum LexiconValue {
-    Single(String),
-    Variants(HashMap<String, Option<String>>),
+#[derive(Clone, Copy)]
+pub struct BinSilverMap {
+    data: &'static [u8],
 }
 
-fn grow_dictionary<T: Clone>(dictionary: HashMap<String, T>) -> HashMap<String, T> {
-    let mut result = dictionary.clone();
-    for (key, value) in dictionary.iter() {
-        if key.chars().count() >= 2 {
-            if key == &key.to_lowercase() {
-                let mut chars = key.chars();
-                if let Some(first) = chars.next() {
-                    let capitalized = first.to_uppercase().to_string() + chars.as_str();
-                    if &capitalized != key {
-                        result.insert(capitalized, value.clone());
-                    }
+impl BinSilverMap {
+    pub const fn new(data: &'static [u8]) -> Self {
+        Self { data }
+    }
+
+    pub fn get(&self, query: &str) -> Option<&'static str> {
+        let num_entries = u32::from_le_bytes(self.data[0..4].try_into().unwrap()) as usize;
+        let index_start = 8;
+        let string_pool_start = index_start + num_entries * 12;
+        let string_pool = &self.data[string_pool_start..];
+
+        let mut low = 0;
+        let mut high = num_entries;
+        while low < high {
+            let mid = (low + high) / 2;
+            let offset = index_start + mid * 12;
+            let key_offset = u32::from_le_bytes(self.data[offset..offset+4].try_into().unwrap()) as usize;
+            let key_len = u16::from_le_bytes(self.data[offset+4..offset+6].try_into().unwrap()) as usize;
+            let key_bytes = &string_pool[key_offset..key_offset + key_len];
+            let key_str = std::str::from_utf8(key_bytes).unwrap();
+
+            match query.cmp(key_str) {
+                std::cmp::Ordering::Equal => {
+                    let val_offset = u32::from_le_bytes(self.data[offset+6..offset+10].try_into().unwrap()) as usize;
+                    let val_len = u16::from_le_bytes(self.data[offset+10..offset+12].try_into().unwrap()) as usize;
+                    let val_bytes = &string_pool[val_offset..val_offset + val_len];
+                    return Some(std::str::from_utf8(val_bytes).unwrap());
                 }
-            } else {
-                // Check capitalized (first uppercase, rest lowercase)
-                let mut chars = key.chars();
-                if let Some(first) = chars.next() {
-                    let mut rest_lower = true;
-                    for c in chars {
-                        if !c.is_lowercase() {
-                            rest_lower = false;
-                            break;
-                        }
-                    }
-                    if first.is_uppercase() && rest_lower {
-                        result.insert(key.to_lowercase(), value.clone());
-                    }
+                std::cmp::Ordering::Less => {
+                    high = mid;
+                }
+                std::cmp::Ordering::Greater => {
+                    low = mid + 1;
                 }
             }
         }
+        None
     }
-    result
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
 }
 
-// Thread-safe parsed lazy static databases
-static US_GOLD: Lazy<HashMap<String, LexiconValue>> = Lazy::new(|| {
-    let dict: HashMap<String, LexiconValue> = serde_json::from_str(US_GOLD_JSON).unwrap();
-    grow_dictionary(dict)
-});
+#[derive(Clone, Copy)]
+pub struct BinGoldMap {
+    data: &'static [u8],
+}
 
-static US_SILVER: Lazy<HashMap<String, String>> = Lazy::new(|| {
-    let dict: HashMap<String, String> = serde_json::from_str(US_SILVER_JSON).unwrap();
-    grow_dictionary(dict)
-});
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinLexiconValue {
+    Single(&'static str),
+    Variants(BinVariants),
+}
 
-static GB_GOLD: Lazy<HashMap<String, LexiconValue>> = Lazy::new(|| {
-    let dict: HashMap<String, LexiconValue> = serde_json::from_str(GB_GOLD_JSON).unwrap();
-    grow_dictionary(dict)
-});
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BinVariants {
+    data: &'static [u8],
+    offset: usize,
+    len: usize,
+    string_pool: &'static [u8],
+}
 
-static GB_SILVER: Lazy<HashMap<String, String>> = Lazy::new(|| {
-    let dict: HashMap<String, String> = serde_json::from_str(GB_SILVER_JSON).unwrap();
-    grow_dictionary(dict)
-});
+impl BinVariants {
+    pub fn get(&self, query_tag: &str) -> Option<Option<&'static str>> {
+        for i in 0..self.len {
+            let item_offset = self.offset + i * 13;
+            let tag_offset = u32::from_le_bytes(self.data[item_offset..item_offset+4].try_into().unwrap()) as usize;
+            let tag_len = u16::from_le_bytes(self.data[item_offset+4..item_offset+6].try_into().unwrap()) as usize;
+            let tag_bytes = &self.string_pool[tag_offset..tag_offset + tag_len];
+            let tag_str = std::str::from_utf8(tag_bytes).unwrap();
+
+            if tag_str == query_tag {
+                let has_val = self.data[item_offset+6];
+                if has_val == 0 {
+                    return Some(None);
+                } else {
+                    let val_offset = u32::from_le_bytes(self.data[item_offset+7..item_offset+11].try_into().unwrap()) as usize;
+                    let val_len = u16::from_le_bytes(self.data[item_offset+11..item_offset+13].try_into().unwrap()) as usize;
+                    let val_bytes = &self.string_pool[val_offset..val_offset + val_len];
+                    return Some(Some(std::str::from_utf8(val_bytes).unwrap()));
+                }
+            }
+        }
+        None
+    }
+
+    pub fn contains_key(&self, tag: &str) -> bool {
+        self.get(tag).is_some()
+    }
+}
+
+impl BinGoldMap {
+    pub const fn new(data: &'static [u8]) -> Self {
+        Self { data }
+    }
+
+    pub fn get(&self, query: &str) -> Option<BinLexiconValue> {
+        let num_entries = u32::from_le_bytes(self.data[0..4].try_into().unwrap()) as usize;
+        let pool_size = u32::from_le_bytes(self.data[4..8].try_into().unwrap()) as usize;
+        let val_pool_size = u32::from_le_bytes(self.data[8..12].try_into().unwrap()) as usize;
+
+        let index_start = 12;
+        let string_pool_start = index_start + num_entries * 14;
+        let values_pool_start = string_pool_start + pool_size;
+
+        let string_pool = &self.data[string_pool_start..string_pool_start + pool_size];
+        let values_pool = &self.data[values_pool_start..values_pool_start + val_pool_size];
+
+        let mut low = 0;
+        let mut high = num_entries;
+        while low < high {
+            let mid = (low + high) / 2;
+            let offset = index_start + mid * 14;
+            let key_offset = u32::from_le_bytes(self.data[offset..offset+4].try_into().unwrap()) as usize;
+            let key_len = u16::from_le_bytes(self.data[offset+4..offset+6].try_into().unwrap()) as usize;
+            let key_bytes = &string_pool[key_offset..key_offset + key_len];
+            let key_str = std::str::from_utf8(key_bytes).unwrap();
+
+            match query.cmp(key_str) {
+                std::cmp::Ordering::Equal => {
+                    let val_type = self.data[offset+6];
+                    let val_data_offset = u32::from_le_bytes(self.data[offset+8..offset+12].try_into().unwrap()) as usize;
+                    let val_data_len = u16::from_le_bytes(self.data[offset+12..offset+14].try_into().unwrap()) as usize;
+
+                    if val_type == 0 {
+                        let val_bytes = &string_pool[val_data_offset..val_data_offset + val_data_len];
+                        return Some(BinLexiconValue::Single(std::str::from_utf8(val_bytes).unwrap()));
+                    } else {
+                        return Some(BinLexiconValue::Variants(BinVariants {
+                            data: values_pool,
+                            offset: val_data_offset,
+                            len: val_data_len as usize,
+                            string_pool,
+                        }));
+                    }
+                }
+                std::cmp::Ordering::Less => {
+                    high = mid;
+                }
+                std::cmp::Ordering::Greater => {
+                    low = mid + 1;
+                }
+            }
+        }
+        None
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+}
 
 pub struct Lexicon {
     pub british: bool,
     pub cap_stresses: (f64, f64),
-    golds: &'static HashMap<String, LexiconValue>,
-    silvers: &'static HashMap<String, String>,
+    golds: BinGoldMap,
+    silvers: BinSilverMap,
     currencies: HashMap<String, (&'static str, &'static str)>,
     ordinals: HashSet<&'static str>,
     add_symbols: HashMap<String, &'static str>,
@@ -113,8 +209,8 @@ pub struct Lexicon {
 
 impl Lexicon {
     pub fn new(british: bool) -> Self {
-        let golds = if british { &*GB_GOLD } else { &*US_GOLD };
-        let silvers = if british { &*GB_SILVER } else { &*US_SILVER };
+        let golds = if british { BinGoldMap::new(GB_GOLD_BIN) } else { BinGoldMap::new(US_GOLD_BIN) };
+        let silvers = if british { BinSilverMap::new(GB_SILVER_BIN) } else { BinSilverMap::new(US_SILVER_BIN) };
 
         let mut currencies = HashMap::new();
         currencies.insert("$".to_string(), ("dollar", "cent"));
@@ -177,9 +273,9 @@ impl Lexicon {
 
     pub fn gold_string(&self, key: &str) -> Option<String> {
         match self.golds.get(key) {
-            Some(LexiconValue::Single(value)) => Some(value.clone()),
-            Some(LexiconValue::Variants(variants)) => {
-                variants.get("DEFAULT").and_then(|opt| opt.clone())
+            Some(BinLexiconValue::Single(value)) => Some(value.to_string()),
+            Some(BinLexiconValue::Variants(variants)) => {
+                variants.get("DEFAULT").and_then(|opt| opt.map(|s| s.to_string()))
             }
             None => None,
         }
@@ -322,12 +418,12 @@ impl Lexicon {
             if character.is_alphabetic() {
                 let char_upper = character.to_uppercase().to_string();
                 match self.golds.get(&char_upper) {
-                    Some(LexiconValue::Single(phonemes)) => {
-                        pieces.push(phonemes.clone());
+                    Some(BinLexiconValue::Single(phonemes)) => {
+                        pieces.push(phonemes.to_string());
                     }
-                    Some(LexiconValue::Variants(variants)) => {
+                    Some(BinLexiconValue::Variants(variants)) => {
                         if let Some(Some(phonemes)) = variants.get("DEFAULT") {
-                            pieces.push(phonemes.clone());
+                            pieces.push(phonemes.to_string());
                         }
                     }
                     None => {}
@@ -412,15 +508,15 @@ impl Lexicon {
         }
         if ["used", "Used", "USED"].contains(&word) {
             if (tag == Some("VBD") || tag == Some("JJ") || tag == Some("VB")) && ctx.future_to {
-                if let Some(LexiconValue::Variants(variants)) = self.golds.get("used") {
+                if let Some(BinLexiconValue::Variants(variants)) = self.golds.get("used") {
                     if let Some(Some(p)) = variants.get("VBD") {
-                        return (Some(p.clone()), Some(4));
+                        return (Some(p.to_string()), Some(4));
                     }
                 }
             }
-            if let Some(LexiconValue::Variants(variants)) = self.golds.get("used") {
+            if let Some(BinLexiconValue::Variants(variants)) = self.golds.get("used") {
                 if let Some(Some(p)) = variants.get("DEFAULT") {
-                    return (Some(p.clone()), Some(4));
+                    return (Some(p.to_string()), Some(4));
                 }
             }
         }
@@ -463,10 +559,10 @@ impl Lexicon {
         let mut rating = 4;
 
         match self.golds.get(&lookup_word) {
-            Some(LexiconValue::Single(value)) => {
-                phonemes = Some(value.clone());
+            Some(BinLexiconValue::Single(value)) => {
+                phonemes = Some(value.to_string());
             }
-            Some(LexiconValue::Variants(variants)) => {
+            Some(BinLexiconValue::Variants(variants)) => {
                 let mut selected_tag = tag.map(|t| t.to_string());
                 if let Some(ref c) = ctx {
                     if c.future_vowel.is_none() && variants.contains_key("None") {
@@ -480,14 +576,15 @@ impl Lexicon {
                 
                 let lookup_tag = selected_tag.as_deref().unwrap_or("DEFAULT");
                 phonemes = variants.get(lookup_tag)
-                    .and_then(|opt| opt.clone())
-                    .or_else(|| variants.get("DEFAULT").and_then(|opt| opt.clone()));
+                    .and_then(|opt| opt)
+                    .or_else(|| variants.get("DEFAULT").and_then(|opt| opt))
+                    .map(|s| s.to_string());
             }
             None => {}
         }
 
         if phonemes.is_none() && !proper_name_guess {
-            phonemes = self.silvers.get(&lookup_word).cloned();
+            phonemes = self.silvers.get(&lookup_word).map(|s| s.to_string());
             if phonemes.is_some() {
                 rating = 3;
             }
