@@ -27,8 +27,9 @@ class NarrationSourceAdapter: Kit.NarrationSource {
 // MARK: - StageCoordinator
 
 /// Connects a ``BookDocument`` → ``DirectorInference`` → ``VocalActor``
-/// via the high-performance pull-based Rust ``StageCoordinator``, returning a
-/// ``PlaybackController`` to manage the active session.
+/// via the high-performance Rust ``StageCoordinator`` (using a configurable
+/// lookahead limit for background rendering), returning a ``PlaybackController``
+/// to manage the active session.
 public enum StageCoordinator {
 
     /// Starts the full narration pipeline and returns a controller for the session.
@@ -38,7 +39,7 @@ public enum StageCoordinator {
         grouping: NarrationGrouping = .paragraph(),
         director: any DirectorInference,
         actor: any VocalActor,
-        lookahead: Int = 5 // Ignored in pull-based design
+        lookahead: Int = 5 // Bounded lookahead limit (0 for synchronous/thread-free)
     ) async -> any PlaybackController {
         
         let sourceAdapter = NarrationSourceAdapter(
@@ -56,15 +57,16 @@ public enum StageCoordinator {
         }
         
         // Swift-side DirectorInference and VocalActor now inherit from FFI protocols directly
-        let rustCoordinator = Kit.StageCoordinator(
+        let rustCoordinator = Kit.StageCoordinator.newWithLookahead(
             source: sourceAdapter,
             director: director,
             actor: actor,
             grouping: kitGrouping,
-            sampleRate: 24000
+            sampleRate: Kit.getSampleRate(),
+            lookaheadLimit: UInt32(lookahead)
         )
         
-        let audioSink = StageAudioSink(sampleRate: 24000)
+        let audioSink = StageAudioSink(sampleRate: Double(Kit.getSampleRate()))
         
         let controller = RustCoordinatedPlaybackController(
             coordinator: rustCoordinator,

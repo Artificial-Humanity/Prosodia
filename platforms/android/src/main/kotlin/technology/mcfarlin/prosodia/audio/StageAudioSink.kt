@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 /**
  * Shared Android AudioTrack output stage for Actor renderers.
  */
-class StageAudioSink(private val sampleRate: Int = 24000) {
+class StageAudioSink(private val sampleRate: Int = uniffi.stage.getSampleRate().toInt()) {
     private var audioTrack: AudioTrack? = null
     private val format = AudioFormat.Builder()
         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)

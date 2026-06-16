@@ -1043,11 +1043,11 @@ public enum FolioParserError {
 
     
     
-    case IoError(message: String
+    case IoError(msg: String
     )
-    case ZipError(message: String
+    case ZipError(msg: String
     )
-    case XmlError(message: String
+    case XmlError(msg: String
     )
     case MissingContainer
     case MissingOpf(path: String
@@ -1068,13 +1068,13 @@ public struct FfiConverterTypeFolioParserError: FfiConverterRustBuffer {
 
         
         case 1: return .IoError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 2: return .ZipError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 3: return .XmlError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 4: return .MissingContainer
         case 5: return .MissingOpf(
@@ -1095,19 +1095,19 @@ public struct FfiConverterTypeFolioParserError: FfiConverterRustBuffer {
 
         
         
-        case let .IoError(message):
+        case let .IoError(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .ZipError(message):
+        case let .ZipError(msg):
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .XmlError(message):
+        case let .XmlError(msg):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
         case .MissingContainer:

@@ -67,7 +67,7 @@ public actor LiteRtVocalActor: Stage.VocalActor {
             g2p: g2p,
             voiceLoader: voiceLoader,
             configJson: configJson,
-            sampleRate: 24000,
+            sampleRate: Kit.getSampleRate(),
             langCode: "en-us"
         )
         let backend = try LiteRtActorEngine(modelPath: modelURL, configURL: configURL)
@@ -171,7 +171,11 @@ public struct LiteRtVocalActorProvider: VocalActorProvider {
 
     public func canHandle(modelURL: URL) -> Bool {
         let ext = modelURL.pathExtension.lowercased()
-        return ext == "tflite" || modelURL.path.hasSuffix(".tflite")
+        let isTflite = ext == "tflite" || modelURL.path.hasSuffix(".tflite")
+        let configURL = modelURL.deletingLastPathComponent().appendingPathComponent("config.json")
+        return isTflite &&
+               FileManager.default.fileExists(atPath: modelURL.path) &&
+               FileManager.default.fileExists(atPath: configURL.path)
     }
 
     public func makeActor(modelURL: URL, voiceDirectoryURL: URL?) -> any Stage.VocalActor {

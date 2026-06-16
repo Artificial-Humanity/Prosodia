@@ -126,14 +126,14 @@ final class ReaderViewModel {
         let docForPlayback = InMemoryBookDocument(chapters: [chapter.text])
         
         // Use real models if available, otherwise fall back to stubs
-        let modelFile = ProductionRunner.mlxModelFile
-        let voiceDir = ProductionRunner.mlxDirectory
+        let modelFile = ProductionRunner.resolvedModelPath
+        let voiceDir = ProductionRunner.resolvedVoiceDirectory
         
         let director: any Stage.DirectorInference
         let actor: any Stage.VocalActor
         
-        if FileManager.default.fileExists(atPath: modelFile.path) {
-            actor = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) ?? StubVocalActor()
+        if let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) {
+            actor = resolved
         } else {
             actor = StubVocalActor()
         }

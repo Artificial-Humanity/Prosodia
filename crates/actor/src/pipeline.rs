@@ -34,12 +34,12 @@ pub struct SynthesisResult {
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum PipelineError {
-    #[error("json parse error: {message}")]
-    JsonParse { message: String },
-    #[error("speech engine error: {message}")]
-    SpeechEngine { message: String },
-    #[error("voice loader error: {message}")]
-    VoiceLoader { message: String },
+    #[error("json parse error: {msg}")]
+    JsonParse { msg: String },
+    #[error("speech engine error: {msg}")]
+    SpeechEngine { msg: String },
+    #[error("voice loader error: {msg}")]
+    VoiceLoader { msg: String },
     #[error("invalid speed: {speed}")]
     InvalidSpeed { speed: f32 },
 }
@@ -74,7 +74,7 @@ impl ProsodiaActorPipeline {
         lang_code: String,
     ) -> Result<Arc<Self>, PipelineError> {
         let config: StyleTTS2Config = serde_json::from_str(&config_json)
-            .map_err(|e| PipelineError::JsonParse { message: e.to_string() })?;
+            .map_err(|e| PipelineError::JsonParse { msg: e.to_string() })?;
         Ok(Arc::new(Self {
             g2p: Mutex::new(g2p),
             voice_loader,
@@ -250,7 +250,7 @@ impl ProsodiaActorPipeline {
                     self.vocab.clone(),
                 )
                 .map_err(|e| PipelineError::VoiceLoader {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             let mut ids = Vec::new();
@@ -336,7 +336,7 @@ impl ProsodiaActorPipeline {
                     resolved_f0_bias,
                 )
                 .map_err(|e| PipelineError::SpeechEngine {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             let pred_dur = output.pred_dur;
@@ -508,7 +508,7 @@ impl ProsodiaActorPipeline {
                 .voice_loader
                 .style_vector(voice.clone(), trimmed_phonemes.chars().count() as i64)
                 .map_err(|e| PipelineError::VoiceLoader {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             if let Some(ref prev) = last_style {
@@ -529,7 +529,7 @@ impl ProsodiaActorPipeline {
                     Some(f0_bias),
                 )
                 .map_err(|e| PipelineError::SpeechEngine {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             let pred_dur = output.pred_dur;
@@ -651,7 +651,7 @@ impl ProsodiaActorPipeline {
                 .voice_loader
                 .style_vector(voice.clone(), chunk.chars().count() as i64)
                 .map_err(|e| PipelineError::VoiceLoader {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             if let Some(ref prev) = last_style {
@@ -666,7 +666,7 @@ impl ProsodiaActorPipeline {
             let output = speech_engine
                 .forward(self.tokenize(&chunk), style, speed, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             callback.on_audio_chunk(output.audio);
@@ -720,12 +720,12 @@ impl ProsodiaActorPipeline {
                 .voice_loader
                 .load_blend(blend_recipe)
                 .map_err(|e| PipelineError::VoiceLoader {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             let mut style = crate::voice_loader::slice_style_row(pack, chunk.chars().count() as i64)
                 .map_err(|e| PipelineError::VoiceLoader {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             if let Some(ref prev) = last_style {
@@ -740,7 +740,7 @@ impl ProsodiaActorPipeline {
             let output = speech_engine
                 .forward(self.tokenize(&chunk), style, speed, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
 
             callback.on_audio_chunk(output.audio);

@@ -12,8 +12,8 @@ pub struct ActorEngineOutput {
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum SpeechEngineError {
-    #[error("inference error: {message}")]
-    Inference { message: String },
+    #[error("inference error: {msg}")]
+    Inference { msg: String },
 }
 
 #[uniffi::export(callback_interface)]
@@ -113,17 +113,17 @@ impl LiteRtActorEngine {
 
         unsafe {
             let model_path_c = CString::new(self.model_path.as_str())
-                .map_err(|e| SpeechEngineError::Inference { message: format!("Invalid model path: {}", e) })?;
+                .map_err(|e| SpeechEngineError::Inference { msg: format!("Invalid model path: {}", e) })?;
 
             let model = tflite::TfLiteModelCreateFromFile(model_path_c.as_ptr());
             if model.is_null() {
-                return Err(SpeechEngineError::Inference { message: format!("Failed to load model from {}", self.model_path) });
+                return Err(SpeechEngineError::Inference { msg: format!("Failed to load model from {}", self.model_path) });
             }
 
             let options = tflite::TfLiteInterpreterOptionsCreate();
             if options.is_null() {
                 tflite::TfLiteModelDelete(model);
-                return Err(SpeechEngineError::Inference { message: "Failed to create interpreter options".to_string() });
+                return Err(SpeechEngineError::Inference { msg: "Failed to create interpreter options".to_string() });
             }
 
             tflite::TfLiteInterpreterOptionsSetNumThreads(options, 4);
@@ -132,7 +132,7 @@ impl LiteRtActorEngine {
             if interpreter.is_null() {
                 tflite::TfLiteInterpreterOptionsDelete(options);
                 tflite::TfLiteModelDelete(model);
-                return Err(SpeechEngineError::Inference { message: "Failed to create interpreter".to_string() });
+                return Err(SpeechEngineError::Inference { msg: "Failed to create interpreter".to_string() });
             }
 
             let status = tflite::TfLiteInterpreterAllocateTensors(interpreter);
@@ -140,7 +140,7 @@ impl LiteRtActorEngine {
                 tflite::TfLiteInterpreterDelete(interpreter);
                 tflite::TfLiteInterpreterOptionsDelete(options);
                 tflite::TfLiteModelDelete(model);
-                return Err(SpeechEngineError::Inference { message: format!("Failed to allocate tensors (status {})", status) });
+                return Err(SpeechEngineError::Inference { msg: format!("Failed to allocate tensors (status {})", status) });
             }
 
             *wrapper_lock = Some(InterpreterWrapper {
@@ -202,7 +202,7 @@ impl LiteRtActorEngine {
 
             if phonemes_index == -1 {
                 return Err(SpeechEngineError::Inference {
-                    message: "LiteRT actor model lacks expected phonemes input tensor.".to_string(),
+                    msg: "LiteRT actor model lacks expected phonemes input tensor.".to_string(),
                 });
             }
 
@@ -217,13 +217,13 @@ impl LiteRtActorEngine {
                 );
                 if status != 0 {
                     return Err(SpeechEngineError::Inference {
-                        message: format!("Failed to resize TFLite phoneme tensor to {} (status: {})", token_count, status),
+                        msg: format!("Failed to resize TFLite phoneme tensor to {} (status: {})", token_count, status),
                     });
                 }
                 let alloc_status = tflite::TfLiteInterpreterAllocateTensors(interpreter);
                 if alloc_status != 0 {
                     return Err(SpeechEngineError::Inference {
-                        message: format!("Failed to re-allocate TFLite tensors after resize (status: {})", alloc_status),
+                        msg: format!("Failed to re-allocate TFLite tensors after resize (status: {})", alloc_status),
                     });
                 }
                 wrapper.last_phoneme_length = token_count;
@@ -241,7 +241,7 @@ impl LiteRtActorEngine {
                 );
                 if status != 0 {
                     return Err(SpeechEngineError::Inference {
-                        message: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
+                        msg: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
                     });
                 }
             }
@@ -289,7 +289,7 @@ impl LiteRtActorEngine {
             let invoke_status = tflite::TfLiteInterpreterInvoke(interpreter);
             if invoke_status != 0 {
                 return Err(SpeechEngineError::Inference {
-                    message: format!("TFLite interpreter execution failed (status: {})", invoke_status),
+                    msg: format!("TFLite interpreter execution failed (status: {})", invoke_status),
                 });
             }
 
@@ -297,13 +297,13 @@ impl LiteRtActorEngine {
             let output_count = tflite::TfLiteInterpreterGetOutputTensorCount(interpreter);
             if output_count == 0 {
                 return Err(SpeechEngineError::Inference {
-                    message: "LiteRT model returned no output tensors.".to_string(),
+                    msg: "LiteRT model returned no output tensors.".to_string(),
                 });
             }
             let out_tensor = tflite::TfLiteInterpreterGetOutputTensor(interpreter, 0);
             if out_tensor.is_null() {
                 return Err(SpeechEngineError::Inference {
-                    message: "Failed to get output tensor 0.".to_string(),
+                    msg: "Failed to get output tensor 0.".to_string(),
                 });
             }
 
@@ -318,7 +318,7 @@ impl LiteRtActorEngine {
             );
             if copy_status != 0 {
                 return Err(SpeechEngineError::Inference {
-                    message: format!("Failed to copy PCM data out of TFLite output tensor (status: {})", copy_status),
+                    msg: format!("Failed to copy PCM data out of TFLite output tensor (status: {})", copy_status),
                 });
             }
 

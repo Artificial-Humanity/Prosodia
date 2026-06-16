@@ -39,6 +39,20 @@ class KotlinSpeechEngine(
 /**
  * A VocalActor implementation wrapped around ProsodiaActorEngine driving StyleTTS2 via LiteRT on Android.
  */
+class DiskVoiceAssetProvider(private val baseDirectory: String) : uniffi.actor.VoiceAssetProvider {
+    override fun loadVoiceBytes(voiceName: String): ByteArray? {
+        val file = java.io.File(baseDirectory, voiceName)
+        return if (file.exists() && file.isFile) {
+            file.readBytes()
+        } else {
+            null
+        }
+    }
+}
+
+/**
+ * A VocalActor implementation wrapped around ProsodiaActorEngine driving StyleTTS2 via LiteRT on Android.
+ */
 class LiteRtVocalActor(
     modelPath: String,
     configPath: String,
@@ -48,16 +62,21 @@ class LiteRtVocalActor(
     private val rustEngine: uniffi.actor.ProsodiaActorEngine
 
     init {
-        val provider = uniffi.actor.DiskVoiceAssetProvider(voiceDirectoryPath)
+        val provider = DiskVoiceAssetProvider(voiceDirectoryPath)
         val voiceLoader = uniffi.actor.VoiceLoader(provider)
-        val g2p = uniffi.actor.ProsodiaSpeech()
+        val g2pObject = uniffi.actor.ProsodiaSpeech()
+        val g2p = object : uniffi.actor.ProsodiaG2pProcessor {
+            override fun process(text: String): List<uniffi.actor.MToken> {
+                return g2pObject.process(text)
+            }
+        }
         val configJson = java.io.File(configPath).readText(Charsets.UTF_8)
 
         val pipeline = uniffi.actor.ProsodiaActorPipeline(
             g2p = g2p,
             voiceLoader = voiceLoader,
             configJson = configJson,
-            sampleRate = 24000,
+            sampleRate = uniffi.stage.getSampleRate(),
             langCode = "en-us"
         )
         val backend = uniffi.actor.LiteRtActorEngine(modelPath)
@@ -75,7 +94,7 @@ class LiteRtVocalActor(
         val totalAudio = mutableListOf<Float>()
 
         for (span in decoded.spans) {
-            val kitEmotion = uniffi.actor.EmotionVector(
+            val kitEmotion = uniffi.stage.EmotionVector(
                 valence = span.emotion.valence,
                 arousal = span.emotion.arousal,
                 tension = span.emotion.tension
@@ -85,7 +104,7 @@ class LiteRtVocalActor(
             val kitAcoustics = if (acoustics != null) {
                 val cp = acoustics.castingProfile
                 val kitCastingProfile = if (cp != null) {
-                    uniffi.actor.CastingProfile(
+                    uniffi.stage.CastingProfile(
                         ageProfile = cp.ageProfile,
                         masculinity = cp.masculinity,
                         strainOrRasp = cp.strainOrRasp
@@ -94,7 +113,7 @@ class LiteRtVocalActor(
                     null
                 }
 
-                uniffi.actor.ProsodyAcoustics(
+                uniffi.stage.ProsodyAcoustics(
                     speedMultiplier = acoustics.speedMultiplier,
                     speedBias = acoustics.speedBias,
                     gainMultiplier = acoustics.gainMultiplier,
@@ -111,7 +130,7 @@ class LiteRtVocalActor(
                 null
             }
 
-            val kitSpan = uniffi.actor.ProsodySpan(
+            val kitSpan = uniffi.stage.ProsodySpan(
                 text = span.text,
                 emotion = kitEmotion,
                 leadingPause = span.leadingPause,

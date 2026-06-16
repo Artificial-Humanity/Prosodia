@@ -31,13 +31,6 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -739,8 +732,8 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_director_fn_method_gemmadirector_set_narration_mode(`ptr`: Pointer,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
-    fun uniffi_director_fn_method_gemmadirector_tag_passage(`ptr`: Pointer,`passage`: RustBuffer.ByValue,
-    ): Long
+    fun uniffi_director_fn_method_gemmadirector_tag_passage(`ptr`: Pointer,`passage`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_director_fn_func_director_system_prompt(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_director_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -891,7 +884,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_director_checksum_method_gemmadirector_set_narration_mode() != 59994.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_director_checksum_method_gemmadirector_tag_passage() != 8392.toShort()) {
+    if (lib.uniffi_director_checksum_method_gemmadirector_tag_passage() != 59778.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_director_checksum_constructor_gemmadirector_new() != 15354.toShort()) {
@@ -900,46 +893,6 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
 }
 
 // Async support
-// Async return type handlers
-
-internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
-internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
-
-internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
-
-// FFI type for Rust future continuations
-internal object uniffiRustFutureContinuationCallbackImpl: UniffiRustFutureContinuationCallback {
-    override fun callback(data: Long, pollResult: Byte) {
-        uniffiContinuationHandleMap.remove(data).resume(pollResult)
-    }
-}
-
-internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
-    rustFuture: Long,
-    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
-    completeFunc: (Long, UniffiRustCallStatus) -> F,
-    freeFunc: (Long) -> Unit,
-    liftFunc: (F) -> T,
-    errorHandler: UniffiRustCallStatusErrorHandler<E>
-): T {
-    try {
-        do {
-            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
-                pollFunc(
-                    rustFuture,
-                    uniffiRustFutureContinuationCallbackImpl,
-                    uniffiContinuationHandleMap.insert(continuation)
-                )
-            }
-        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
-
-        return liftFunc(
-            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
-        )
-    } finally {
-        freeFunc(rustFuture)
-    }
-}
 
 // Public interface members begin here.
 
@@ -1221,7 +1174,7 @@ public interface GemmaDirectorInterface {
     
     fun `setNarrationMode`(`mode`: NarrationMode)
     
-    suspend fun `tagPassage`(`passage`: kotlin.String): kotlin.String
+    fun `tagPassage`(`passage`: kotlin.String): kotlin.String
     
     companion object
 }
@@ -1342,25 +1295,17 @@ open class GemmaDirector: Disposable, AutoCloseable, GemmaDirectorInterface {
     
     
 
-    
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `tagPassage`(`passage`: kotlin.String) : kotlin.String {
-        return uniffiRustCallAsync(
-        callWithPointer { thisPtr ->
-            UniffiLib.INSTANCE.uniffi_director_fn_method_gemmadirector_tag_passage(
-                thisPtr,
-                FfiConverterString.lower(`passage`),
-            )
-        },
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_director_rust_future_poll_rust_buffer(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_director_rust_future_complete_rust_buffer(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_director_rust_future_free_rust_buffer(future) },
-        // lift function
-        { FfiConverterString.lift(it) },
-        // Error FFI converter
-        UniffiNullRustCallStatusErrorHandler,
+    override fun `tagPassage`(`passage`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_director_fn_method_gemmadirector_tag_passage(
+        it, FfiConverterString.lower(`passage`),_status)
+}
+    }
     )
     }
+    
 
     
 
@@ -1419,14 +1364,6 @@ public object FfiConverterTypeNarrationMode: FfiConverterRustBuffer<NarrationMod
         buf.putInt(value.ordinal + 1)
     }
 }
-
-
-
-
-
-
-
-
 
  fun `directorSystemPrompt`(): kotlin.String {
             return FfiConverterString.lift(

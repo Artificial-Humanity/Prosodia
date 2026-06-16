@@ -454,6 +454,12 @@ RustBuffer uniffi_stage_fn_func_get_phrase_pause(RustCallStatus *_Nonnull out_st
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FUNC_GET_SAMPLE_RATE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FUNC_GET_SAMPLE_RATE
+uint32_t uniffi_stage_fn_func_get_sample_rate(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FUNC_NEUTRAL_PAYLOAD_FOR_PASSAGE
 #define UNIFFI_FFIDEF_UNIFFI_STAGE_FN_FUNC_NEUTRAL_PAYLOAD_FOR_PASSAGE
 RustBuffer uniffi_stage_fn_func_neutral_payload_for_passage(RustBuffer passage, RustCallStatus *_Nonnull out_status
@@ -829,6 +835,12 @@ uint16_t uniffi_stage_checksum_func_get_acoustic_matrix(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_FUNC_GET_PHRASE_PAUSE
 #define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_FUNC_GET_PHRASE_PAUSE
 uint16_t uniffi_stage_checksum_func_get_phrase_pause(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_FUNC_GET_SAMPLE_RATE
+#define UNIFFI_FFIDEF_UNIFFI_STAGE_CHECKSUM_FUNC_GET_SAMPLE_RATE
+uint16_t uniffi_stage_checksum_func_get_sample_rate(void
     
 );
 #endif

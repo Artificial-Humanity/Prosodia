@@ -411,10 +411,10 @@ public actor StubVocalActor: VocalActor {
         
         // Return a soft 440 Hz tone (A4) to provide audible playback feedback in stub mode.
         // Duration: 1.0 second (24,000 samples at 24 kHz)
-        let sampleRate = 24000.0
+        let sampleRate = Double(Kit.getSampleRate())
         let frequency = 440.0
         let amplitude: Float = 0.1
-        var audio = [Float](repeating: 0.0, count: 24000)
+        var audio = [Float](repeating: 0.0, count: Int(Kit.getSampleRate()))
         for i in 0..<audio.count {
             let t = Double(i) / sampleRate
             audio[i] = Float(sin(2.0 * Double.pi * frequency * t)) * amplitude

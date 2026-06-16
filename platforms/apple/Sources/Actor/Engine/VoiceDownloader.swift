@@ -4,7 +4,7 @@ public final class VoiceDownloader: Sendable {
     public let remoteBaseURL: URL
     private let session: URLSession
 
-    public init(remoteBaseURL: URL = URL(string: "https://huggingface.co/hexgrad/StyleTTS2-Lite/resolve/main/voices/")!) {
+    public init(remoteBaseURL: URL = URL(string: "https://huggingface.co/artificial-humanity/StyleTTS2-Lite/resolve/main/voices/")!) {
         self.remoteBaseURL = remoteBaseURL
         
         let configuration = URLSessionConfiguration.default

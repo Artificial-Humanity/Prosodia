@@ -3898,26 +3898,26 @@ sealed class PipelineException: Exception() {
     
     class JsonParse(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : PipelineException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class SpeechEngine(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : PipelineException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class VoiceLoader(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : PipelineException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class InvalidSpeed(
@@ -3962,17 +3962,17 @@ public object FfiConverterTypePipelineError : FfiConverterRustBuffer<PipelineExc
             is PipelineException.JsonParse -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is PipelineException.SpeechEngine -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is PipelineException.VoiceLoader -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is PipelineException.InvalidSpeed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -3986,17 +3986,17 @@ public object FfiConverterTypePipelineError : FfiConverterRustBuffer<PipelineExc
         when(value) {
             is PipelineException.JsonParse -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is PipelineException.SpeechEngine -> {
                 buf.putInt(2)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is PipelineException.VoiceLoader -> {
                 buf.putInt(3)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is PipelineException.InvalidSpeed -> {
@@ -4017,10 +4017,10 @@ sealed class SpeechEngineException: Exception() {
     
     class Inference(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : SpeechEngineException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
 
@@ -4048,7 +4048,7 @@ public object FfiConverterTypeSpeechEngineError : FfiConverterRustBuffer<SpeechE
             is SpeechEngineException.Inference -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
         }
     }
@@ -4057,7 +4057,7 @@ public object FfiConverterTypeSpeechEngineError : FfiConverterRustBuffer<SpeechE
         when(value) {
             is SpeechEngineException.Inference -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -4073,10 +4073,10 @@ sealed class VoiceLoaderException: Exception() {
     
     class Safetensors(
         
-        val `message`: kotlin.String
+        val `msg`: kotlin.String
         ) : VoiceLoaderException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "msg=${ `msg` }"
     }
     
     class NotTwoDimensional(
@@ -4140,7 +4140,7 @@ public object FfiConverterTypeVoiceLoaderError : FfiConverterRustBuffer<VoiceLoa
             is VoiceLoaderException.Safetensors -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`msg`)
             )
             is VoiceLoaderException.NotTwoDimensional -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -4167,7 +4167,7 @@ public object FfiConverterTypeVoiceLoaderError : FfiConverterRustBuffer<VoiceLoa
         when(value) {
             is VoiceLoaderException.Safetensors -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`msg`, buf)
                 Unit
             }
             is VoiceLoaderException.NotTwoDimensional -> {

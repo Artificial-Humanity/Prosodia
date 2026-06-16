@@ -18,14 +18,14 @@ pub struct AcousticMatrixState {
 impl Default for AcousticMatrixState {
     fn default() -> Self {
         Self {
-            expressiveness: 3.0,
+            expressiveness: 3.25,
             speed_arousal_gain: 0.08,
-            speed_tension_gain: 0.06,
-            speed_valence_gain: 0.015,
+            speed_tension_gain: 0.10,
+            speed_valence_gain: 0.05,
             speed_range_min: 0.65,
             speed_range_max: 1.12,
-            gain_arousal_gain: 0.20,
-            gain_valence_gain: 0.06,
+            gain_arousal_gain: 0.25,
+            gain_valence_gain: 0.08,
             gain_range_min: 0.60,
             gain_range_max: 1.20,
         }
@@ -134,4 +134,9 @@ pub fn pitch_for_emotion(emotion: &EmotionVector) -> f64 {
             shift.min(15.0)
         }
     }
+}
+
+#[uniffi::export]
+pub fn get_sample_rate() -> u32 {
+    24000
 }

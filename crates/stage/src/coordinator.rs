@@ -4,16 +4,19 @@
 //! `narration source → director → actor → audio` — into a single Rust object that
 //! the platform layer drives by repeatedly calling [`StageCoordinator::next_chunk`].
 //!
-//! It is deliberately **pull-based and runtime-free**: there is no async runtime,
+//! By default, it is **pull-based and thread-free**: there is no async runtime,
 //! no internal threads, and no lookahead buffer inside Rust. The platform owns the
 //! loop and the audio device, so backpressure falls out naturally — Swift/Android
-//! call `next_chunk()` only when they are ready for more audio, which paces the
-//! Director and Actor without any explicit channel.
+//! call `next_chunk()` only when they are ready for more audio.
+//!
+//! Optionally, a bounded lookahead limit can be configured via [`StageCoordinator::new_with_lookahead`].
+//! In this mode, the coordinator spawns a single background worker thread to eagerly
+//! pre-render passages up to the limit, ensuring gap-free playback while avoiding
+//! excessive resource consumption.
 //!
 //! Every moving part the coordinator touches (pulling the next passage, running the
 //! on-device Director LLM, running the Actor synthesizer) is a Swift/Android
-//! responsibility expressed as a synchronous callback. The coordinator itself is
-//! pure glue, so it depends on no other crate — just the three traits below.
+//! responsibility expressed as a synchronous callback.
 
 use std::sync::{Arc, Mutex, Condvar};
 
@@ -223,7 +226,7 @@ impl StageCoordinator {
         grouping: crate::segmenter::NarrationGrouping,
         sample_rate: u32,
     ) -> Arc<Self> {
-        Self::new_with_lookahead(source, director, actor, grouping, sample_rate, 4)
+        Self::new_with_lookahead(source, director, actor, grouping, sample_rate, 0)
     }
 
     #[uniffi::constructor]
@@ -525,9 +528,16 @@ mod tests {
             2, // lookahead limit of 2
         );
 
-        // Give the background thread a moment to start pre-rendering.
-        // It should pre-render up to 2 items (limit) and then block.
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        let wait_for_queue_len = |target_len: usize| {
+            let (lock, cvar) = &*coord.state;
+            let mut state = lock.lock().unwrap();
+            while state.pre_rendered_queue.len() < target_len && !state.source_exhausted {
+                state = cvar.wait(state).unwrap();
+            }
+        };
+
+        // Wait until the background thread has pre-rendered up to the limit (2)
+        wait_for_queue_len(2);
         
         // Since limit is 2, it should have rendered exactly 2 items.
         assert_eq!(calls.load(Ordering::SeqCst), 2);
@@ -538,7 +548,8 @@ mod tests {
         assert_eq!(c0.passage, "one");
 
         // After pulling 1 chunk, the queue has space, so the background thread should pre-render the 3rd item
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        // Wait until queue length becomes 2 again
+        wait_for_queue_len(2);
         assert_eq!(calls.load(Ordering::SeqCst), 3);
 
         // Pull the rest
