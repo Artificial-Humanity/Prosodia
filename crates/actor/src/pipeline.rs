@@ -54,6 +54,22 @@ pub trait AudioChunkCallback: Send + Sync {
     fn on_audio_chunk(&self, chunk: Vec<f32>);
 }
 
+pub fn map_styletts2_to_matcha_ipa(phonemes: &str) -> String {
+    let mut mapped = phonemes.to_string();
+    mapped = mapped.replace("A", "eɪ");
+    mapped = mapped.replace("I", "aɪ");
+    mapped = mapped.replace("O", "oʊ");
+    mapped = mapped.replace("Q", "əʊ");
+    mapped = mapped.replace("W", "aʊ");
+    mapped = mapped.replace("Y", "ɔɪ");
+    mapped = mapped.replace("ʤ", "dʒ");
+    mapped = mapped.replace("ʧ", "tʃ");
+    mapped = mapped.replace("ɐ", "ə");
+    mapped = mapped.replace("ᵻ", "ɪ");
+    mapped = mapped.replace("ᵊ", "ə");
+    mapped
+}
+
 #[derive(uniffi::Object)]
 pub struct ProsodiaActorPipeline {
     g2p: Mutex<Box<dyn ProsodiaG2PProcessor>>,
@@ -89,10 +105,15 @@ impl ProsodiaActorPipeline {
         *g2p = processor;
     }
 
-    fn tokenize(&self, phonemes: &str) -> Vec<i32> {
+    fn tokenize(&self, phonemes: &str, is_matcha: bool) -> Vec<i32> {
         let mut ids = Vec::new();
         ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
-        for c in phonemes.chars() {
+        let mapped = if is_matcha {
+            map_styletts2_to_matcha_ipa(phonemes)
+        } else {
+            phonemes.to_string()
+        };
+        for c in mapped.chars() {
             if let Some(&id) = self.vocab.get(&c.to_string()) {
                 ids.push(id);
             }
@@ -253,14 +274,7 @@ impl ProsodiaActorPipeline {
                     msg: e.to_string(),
                 })?;
 
-            let mut ids = Vec::new();
-            ids.push(0);
-            for c in trimmed_phonemes.chars() {
-                if let Some(&id) = self.vocab.get(&c.to_string()) {
-                    ids.push(id);
-                }
-            }
-            ids.push(0);
+            let ids = self.tokenize(&trimmed_phonemes, speech_engine.is_matcha());
 
             let mut chunk_duration_scales = None;
             if let Some(ref d_scales) = duration_scales {
@@ -271,7 +285,12 @@ impl ProsodiaActorPipeline {
                     let scale = d_scales.get(global_token_idx).copied().unwrap_or(1.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    for char in word_phonemes.chars() {
+                    let mapped_word_phonemes = if speech_engine.is_matcha() {
+                        map_styletts2_to_matcha_ipa(word_phonemes)
+                    } else {
+                        word_phonemes.to_string()
+                    };
+                    for char in mapped_word_phonemes.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
                                 scales[p_idx] = scale;
@@ -279,7 +298,12 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    for char in token.whitespace.chars() {
+                    let mapped_whitespace = if speech_engine.is_matcha() {
+                        map_styletts2_to_matcha_ipa(&token.whitespace)
+                    } else {
+                        token.whitespace.to_string()
+                    };
+                    for char in mapped_whitespace.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
                                 scales[p_idx] = scale;
@@ -300,7 +324,12 @@ impl ProsodiaActorPipeline {
                     let bias = biases.get(global_token_idx).copied().unwrap_or(0.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    for char in word_phonemes.chars() {
+                    let mapped_word_phonemes = if speech_engine.is_matcha() {
+                        map_styletts2_to_matcha_ipa(word_phonemes)
+                    } else {
+                        word_phonemes.to_string()
+                    };
+                    for char in mapped_word_phonemes.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
                                 chunk_biases[p_idx] = bias;
@@ -308,7 +337,12 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    for char in token.whitespace.chars() {
+                    let mapped_whitespace = if speech_engine.is_matcha() {
+                        map_styletts2_to_matcha_ipa(&token.whitespace)
+                    } else {
+                        token.whitespace.to_string()
+                    };
+                    for char in mapped_whitespace.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
                                 chunk_biases[p_idx] = bias;
@@ -329,7 +363,7 @@ impl ProsodiaActorPipeline {
 
             let output = speech_engine
                 .forward(
-                    self.tokenize(&trimmed_phonemes),
+                    self.tokenize(&trimmed_phonemes, speech_engine.is_matcha()),
                     style,
                     speed,
                     chunk_duration_scales,
@@ -353,7 +387,12 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                for char in word_phonemes.chars() {
+                let mapped_word_phonemes = if speech_engine.is_matcha() {
+                    map_styletts2_to_matcha_ipa(word_phonemes)
+                } else {
+                    word_phonemes.to_string()
+                };
+                for char in mapped_word_phonemes.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
                             current_time += pred_dur[token_idx] as f64 * frame_duration;
@@ -362,7 +401,12 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                for char in whitespace.chars() {
+                let mapped_whitespace = if speech_engine.is_matcha() {
+                    map_styletts2_to_matcha_ipa(whitespace)
+                } else {
+                    whitespace.to_string()
+                };
+                for char in mapped_whitespace.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
                             current_time += pred_dur[token_idx] as f64 * frame_duration;
@@ -393,6 +437,7 @@ impl ProsodiaActorPipeline {
             total_audio.extend_from_slice(&output.audio);
             audio_time_offset += output.audio.len() as f64 / self.sample_rate as f64;
             token_offset += chunk.len();
+
         }
 
         let full_phonemes = tokens
@@ -487,9 +532,43 @@ impl ProsodiaActorPipeline {
             let trimmed_states = &raw_states[start_idx..end_idx];
 
             let mut filtered_states = Vec::new();
-            for (idx, c) in trimmed_phonemes.chars().enumerate() {
-                if self.vocab.contains_key(&c.to_string()) {
-                    filtered_states.push(trimmed_states[idx].clone());
+            let mut mapped_phonemes = String::new();
+
+            if speech_engine.is_matcha() {
+                for (idx, c) in trimmed_phonemes.chars().enumerate() {
+                    let (rep, _repeat_count) = match c {
+                        'A' => ("eɪ", 2),
+                        'I' => ("aɪ", 2),
+                        'O' => ("oʊ", 2),
+                        'Q' => ("əʊ", 2),
+                        'W' => ("aʊ", 2),
+                        'Y' => ("ɔɪ", 2),
+                        'ʤ' => ("dʒ", 2),
+                        'ʧ' => ("tʃ", 2),
+                        'ɐ' => ("ə", 1),
+                        'ᵻ' => ("ɪ", 1),
+                        'ᵊ' => ("ə", 1),
+                        _ => {
+                            mapped_phonemes.push(c);
+                            if self.vocab.contains_key(&c.to_string()) {
+                                filtered_states.push(trimmed_states[idx].clone());
+                            }
+                            continue;
+                        }
+                    };
+                    mapped_phonemes.push_str(rep);
+                    for sub_c in rep.chars() {
+                        if self.vocab.contains_key(&sub_c.to_string()) {
+                            filtered_states.push(trimmed_states[idx].clone());
+                        }
+                    }
+                }
+            } else {
+                mapped_phonemes = trimmed_phonemes.clone();
+                for (idx, c) in trimmed_phonemes.chars().enumerate() {
+                    if self.vocab.contains_key(&c.to_string()) {
+                        filtered_states.push(trimmed_states[idx].clone());
+                    }
                 }
             }
 
@@ -522,7 +601,7 @@ impl ProsodiaActorPipeline {
 
             let output = speech_engine
                 .forward(
-                    self.tokenize(&trimmed_phonemes),
+                    self.tokenize(&mapped_phonemes, speech_engine.is_matcha()),
                     style,
                     speed,
                     Some(duration_scales),
@@ -546,7 +625,12 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                for char in word_phonemes.chars() {
+                let mapped_word_phonemes = if speech_engine.is_matcha() {
+                    map_styletts2_to_matcha_ipa(word_phonemes)
+                } else {
+                    word_phonemes.to_string()
+                };
+                for char in mapped_word_phonemes.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
                             current_time += pred_dur[token_idx] as f64 * frame_duration;
@@ -555,7 +639,12 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                for char in whitespace.chars() {
+                let mapped_whitespace = if speech_engine.is_matcha() {
+                    map_styletts2_to_matcha_ipa(whitespace)
+                } else {
+                    whitespace.to_string()
+                };
+                for char in mapped_whitespace.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
                             current_time += pred_dur[token_idx] as f64 * frame_duration;
@@ -565,6 +654,7 @@ impl ProsodiaActorPipeline {
                 }
 
                 let word_end_time = audio_time_offset + current_time;
+
 
                 let clean_word = word_text.trim();
                 if !clean_word.is_empty()
@@ -664,7 +754,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk), style, speed, None, None)
+                .forward(self.tokenize(&chunk, speech_engine.is_matcha()), style, speed, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -738,7 +828,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk), style, speed, None, None)
+                .forward(self.tokenize(&chunk, speech_engine.is_matcha()), style, speed, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -910,6 +1000,10 @@ mod tests {
         }
 
         fn reclaim_memory(&self) {}
+
+        fn is_matcha(&self) -> bool {
+            false
+        }
     }
 
     struct MockAssetProvider;
