@@ -4,6 +4,9 @@ use crate::pipeline::PipelineOutput;
 use crate::asset_manager::StyleVector;
 use crate::tflite;
 
+const MATCHA_CFM_TEMPERATURE: f32 = 0.667;
+const STYLETTS2_HOP_SIZE: f64 = 512.0;
+
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct ActorEngineOutput {
     pub audio: Vec<f32>,
@@ -260,13 +263,22 @@ impl LiteRtActorEngine {
                     });
                 }
                 let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
-                let element_size = if byte_size >= 400 { 8 } else { 4 };
+                let dtype = tflite::TfLiteTensorType(phonemes_tensor);
+                let element_size = if dtype == tflite::kTfLiteInt64 { 8 } else { 4 };
                 let static_limit = byte_size / element_size;
+
+                if token_count > static_limit {
+                    return Err(SpeechEngineError::Inference {
+                        msg: format!(
+                            "Input token count ({}) exceeds the model's static limit ({})",
+                            token_count, static_limit
+                        ),
+                    });
+                }
 
                 if element_size == 8 {
                     let mut phoneme_ids_i64 = vec![0i64; static_limit];
-                    let copy_len = token_count.min(static_limit);
-                    for j in 0..copy_len {
+                    for j in 0..token_count {
                         phoneme_ids_i64[j] = phoneme_ids[j] as i64;
                     }
                     let status = tflite::TfLiteTensorCopyFromBuffer(
@@ -281,8 +293,7 @@ impl LiteRtActorEngine {
                     }
                 } else {
                     let mut phoneme_ids_i32 = vec![0i32; static_limit];
-                    let copy_len = token_count.min(static_limit);
-                    for j in 0..copy_len {
+                    for j in 0..token_count {
                         phoneme_ids_i32[j] = phoneme_ids[j];
                     }
                     let status = tflite::TfLiteTensorCopyFromBuffer(
@@ -326,7 +337,7 @@ impl LiteRtActorEngine {
                     if !scales_tensor.is_null() {
                         let byte_size = tflite::TfLiteTensorByteSize(scales_tensor);
                         let count = byte_size / std::mem::size_of::<f32>();
-                        let mut scale_vals = vec![0.667f32; count];
+                        let mut scale_vals = vec![MATCHA_CFM_TEMPERATURE; count];
                         if count >= 2 {
                             scale_vals[1] = 1.0 / speed;
                         }
@@ -502,7 +513,7 @@ impl LiteRtActorEngine {
                 output_pcm = resample_linear(output_pcm, 22050.0, 24000.0);
 
                 // Distribute total frames evenly across phonemes
-                let total_frames = (output_pcm.len() as f64 / 512.0) as i32;
+                let total_frames = (output_pcm.len() as f64 / STYLETTS2_HOP_SIZE) as i32;
                 let avg_dur = (total_frames as f32 / token_count as f32).round() as i32;
                 pred_dur = vec![avg_dur.max(1); token_count];
             }
@@ -574,12 +585,33 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
             if let Some(ref wrapper) = *guard {
                 if wrapper.is_matcha {
                     unsafe {
-                        let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(wrapper.interpreter, 0);
-                        if !phonemes_tensor.is_null() {
-                            let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
-                            let element_size = if byte_size >= 400 { 8 } else { 4 };
-                            let limit = byte_size / element_size;
-                            return (limit.saturating_sub(2)) as i32;
+                        let interpreter = wrapper.interpreter;
+                        let input_count = tflite::TfLiteInterpreterGetInputTensorCount(interpreter);
+                        let mut phonemes_index: i32 = -1;
+                        for i in 0..input_count {
+                            let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, i);
+                            if tensor.is_null() {
+                                continue;
+                            }
+                            let name_ptr = tflite::TfLiteTensorName(tensor);
+                            if name_ptr.is_null() {
+                                continue;
+                            }
+                            let name = CStr::from_ptr(name_ptr).to_string_lossy().to_lowercase();
+                            if name == "x" || name.contains("phone") || name.contains("input_ids") || name.contains("text") {
+                                phonemes_index = i;
+                                break;
+                            }
+                        }
+                        if phonemes_index != -1 {
+                            let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, phonemes_index);
+                            if !phonemes_tensor.is_null() {
+                                let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
+                                let dtype = tflite::TfLiteTensorType(phonemes_tensor);
+                                let element_size = if dtype == tflite::kTfLiteInt64 { 8 } else { 4 };
+                                let limit = byte_size / element_size;
+                                return (limit.saturating_sub(2)) as i32;
+                            }
                         }
                     }
                 }

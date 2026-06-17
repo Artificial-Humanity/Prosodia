@@ -50,4 +50,11 @@ unsafe extern "C" {
 
     pub fn TfLiteTensorByteSize(tensor: *const TfLiteTensor) -> usize;
     pub fn TfLiteTensorName(tensor: *const TfLiteTensor) -> *const c_char;
+    pub fn TfLiteTensorType(tensor: *const TfLiteTensor) -> i32;
 }
+
+#[allow(non_upper_case_globals)]
+pub const kTfLiteInt32: i32 = 2;
+#[allow(non_upper_case_globals)]
+pub const kTfLiteInt64: i32 = 4;
+
