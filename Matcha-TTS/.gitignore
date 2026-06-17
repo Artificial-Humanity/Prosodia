@@ -162,3 +162,12 @@ g_02500000
 gradio_cached_examples/
 synth_output/
 /data
+
+# Local Matcha-TTS artifacts and exports
+model_tflite/
+model_e2e_tflite/
+replace.json
+utterance_001.npy
+utterance_001.png
+utterance_001.wav
+*.onnx
