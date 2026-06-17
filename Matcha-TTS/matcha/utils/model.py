@@ -31,12 +31,22 @@ def generate_path(duration, mask):
 
     b, t_x, t_y = mask.shape
     cum_duration = torch.cumsum(duration, 1)
-    path = torch.zeros(b, t_x, t_y, dtype=mask.dtype).to(device=device)
 
-    cum_duration_flat = cum_duration.view(b * t_x)
-    path = sequence_mask(cum_duration_flat, t_y).to(mask.dtype)
-    path = path.view(b, t_x, t_y)
-    path = path - torch.nn.functional.pad(path, convert_pad_shape([[0, 0], [1, 0], [0, 0]]))[:, :-1]
+    if torch.onnx.is_in_onnx_export():
+        cum_duration_1d = cum_duration.squeeze(0)
+        x = torch.arange(t_y, dtype=cum_duration.dtype, device=device)
+        ones_x = torch.ones(t_x, dtype=cum_duration.dtype, device=device)
+        ones_y = torch.ones(t_y, dtype=cum_duration.dtype, device=device)
+        x_grid = torch.outer(ones_x, x)
+        dur_grid = torch.outer(cum_duration_1d, ones_y)
+        path_2d = (x_grid < dur_grid).to(mask.dtype)
+        path_2d = path_2d - torch.nn.functional.pad(path_2d, (0, 0, 1, 0))[:-1]
+        path = path_2d.unsqueeze(0)
+    else:
+        x = torch.arange(t_y, dtype=cum_duration.dtype, device=device)
+        path = (x.view(1, 1, -1) < cum_duration.unsqueeze(-1)).to(mask.dtype)
+        path = path - torch.nn.functional.pad(path, (0, 0, 1, 0, 0, 0))[:, :-1]
+
     path = path * mask
     return path
 

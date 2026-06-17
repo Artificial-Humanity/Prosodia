@@ -30,6 +30,14 @@ pub trait ProsodiaSpeechEngine: Send + Sync {
     ) -> Result<ActorEngineOutput, SpeechEngineError>;
     
     fn reclaim_memory(&self);
+
+    fn is_matcha(&self) -> bool {
+        false
+    }
+
+    fn get_token_limit(&self) -> i32 {
+        510
+    }
 }
 
 #[uniffi::export(callback_interface)]
@@ -65,6 +73,7 @@ struct InterpreterWrapper {
     options: *mut tflite::TfLiteInterpreterOptions,
     interpreter: *mut tflite::TfLiteInterpreter,
     last_phoneme_length: usize,
+    is_matcha: bool,
 }
 
 unsafe impl Send for InterpreterWrapper {}
@@ -143,11 +152,37 @@ impl LiteRtActorEngine {
                 return Err(SpeechEngineError::Inference { msg: format!("Failed to allocate tensors (status {})", status) });
             }
 
+            // Detect if this is a Matcha model by checking for input names
+            let input_count = tflite::TfLiteInterpreterGetInputTensorCount(interpreter);
+            let mut has_x = false;
+            let mut has_x_lengths = false;
+            let mut has_scales = false;
+
+            for i in 0..input_count {
+                let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, i);
+                if !tensor.is_null() {
+                    let name_ptr = tflite::TfLiteTensorName(tensor);
+                    if !name_ptr.is_null() {
+                        let name = CStr::from_ptr(name_ptr).to_string_lossy().to_lowercase();
+                        if name == "x" {
+                            has_x = true;
+                        } else if name.contains("x_lengths") {
+                            has_x_lengths = true;
+                        } else if name == "scales" {
+                            has_scales = true;
+                        }
+                    }
+                }
+            }
+
+            let is_matcha = has_x && has_x_lengths && has_scales;
+
             *wrapper_lock = Some(InterpreterWrapper {
                 model,
                 options,
                 interpreter,
                 last_phoneme_length: 0,
+                is_matcha,
             });
 
             Ok(wrapper_lock)
@@ -168,6 +203,7 @@ impl LiteRtActorEngine {
         unsafe {
             let interpreter = wrapper.interpreter;
             let token_count = phoneme_ids.len();
+            let is_matcha = wrapper.is_matcha;
 
             // 1. Identify input tensor indices by matching names
             let input_count = tflite::TfLiteInterpreterGetInputTensorCount(interpreter);
@@ -175,6 +211,8 @@ impl LiteRtActorEngine {
             let mut style_index: i32 = -1;
             let mut speed_index: i32 = -1;
             let mut vat_index: i32 = -1;
+            let mut x_lengths_index: i32 = -1;
+            let mut scales_index: i32 = -1;
 
             for i in 0..input_count {
                 let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, i);
@@ -187,7 +225,13 @@ impl LiteRtActorEngine {
                 }
                 let name = CStr::from_ptr(name_ptr).to_string_lossy().to_lowercase();
 
-                if name.contains("phone") || name.contains("input_ids") || name.contains("text") {
+                if name == "x" {
+                    phonemes_index = i;
+                } else if name.contains("x_lengths") {
+                    x_lengths_index = i;
+                } else if name == "scales" {
+                    scales_index = i;
+                } else if name.contains("phone") || name.contains("input_ids") || name.contains("text") {
                     phonemes_index = i;
                 } else if name.contains("style") || name.contains("ref") {
                     style_index = i;
@@ -202,90 +246,178 @@ impl LiteRtActorEngine {
 
             if phonemes_index == -1 {
                 return Err(SpeechEngineError::Inference {
-                    msg: "LiteRT actor model lacks expected phonemes input tensor.".to_string(),
+                    msg: "LiteRT actor model lacks expected phonemes/x input tensor.".to_string(),
                 });
             }
 
-            // 2. Dynamically resize phonemes tensor if text length changed
-            if token_count != wrapper.last_phoneme_length {
-                let dims = [1, token_count as i32];
-                let status = tflite::TfLiteInterpreterResizeInputTensor(
-                    interpreter,
-                    phonemes_index,
-                    dims.as_ptr(),
-                    2,
-                );
-                if status != 0 {
+            // 2. Handle input tensor sizing
+            if is_matcha {
+                // Matcha uses static compiled size, we pad rather than resize.
+                let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, phonemes_index);
+                if phonemes_tensor.is_null() {
                     return Err(SpeechEngineError::Inference {
-                        msg: format!("Failed to resize TFLite phoneme tensor to {} (status: {})", token_count, status),
+                        msg: "Failed to get phonemes tensor".to_string(),
                     });
                 }
-                let alloc_status = tflite::TfLiteInterpreterAllocateTensors(interpreter);
-                if alloc_status != 0 {
-                    return Err(SpeechEngineError::Inference {
-                        msg: format!("Failed to re-allocate TFLite tensors after resize (status: {})", alloc_status),
-                    });
-                }
-                wrapper.last_phoneme_length = token_count;
-            }
+                let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
+                let element_size = if byte_size >= 400 { 8 } else { 4 };
+                let static_limit = byte_size / element_size;
 
-            // 3. Copy data into input tensors
-            // A. Phoneme IDs
-            let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, phonemes_index);
-            if !phonemes_tensor.is_null() {
-                let size = phoneme_ids.len() * std::mem::size_of::<i32>();
-                let status = tflite::TfLiteTensorCopyFromBuffer(
-                    phonemes_tensor,
-                    phoneme_ids.as_ptr() as *const std::ffi::c_void,
-                    size,
-                );
-                if status != 0 {
-                    return Err(SpeechEngineError::Inference {
-                        msg: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
-                    });
-                }
-            }
-
-            // B. Style Vectors
-            if style_index != -1 {
-                let style_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, style_index);
-                if !style_tensor.is_null() {
-                    let size = style.data.len() * std::mem::size_of::<f32>();
-                    tflite::TfLiteTensorCopyFromBuffer(
-                        style_tensor,
-                        style.data.as_ptr() as *const std::ffi::c_void,
-                        size,
+                if element_size == 8 {
+                    let mut phoneme_ids_i64 = vec![0i64; static_limit];
+                    let copy_len = token_count.min(static_limit);
+                    for j in 0..copy_len {
+                        phoneme_ids_i64[j] = phoneme_ids[j] as i64;
+                    }
+                    let status = tflite::TfLiteTensorCopyFromBuffer(
+                        phonemes_tensor,
+                        phoneme_ids_i64.as_ptr() as *const std::ffi::c_void,
+                        byte_size,
                     );
-                }
-            }
-
-            // C. Speed
-            if speed_index != -1 {
-                let speed_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, speed_index);
-                if !speed_tensor.is_null() {
-                    let speed_val = speed;
-                    tflite::TfLiteTensorCopyFromBuffer(
-                        speed_tensor,
-                        &speed_val as *const f32 as *const std::ffi::c_void,
-                        std::mem::size_of::<f32>(),
+                    if status != 0 {
+                        return Err(SpeechEngineError::Inference {
+                            msg: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
+                        });
+                    }
+                } else {
+                    let mut phoneme_ids_i32 = vec![0i32; static_limit];
+                    let copy_len = token_count.min(static_limit);
+                    for j in 0..copy_len {
+                        phoneme_ids_i32[j] = phoneme_ids[j];
+                    }
+                    let status = tflite::TfLiteTensorCopyFromBuffer(
+                        phonemes_tensor,
+                        phoneme_ids_i32.as_ptr() as *const std::ffi::c_void,
+                        byte_size,
                     );
+                    if status != 0 {
+                        return Err(SpeechEngineError::Inference {
+                            msg: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
+                        });
+                    }
                 }
-            }
 
-            // D. Emotion VAT
-            if vat_index != -1 {
-                let vat_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, vat_index);
-                if !vat_tensor.is_null() {
-                    let vat_data: [f32; 3] = [0.5, 0.5, 0.5];
-                    tflite::TfLiteTensorCopyFromBuffer(
-                        vat_tensor,
-                        vat_data.as_ptr() as *const std::ffi::c_void,
-                        vat_data.len() * std::mem::size_of::<f32>(),
+                // Copy x_lengths
+                if x_lengths_index != -1 {
+                    let lengths_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, x_lengths_index);
+                    if !lengths_tensor.is_null() {
+                        let byte_size = tflite::TfLiteTensorByteSize(lengths_tensor);
+                        if byte_size == 8 {
+                            let val = [token_count as i64];
+                            tflite::TfLiteTensorCopyFromBuffer(
+                                lengths_tensor,
+                                val.as_ptr() as *const std::ffi::c_void,
+                                8,
+                            );
+                        } else {
+                            let val = [token_count as i32];
+                            tflite::TfLiteTensorCopyFromBuffer(
+                                lengths_tensor,
+                                val.as_ptr() as *const std::ffi::c_void,
+                                4,
+                            );
+                        }
+                    }
+                }
+
+                // Copy scales
+                if scales_index != -1 {
+                    let scales_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, scales_index);
+                    if !scales_tensor.is_null() {
+                        let byte_size = tflite::TfLiteTensorByteSize(scales_tensor);
+                        let count = byte_size / std::mem::size_of::<f32>();
+                        let mut scale_vals = vec![0.667f32; count];
+                        if count >= 2 {
+                            scale_vals[1] = 1.0 / speed;
+                        }
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            scales_tensor,
+                            scale_vals.as_ptr() as *const std::ffi::c_void,
+                            byte_size,
+                        );
+                    }
+                }
+            } else {
+                // StyleTTS2 supports dynamic resizing
+                if token_count != wrapper.last_phoneme_length {
+                    let dims = [1, token_count as i32];
+                    let status = tflite::TfLiteInterpreterResizeInputTensor(
+                        interpreter,
+                        phonemes_index,
+                        dims.as_ptr(),
+                        2,
                     );
+                    if status != 0 {
+                        return Err(SpeechEngineError::Inference {
+                            msg: format!("Failed to resize TFLite phoneme tensor to {} (status: {})", token_count, status),
+                        });
+                    }
+                    let alloc_status = tflite::TfLiteInterpreterAllocateTensors(interpreter);
+                    if alloc_status != 0 {
+                        return Err(SpeechEngineError::Inference {
+                            msg: format!("Failed to re-allocate TFLite tensors after resize (status: {})", alloc_status),
+                        });
+                    }
+                    wrapper.last_phoneme_length = token_count;
+                }
+
+                // Copy phoneme IDs
+                let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, phonemes_index);
+                if !phonemes_tensor.is_null() {
+                    let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
+                    let status = tflite::TfLiteTensorCopyFromBuffer(
+                        phonemes_tensor,
+                        phoneme_ids.as_ptr() as *const std::ffi::c_void,
+                        byte_size,
+                    );
+                    if status != 0 {
+                        return Err(SpeechEngineError::Inference {
+                            msg: format!("Failed to copy phoneme IDs to TFLite input (status: {})", status),
+                        });
+                    }
+                }
+
+                // Copy Style Vectors
+                if style_index != -1 {
+                    let style_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, style_index);
+                    if !style_tensor.is_null() {
+                        let size = style.data.len() * std::mem::size_of::<f32>();
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            style_tensor,
+                            style.data.as_ptr() as *const std::ffi::c_void,
+                            size,
+                        );
+                    }
+                }
+
+                // Copy Speed
+                if speed_index != -1 {
+                    let speed_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, speed_index);
+                    if !speed_tensor.is_null() {
+                        let speed_val = speed;
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            speed_tensor,
+                            &speed_val as *const f32 as *const std::ffi::c_void,
+                            std::mem::size_of::<f32>(),
+                        );
+                    }
+                }
+
+                // Copy Emotion VAT
+                if vat_index != -1 {
+                    let vat_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, vat_index);
+                    if !vat_tensor.is_null() {
+                        let vat_data: [f32; 3] = [0.5, 0.5, 0.5];
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            vat_tensor,
+                            vat_data.as_ptr() as *const std::ffi::c_void,
+                            vat_data.len() * std::mem::size_of::<f32>(),
+                        );
+                    }
                 }
             }
 
-            // 4. Invoke Inference
+            // 3. Invoke Inference
             let invoke_status = tflite::TfLiteInterpreterInvoke(interpreter);
             if invoke_status != 0 {
                 return Err(SpeechEngineError::Inference {
@@ -293,13 +425,47 @@ impl LiteRtActorEngine {
                 });
             }
 
-            // 5. Extract output buffer PCM floats
+            // 4. Extract output buffer PCM floats
             let output_count = tflite::TfLiteInterpreterGetOutputTensorCount(interpreter);
             if output_count == 0 {
                 return Err(SpeechEngineError::Inference {
                     msg: "LiteRT model returned no output tensors.".to_string(),
                 });
             }
+
+            let mut actual_len = 0usize;
+            let mut has_actual_len = false;
+
+            if is_matcha && output_count >= 2 {
+                let len_tensor = tflite::TfLiteInterpreterGetOutputTensor(interpreter, 1);
+                if !len_tensor.is_null() {
+                    let byte_size = tflite::TfLiteTensorByteSize(len_tensor);
+                    if byte_size == 8 {
+                        let mut len_val = 0i64;
+                        let copy_status = tflite::TfLiteTensorCopyToBuffer(
+                            len_tensor,
+                            &mut len_val as *mut i64 as *mut std::ffi::c_void,
+                            8,
+                        );
+                        if copy_status == 0 {
+                            actual_len = len_val as usize;
+                            has_actual_len = true;
+                        }
+                    } else if byte_size == 4 {
+                        let mut len_val = 0i32;
+                        let copy_status = tflite::TfLiteTensorCopyToBuffer(
+                            len_tensor,
+                            &mut len_val as *mut i32 as *mut std::ffi::c_void,
+                            4,
+                        );
+                        if copy_status == 0 {
+                            actual_len = len_val as usize;
+                            has_actual_len = true;
+                        }
+                    }
+                }
+            }
+
             let out_tensor = tflite::TfLiteInterpreterGetOutputTensor(interpreter, 0);
             if out_tensor.is_null() {
                 return Err(SpeechEngineError::Inference {
@@ -308,9 +474,15 @@ impl LiteRtActorEngine {
             }
 
             let byte_size = tflite::TfLiteTensorByteSize(out_tensor);
-            let element_count = byte_size / std::mem::size_of::<f32>();
-            let mut output_pcm = vec![0.0f32; element_count];
+            let total_elements = byte_size / std::mem::size_of::<f32>();
 
+            let element_count = if has_actual_len {
+                actual_len.min(total_elements)
+            } else {
+                total_elements
+            };
+
+            let mut output_pcm = vec![0.0f32; total_elements];
             let copy_status = tflite::TfLiteTensorCopyToBuffer(
                 out_tensor,
                 output_pcm.as_mut_ptr() as *mut std::ffi::c_void,
@@ -322,10 +494,22 @@ impl LiteRtActorEngine {
                 });
             }
 
-            let dummy_durations = vec![8i32; token_count];
+            output_pcm.truncate(element_count);
+
+            let mut pred_dur = vec![8i32; token_count];
+            if is_matcha {
+                // Resample from 22050 to 24000
+                output_pcm = resample_linear(output_pcm, 22050.0, 24000.0);
+
+                // Distribute total frames evenly across phonemes
+                let total_frames = (output_pcm.len() as f64 / 512.0) as i32;
+                let avg_dur = (total_frames as f32 / token_count as f32).round() as i32;
+                pred_dur = vec![avg_dur.max(1); token_count];
+            }
+
             Ok(ActorEngineOutput {
                 audio: output_pcm,
-                pred_dur: dummy_durations,
+                pred_dur,
             })
         }
     }
@@ -351,6 +535,10 @@ impl LiteRtActorEngine {
     pub fn reclaim_memory(&self) {
         self.reclaim_memory_impl();
     }
+
+    pub fn get_token_limit(&self) -> i32 {
+        <Self as ProsodiaSpeechEngine>::get_token_limit(self)
+    }
 }
 
 impl ProsodiaSpeechEngine for LiteRtActorEngine {
@@ -371,5 +559,102 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
 
     fn reclaim_memory(&self) {
         self.reclaim_memory_impl();
+    }
+
+    fn is_matcha(&self) -> bool {
+        if let Ok(guard) = self.get_or_init_interpreter() {
+            guard.as_ref().map(|w| w.is_matcha).unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    fn get_token_limit(&self) -> i32 {
+        if let Ok(guard) = self.get_or_init_interpreter() {
+            if let Some(ref wrapper) = *guard {
+                if wrapper.is_matcha {
+                    unsafe {
+                        let phonemes_tensor = tflite::TfLiteInterpreterGetInputTensor(wrapper.interpreter, 0);
+                        if !phonemes_tensor.is_null() {
+                            let byte_size = tflite::TfLiteTensorByteSize(phonemes_tensor);
+                            let element_size = if byte_size >= 400 { 8 } else { 4 };
+                            let limit = byte_size / element_size;
+                            return (limit.saturating_sub(2)) as i32;
+                        }
+                    }
+                }
+            }
+        }
+        510
+    }
+}
+
+fn resample_linear(input: Vec<f32>, from_rate: f32, to_rate: f32) -> Vec<f32> {
+    if input.is_empty() || (from_rate - to_rate).abs() < 1e-3 {
+        return input;
+    }
+    
+    let ratio = from_rate / to_rate;
+    let input_len = input.len();
+    let output_len = (input_len as f32 * to_rate / from_rate).round() as usize;
+    if output_len == 0 {
+        return Vec::new();
+    }
+    
+    let mut output = Vec::with_capacity(output_len);
+    for i in 0..output_len {
+        let t = i as f32 * ratio;
+        let t_floor = t.floor() as usize;
+        let t_fract = t - t_floor as f32;
+        
+        if t_floor + 1 < input_len {
+            let sample = (1.0 - t_fract) * input[t_floor] + t_fract * input[t_floor + 1];
+            output.push(sample);
+        } else if t_floor < input_len {
+            output.push(input[t_floor]);
+        } else {
+            output.push(0.0);
+        }
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_matcha_stock_forward() {
+        let model_path = "../../Models/matcha_stock.tflite";
+        if !Path::new(model_path).exists() {
+            println!("Skipping test: {} not found", model_path);
+            return;
+        }
+
+        let engine = LiteRtActorEngine::new(model_path.to_string());
+        assert!(engine.is_matcha(), "Expected loaded model to be detected as Matcha");
+
+        let phoneme_ids = vec![12, 15, 18, 5, 9];
+        let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
+        
+        let output = engine.forward(
+            phoneme_ids.clone(),
+            style,
+            1.0,
+            None,
+            None,
+        ).expect("Forward execution failed");
+
+        assert!(!output.audio.is_empty(), "Expected non-empty output audio");
+        assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected pred_dur to match phoneme count");
+    }
+
+    #[test]
+    fn test_resample_linear() {
+        let input = vec![0.0; 100];
+        let output = resample_linear(input.clone(), 22050.0, 24000.0);
+        assert!(!output.is_empty());
+        assert_eq!(output.len(), 109);
     }
 }

@@ -137,29 +137,7 @@ def main():
     model, output_names = get_exportable_module(matcha, vocoder, args.n_timesteps)
 
     # Set dynamic shape for inputs/outputs
-    dynamic_axes = {
-        "x": {0: "batch_size", 1: "time"},
-        "x_lengths": {0: "batch_size"},
-    }
-
-    if vocoder is None:
-        dynamic_axes.update(
-            {
-                "mel": {0: "batch_size", 2: "time"},
-                "mel_lengths": {0: "batch_size"},
-            }
-        )
-    else:
-        print("Embedding the vocoder in the ONNX graph")
-        dynamic_axes.update(
-            {
-                "wav": {0: "batch_size", 1: "time"},
-                "wav_lengths": {0: "batch_size"},
-            }
-        )
-
-    if is_multi_speaker:
-        dynamic_axes["spks"] = {0: "batch_size"}
+    dynamic_axes = None
 
     # Create the output directory (if not exists)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
@@ -173,6 +151,7 @@ def main():
         opset_version=args.opset,
         export_params=True,
         do_constant_folding=True,
+        dynamo=False,
     )
     print(f"[🍵] ONNX model exported to  {args.output}")
 

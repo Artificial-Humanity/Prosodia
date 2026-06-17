@@ -9,6 +9,26 @@ import numpy as np
 import soundfile as sf
 import torch
 
+# Configure safe globals for PyTorch >= 2.6 loading older Lightning checkpoints
+if hasattr(torch.serialization, "add_safe_globals"):
+    try:
+        import omegaconf
+        import collections
+        torch.serialization.add_safe_globals([
+            omegaconf.dictconfig.DictConfig,
+            omegaconf.listconfig.ListConfig,
+            omegaconf.nodes.AnyNode,
+            omegaconf.nodes.StringNode,
+            omegaconf.nodes.IntegerNode,
+            omegaconf.nodes.FloatNode,
+            omegaconf.nodes.BooleanNode,
+            omegaconf.base.ContainerMetadata,
+            omegaconf.base.Node,
+            collections.defaultdict,
+        ])
+    except ImportError:
+        pass
+
 from matcha.hifigan.config import v1
 from matcha.hifigan.denoiser import Denoiser
 from matcha.hifigan.env import AttrDict
@@ -107,7 +127,7 @@ def load_vocoder(vocoder_name, checkpoint_path, device):
 
 def load_matcha(model_name, checkpoint_path, device):
     print(f"[!] Loading {model_name}!")
-    model = MatchaTTS.load_from_checkpoint(checkpoint_path, map_location=device)
+    model = MatchaTTS.load_from_checkpoint(checkpoint_path, map_location=device, weights_only=False)
     _ = model.eval()
 
     print(f"[+] {model_name} loaded!")
