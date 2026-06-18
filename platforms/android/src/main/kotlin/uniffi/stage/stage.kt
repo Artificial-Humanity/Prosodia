@@ -2324,7 +2324,8 @@ data class AcousticMatrixConfig (
     var `gainArousalGain`: kotlin.Double, 
     var `gainValenceGain`: kotlin.Double, 
     var `gainRangeMin`: kotlin.Double, 
-    var `gainRangeMax`: kotlin.Double
+    var `gainRangeMax`: kotlin.Double, 
+    var `sampleRate`: kotlin.UInt
 ) {
     
     companion object
@@ -2343,6 +2344,7 @@ public object FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer<Acous
             FfiConverterDouble.read(buf),
             FfiConverterDouble.read(buf),
             FfiConverterDouble.read(buf),
+            FfiConverterUInt.read(buf),
         )
     }
 
@@ -2356,7 +2358,8 @@ public object FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer<Acous
             FfiConverterDouble.allocationSize(value.`gainArousalGain`) +
             FfiConverterDouble.allocationSize(value.`gainValenceGain`) +
             FfiConverterDouble.allocationSize(value.`gainRangeMin`) +
-            FfiConverterDouble.allocationSize(value.`gainRangeMax`)
+            FfiConverterDouble.allocationSize(value.`gainRangeMax`) +
+            FfiConverterUInt.allocationSize(value.`sampleRate`)
     )
 
     override fun write(value: AcousticMatrixConfig, buf: ByteBuffer) {
@@ -2370,6 +2373,7 @@ public object FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer<Acous
             FfiConverterDouble.write(value.`gainValenceGain`, buf)
             FfiConverterDouble.write(value.`gainRangeMin`, buf)
             FfiConverterDouble.write(value.`gainRangeMax`, buf)
+            FfiConverterUInt.write(value.`sampleRate`, buf)
     }
 }
 

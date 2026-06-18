@@ -13,6 +13,7 @@ pub struct AcousticMatrixState {
     pub gain_valence_gain: f64,
     pub gain_range_min: f64,
     pub gain_range_max: f64,
+    pub sample_rate: u32,
 }
 
 impl Default for AcousticMatrixState {
@@ -28,6 +29,7 @@ impl Default for AcousticMatrixState {
             gain_valence_gain: 0.08,
             gain_range_min: 0.60,
             gain_range_max: 1.20,
+            sample_rate: 24000,
         }
     }
 }
@@ -55,6 +57,7 @@ pub struct AcousticMatrixConfig {
     pub gain_valence_gain: f64,
     pub gain_range_min: f64,
     pub gain_range_max: f64,
+    pub sample_rate: u32,
 }
 
 #[uniffi::export]
@@ -71,6 +74,7 @@ pub fn get_acoustic_matrix() -> AcousticMatrixConfig {
         gain_valence_gain: state.gain_valence_gain,
         gain_range_min: state.gain_range_min,
         gain_range_max: state.gain_range_max,
+        sample_rate: state.sample_rate,
     }
 }
 
@@ -87,6 +91,7 @@ pub fn set_acoustic_matrix(config: AcousticMatrixConfig) {
     state.gain_valence_gain = config.gain_valence_gain;
     state.gain_range_min = config.gain_range_min;
     state.gain_range_max = config.gain_range_max;
+    state.sample_rate = config.sample_rate;
 }
 
 #[uniffi::export]
@@ -138,5 +143,5 @@ pub fn pitch_for_emotion(emotion: &EmotionVector) -> f64 {
 
 #[uniffi::export]
 pub fn get_sample_rate() -> u32 {
-    24000
+    ACOUSTIC_MATRIX.read().unwrap().sample_rate
 }

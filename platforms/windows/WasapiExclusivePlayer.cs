@@ -28,9 +28,33 @@ namespace Prosodia.Platforms.Windows
         private int _channels;
         private int _bufferFrameCount;
 
-        public WasapiExclusivePlayer(int sampleRate = 24000, int channels = 1)
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RustCallStatus
         {
-            _sampleRate = sampleRate;
+            public byte code;
+            public uint error_len;
+            public IntPtr error_buf;
+        }
+
+        [DllImport("stage", CallingConvention = CallingConvention.Cdecl)]
+        private static extern uint uniffi_stage_fn_func_get_sample_rate(ref RustCallStatus status);
+
+        private static uint GetStageSampleRate()
+        {
+            try
+            {
+                var status = new RustCallStatus();
+                return uniffi_stage_fn_func_get_sample_rate(ref status);
+            }
+            catch
+            {
+                return 24000;
+            }
+        }
+
+        public WasapiExclusivePlayer(int sampleRate = -1, int channels = 1)
+        {
+            _sampleRate = sampleRate == -1 ? (int)GetStageSampleRate() : sampleRate;
             _channels = channels;
             InitializeWasapi();
         }
