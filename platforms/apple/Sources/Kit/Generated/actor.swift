@@ -650,6 +650,10 @@ public protocol LiteRtActorEngineProtocol : AnyObject {
     
     func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
     
+    func getTokenLimit()  -> Int32
+    
+    func isMatcha()  -> Bool
+    
     func reclaimMemory() 
     
 }
@@ -714,6 +718,20 @@ open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, duratio
         FfiConverterFloat.lower(speed),
         FfiConverterOptionSequenceFloat.lower(durationScales),
         FfiConverterOptionSequenceFloat.lower(f0Bias),$0
+    )
+})
+}
+    
+open func getTokenLimit() -> Int32 {
+    return try!  FfiConverterInt32.lift(try! rustCall() {
+    uniffi_actor_fn_method_litertactorengine_get_token_limit(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func isMatcha() -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_actor_fn_method_litertactorengine_is_matcha(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -918,7 +936,7 @@ public protocol ProsodiaActorPipelineProtocol : AnyObject {
     
     func synthesizeWithTimestampsBlend(speechEngine: ProsodiaSpeechEngine, text: String, voiceBlends: [String], speed: Float, pitch: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> SynthesisResult
     
-    func tokenize(phonemes: String)  -> [Int32]
+    func tokenize(phonemes: String, isMatcha: Bool)  -> [Int32]
     
 }
 
@@ -1097,10 +1115,11 @@ open func synthesizeWithTimestampsBlend(speechEngine: ProsodiaSpeechEngine, text
 })
 }
     
-open func tokenize(phonemes: String) -> [Int32] {
+open func tokenize(phonemes: String, isMatcha: Bool) -> [Int32] {
     return try!  FfiConverterSequenceInt32.lift(try! rustCall() {
     uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(self.uniffiClonePointer(),
-        FfiConverterString.lower(phonemes),$0
+        FfiConverterString.lower(phonemes),
+        FfiConverterBool.lower(isMatcha),$0
     )
 })
 }
@@ -2726,6 +2745,10 @@ public protocol ProsodiaSpeechEngine : AnyObject {
     
     func reclaimMemory() 
     
+    func isMatcha()  -> Bool
+    
+    func getTokenLimit()  -> Int32
+    
 }
 
 
@@ -2809,6 +2832,50 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
 
             
             let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        isMatcha: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceProsodiaSpeechEngine.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.isMatcha(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        getTokenLimit: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<Int32>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Int32 in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceProsodiaSpeechEngine.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.getTokenLimit(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterInt32.lower($0) }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -3522,6 +3589,12 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_litertactorengine_forward() != 30289) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_method_litertactorengine_get_token_limit() != 61050) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_litertactorengine_is_matcha() != 26718) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_method_litertactorengine_reclaim_memory() != 58102) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3567,7 +3640,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_timestamps_blend() != 29930) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 46172) {
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 50012) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaspeech_process() != 63471) {
@@ -3637,6 +3710,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_is_matcha() != 32180) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_get_token_limit() != 59867) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_voiceassetprovider_load_voice_bytes() != 32360) {

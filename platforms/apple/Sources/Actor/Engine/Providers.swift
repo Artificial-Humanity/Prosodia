@@ -51,6 +51,14 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
     func reclaimMemory() {
         backend.reclaimMemory()
     }
+
+    func isMatcha() -> Bool {
+        return backend.isMatcha()
+    }
+
+    func getTokenLimit() -> Int32 {
+        return backend.getTokenLimit()
+    }
 }
 
 /// A ``VocalActor`` wrapped around ``ProsodiaActorEngine`` driving StyleTTS2 via LiteRT.

@@ -307,6 +307,20 @@ typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod2)(uint64_t, voi
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD3
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD3
+typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod3)(uint64_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD4
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD4
+typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod4)(uint64_t, int32_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER_METHOD0
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VOICE_ASSET_PROVIDER_METHOD0
 typedef void (*UniffiCallbackInterfaceVoiceAssetProviderMethod0)(uint64_t, RustBuffer, RustBuffer* _Nonnull, 
@@ -353,6 +367,8 @@ typedef struct UniffiVTableCallbackInterfaceProsodiaSpeechEngine {
     UniffiCallbackInterfaceProsodiaSpeechEngineMethod0 _Nonnull synthesize;
     UniffiCallbackInterfaceProsodiaSpeechEngineMethod1 _Nonnull forward;
     UniffiCallbackInterfaceProsodiaSpeechEngineMethod2 _Nonnull reclaimMemory;
+    UniffiCallbackInterfaceProsodiaSpeechEngineMethod3 _Nonnull isMatcha;
+    UniffiCallbackInterfaceProsodiaSpeechEngineMethod4 _Nonnull getTokenLimit;
     UniffiCallbackInterfaceFree _Nonnull uniffiFree;
 } UniffiVTableCallbackInterfaceProsodiaSpeechEngine;
 
@@ -409,6 +425,16 @@ void*_Nonnull uniffi_actor_fn_constructor_litertactorengine_new(RustBuffer model
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
 RustBuffer uniffi_actor_fn_method_litertactorengine_forward(void*_Nonnull ptr, RustBuffer phoneme_ids, RustBuffer style, float speed, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
+int32_t uniffi_actor_fn_method_litertactorengine_get_token_limit(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_IS_MATCHA
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_IS_MATCHA
+int8_t uniffi_actor_fn_method_litertactorengine_is_matcha(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_RECLAIM_MEMORY
@@ -518,7 +544,7 @@ RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_with_timestam
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
-RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(void*_Nonnull ptr, RustBuffer phonemes, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(void*_Nonnull ptr, RustBuffer phonemes, int8_t is_matcha, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_PROSODIASPEECH
@@ -1002,6 +1028,18 @@ uint16_t uniffi_actor_checksum_method_litertactorengine_forward(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
+uint16_t uniffi_actor_checksum_method_litertactorengine_get_token_limit(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_IS_MATCHA
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_IS_MATCHA
+uint16_t uniffi_actor_checksum_method_litertactorengine_is_matcha(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_RECLAIM_MEMORY
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_LITERTACTORENGINE_RECLAIM_MEMORY
 uint16_t uniffi_actor_checksum_method_litertactorengine_reclaim_memory(void
@@ -1233,6 +1271,18 @@ uint16_t uniffi_actor_checksum_method_prosodiaspeechengine_forward(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_RECLAIM_MEMORY
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_RECLAIM_MEMORY
 uint16_t uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_IS_MATCHA
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_IS_MATCHA
+uint16_t uniffi_actor_checksum_method_prosodiaspeechengine_is_matcha(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_GET_TOKEN_LIMIT
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIASPEECHENGINE_GET_TOKEN_LIMIT
+uint16_t uniffi_actor_checksum_method_prosodiaspeechengine_get_token_limit(void
     
 );
 #endif

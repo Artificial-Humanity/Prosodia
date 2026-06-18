@@ -550,6 +550,10 @@ impl LiteRtActorEngine {
     pub fn get_token_limit(&self) -> i32 {
         <Self as ProsodiaSpeechEngine>::get_token_limit(self)
     }
+
+    pub fn is_matcha(&self) -> bool {
+        <Self as ProsodiaSpeechEngine>::is_matcha(self)
+    }
 }
 
 impl ProsodiaSpeechEngine for LiteRtActorEngine {

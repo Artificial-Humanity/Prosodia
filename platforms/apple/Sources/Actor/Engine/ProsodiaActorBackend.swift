@@ -21,8 +21,13 @@ public protocol ProsodiaActorBackend: AnyObject, Sendable {
     ) throws -> ActorEngineOutput
 
     func reclaimMemory()
+
+    func isMatcha() -> Bool
+    func getTokenLimit() -> Int32
 }
 
 public extension ProsodiaActorBackend {
     func reclaimMemory() {}
+    func isMatcha() -> Bool { false }
+    func getTokenLimit() -> Int32 { 510 }
 }
