@@ -31,6 +31,7 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
         phonemeIds: [Int32],
         refS: StyleVector,
         speed: Float,
+        vat: [Float]?,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> ActorEngineOutput {
@@ -38,6 +39,7 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
             phonemeIds: phonemeIds,
             style: refS,
             speed: speed,
+            vat: vat,
             durationScales: durationScales,
             f0Bias: f0Bias
         )

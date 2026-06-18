@@ -118,6 +118,10 @@ impl ProsodiaActorPipeline {
         *g2p = processor;
     }
 
+    pub fn tokenize_phonemes(&self, phonemes: String, is_matcha: bool) -> Vec<i32> {
+        self.tokenize(&phonemes, is_matcha)
+    }
+
     fn tokenize(&self, phonemes: &str, is_matcha: bool) -> Vec<i32> {
         let mut ids = Vec::new();
         ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
@@ -384,6 +388,7 @@ impl ProsodiaActorPipeline {
                     self.tokenize(&trimmed_phonemes, is_matcha),
                     style,
                     speed,
+                    None,
                     chunk_duration_scales,
                     resolved_f0_bias,
                 )
@@ -617,6 +622,7 @@ impl ProsodiaActorPipeline {
                     self.tokenize(&mapped_phonemes, is_matcha),
                     style,
                     speed,
+                    None,
                     Some(duration_scales),
                     Some(f0_bias),
                 )
@@ -770,7 +776,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None)
+                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -847,7 +853,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None)
+                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -1008,6 +1014,7 @@ mod tests {
             phoneme_ids: Vec<i32>,
             _style: StyleVector,
             _speed: f32,
+            _vat: Option<Vec<f32>>,
             _duration_scales: Option<Vec<f32>>,
             _f0_bias: Option<Vec<f32>>,
         ) -> Result<ActorEngineOutput, SpeechEngineError> {

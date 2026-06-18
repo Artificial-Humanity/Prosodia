@@ -18,6 +18,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
         phonemeIds: [Int32],
         style: StyleVector,
         speed: Float,
+        vat: [Float]?,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> Kit.ActorEngineOutput {
@@ -25,6 +26,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
             phonemeIds: phonemeIds,
             refS: style,
             speed: speed,
+            vat: vat,
             durationScales: durationScales,
             f0Bias: f0Bias
         )
@@ -33,6 +35,14 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
     
     func reclaimMemory() {
         backend.reclaimMemory()
+    }
+
+    func isMatcha() -> Bool {
+        return backend.isMatcha()
+    }
+
+    func getTokenLimit() -> Int32 {
+        return backend.getTokenLimit()
     }
 }
 
