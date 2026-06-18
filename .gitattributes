@@ -1,0 +1,13 @@
+# Git LFS — store large build artifacts as LFS objects, not git blobs.
+# Patterns target only the real binary files (mode 100755); the Apple framework
+# symlinks live at *.framework/<name>FFI and Versions/Current and are NOT matched.
+# NOTE: every clone (CI, other dev machines) must have git-lfs installed, or these
+# files will check out as pointer text and Apple/Android builds will break.
+
+*.so   filter=lfs diff=lfs merge=lfs -text
+*.dylib filter=lfs diff=lfs merge=lfs -text
+*.a    filter=lfs diff=lfs merge=lfs -text
+*.jar  filter=lfs diff=lfs merge=lfs -text
+
+# Apple xcframework binaries (no file extension): .../Versions/A/<name>FFI
+**/Versions/A/*FFI filter=lfs diff=lfs merge=lfs -text
