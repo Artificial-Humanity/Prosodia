@@ -166,6 +166,7 @@ synth_output/
 # Local Matcha-TTS artifacts and exports
 model_tflite/
 model_e2e_tflite/
+model_e2e_test_tflite/
 replace.json
 utterance_001.npy
 utterance_001.png

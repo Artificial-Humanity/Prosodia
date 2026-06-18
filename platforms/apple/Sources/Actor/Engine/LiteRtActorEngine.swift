@@ -46,4 +46,12 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
             predDur: output.predDur.map { Int($0) }
         )
     }
+
+    public func isMatcha() -> Bool {
+        return rustEngine.isMatcha()
+    }
+
+    public func getTokenLimit() -> Int32 {
+        return rustEngine.getTokenLimit()
+    }
 }
