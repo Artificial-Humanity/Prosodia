@@ -793,7 +793,7 @@ public func FfiConverterTypeLiteRtActorEngine_lower(_ value: LiteRtActorEngine) 
 
 public protocol ProsodiaActorEngineProtocol : AnyObject {
     
-    func processAndSynthesize(span: ProsodySpan)  -> ActorEngineOutput
+    func processAndSynthesize(span: ProsodySpan) throws  -> ActorEngineOutput
     
     func reclaimMemory() 
     
@@ -849,8 +849,8 @@ public convenience init(pipeline: ProsodiaActorPipeline, speechEngine: ProsodiaS
     
 
     
-open func processAndSynthesize(span: ProsodySpan) -> ActorEngineOutput {
-    return try!  FfiConverterTypeActorEngineOutput.lift(try! rustCall() {
+open func processAndSynthesize(span: ProsodySpan)throws  -> ActorEngineOutput {
+    return try  FfiConverterTypeActorEngineOutput.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
     uniffi_actor_fn_method_prosodiaactorengine_process_and_synthesize(self.uniffiClonePointer(),
         FfiConverterTypeProsodySpan_lower(span),$0
     )
@@ -3612,7 +3612,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_litertactorengine_reclaim_memory() != 58102) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 29516) {
+    if (uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 34089) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory() != 18014) {

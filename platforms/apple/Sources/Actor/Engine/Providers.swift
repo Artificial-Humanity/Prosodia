@@ -147,8 +147,12 @@ public actor LiteRtVocalActor: Stage.VocalActor {
                 acoustics: kitAcoustics
             )
 
-            let output = rustEngine.processAndSynthesize(span: kitSpan)
-            totalAudio.append(contentsOf: output.audio)
+            do {
+                let output = try rustEngine.processAndSynthesize(span: kitSpan)
+                totalAudio.append(contentsOf: output.audio)
+            } catch {
+                print("Warning: failed to process and synthesize span: \(error)")
+            }
         }
 
         return totalAudio
