@@ -78,6 +78,7 @@ fastlane/test_output
 *.onnx
 *.safetensors
 Models/
+!Models/Matcha-TTS/
 
 # Local credentials
 .netrc
