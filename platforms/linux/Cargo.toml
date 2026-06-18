@@ -1,0 +1,16 @@
+[package]
+name = "prosodia-linux"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["alsa"]
+alsa = []
+pulse = []
+
+[dependencies]
+stage = { path = "../../crates/stage" }
+actor = { path = "../../crates/actor" }
+
+[build-dependencies]
+cc = "1.0"
