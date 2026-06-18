@@ -4,6 +4,7 @@ members = [
     "crates/folioparser",
     "crates/director",
     "crates/actor",
-    "crates/stage"
+    "crates/stage",
+    "platforms/linux"
 ]
 resolver = "2"
