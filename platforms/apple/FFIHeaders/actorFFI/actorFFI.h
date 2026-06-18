@@ -295,7 +295,7 @@ typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod0)(uint64_t, Rus
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD1
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROSODIA_SPEECH_ENGINE_METHOD1
-typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod1)(uint64_t, RustBuffer, RustBuffer, float, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceProsodiaSpeechEngineMethod1)(uint64_t, RustBuffer, RustBuffer, float, RustBuffer, RustBuffer, RustBuffer, RustBuffer* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -424,7 +424,7 @@ void*_Nonnull uniffi_actor_fn_constructor_litertactorengine_new(RustBuffer model
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
-RustBuffer uniffi_actor_fn_method_litertactorengine_forward(void*_Nonnull ptr, RustBuffer phoneme_ids, RustBuffer style, float speed, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_actor_fn_method_litertactorengine_forward(void*_Nonnull ptr, RustBuffer phoneme_ids, RustBuffer style, float speed, RustBuffer vat, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
@@ -545,6 +545,11 @@ RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_with_timestam
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
 RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(void*_Nonnull ptr, RustBuffer phonemes, int8_t is_matcha, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE_PHONEMES
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_TOKENIZE_PHONEMES
+RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_tokenize_phonemes(void*_Nonnull ptr, RustBuffer phonemes, int8_t is_matcha, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_PROSODIASPEECH
@@ -1133,6 +1138,12 @@ uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_time
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_TOKENIZE
 uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_TOKENIZE_PHONEMES
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_TOKENIZE_PHONEMES
+uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize_phonemes(void
     
 );
 #endif

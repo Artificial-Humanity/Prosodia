@@ -19,6 +19,7 @@ class KotlinSpeechEngine(
         phonemeIds: List<Int>,
         style: StyleVector,
         speed: Float,
+        vat: List<Float>?,
         durationScales: List<Float>?,
         f0Bias: List<Float>?
     ): ActorEngineOutput {
@@ -26,6 +27,7 @@ class KotlinSpeechEngine(
             phonemeIds = phonemeIds,
             style = style,
             speed = speed,
+            vat = vat,
             durationScales = durationScales,
             f0Bias = f0Bias
         )

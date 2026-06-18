@@ -658,10 +658,16 @@ internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod0 : com.sun.
     fun callback(`uniffiHandle`: Long,`input`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod1 : com.sun.jna.Callback {
-    fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+    fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod2 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod3 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod4 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: IntByReference,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceVoiceAssetProviderMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`voiceName`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
@@ -733,24 +739,30 @@ internal open class UniffiVTableCallbackInterfaceProsodiaG2pProcessor(
     }
 
 }
-@Structure.FieldOrder("synthesize", "forward", "reclaimMemory", "uniffiFree")
+@Structure.FieldOrder("synthesize", "forward", "reclaimMemory", "isMatcha", "getTokenLimit", "uniffiFree")
 internal open class UniffiVTableCallbackInterfaceProsodiaSpeechEngine(
     @JvmField internal var `synthesize`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod0? = null,
     @JvmField internal var `forward`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod1? = null,
     @JvmField internal var `reclaimMemory`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod2? = null,
+    @JvmField internal var `isMatcha`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod3? = null,
+    @JvmField internal var `getTokenLimit`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod4? = null,
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
 ) : Structure() {
     class UniffiByValue(
         `synthesize`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod0? = null,
         `forward`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod1? = null,
         `reclaimMemory`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod2? = null,
+        `isMatcha`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod3? = null,
+        `getTokenLimit`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod4? = null,
         `uniffiFree`: UniffiCallbackInterfaceFree? = null,
-    ): UniffiVTableCallbackInterfaceProsodiaSpeechEngine(`synthesize`,`forward`,`reclaimMemory`,`uniffiFree`,), Structure.ByValue
+    ): UniffiVTableCallbackInterfaceProsodiaSpeechEngine(`synthesize`,`forward`,`reclaimMemory`,`isMatcha`,`getTokenLimit`,`uniffiFree`,), Structure.ByValue
 
    internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceProsodiaSpeechEngine) {
         `synthesize` = other.`synthesize`
         `forward` = other.`forward`
         `reclaimMemory` = other.`reclaimMemory`
+        `isMatcha` = other.`isMatcha`
+        `getTokenLimit` = other.`getTokenLimit`
         `uniffiFree` = other.`uniffiFree`
     }
 
@@ -771,6 +783,14 @@ internal open class UniffiVTableCallbackInterfaceVoiceAssetProvider(
     }
 
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -979,8 +999,12 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_actor_fn_constructor_litertactorengine_new(`modelPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
-    fun uniffi_actor_fn_method_litertactorengine_forward(`ptr`: Pointer,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_actor_fn_method_litertactorengine_forward(`ptr`: Pointer,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_actor_fn_method_litertactorengine_get_token_limit(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_actor_fn_method_litertactorengine_is_matcha(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_actor_fn_method_litertactorengine_reclaim_memory(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_actor_fn_clone_prosodiaactorengine(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1023,7 +1047,9 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_with_timestamps_blend(`ptr`: Pointer,`speechEngine`: Long,`text`: RustBuffer.ByValue,`voiceBlends`: RustBuffer.ByValue,`speed`: Float,`pitch`: Float,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(`ptr`: Pointer,`phonemes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(`ptr`: Pointer,`phonemes`: RustBuffer.ByValue,`isMatcha`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_actor_fn_method_prosodiaactorpipeline_tokenize_phonemes(`ptr`: Pointer,`phonemes`: RustBuffer.ByValue,`isMatcha`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_clone_prosodiaspeech(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
@@ -1213,6 +1239,10 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_actor_checksum_method_litertactorengine_forward(
     ): Short
+    fun uniffi_actor_checksum_method_litertactorengine_get_token_limit(
+    ): Short
+    fun uniffi_actor_checksum_method_litertactorengine_is_matcha(
+    ): Short
     fun uniffi_actor_checksum_method_litertactorengine_reclaim_memory(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize(
@@ -1244,6 +1274,8 @@ internal interface UniffiLib : Library {
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_timestamps_blend(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize(
+    ): Short
+    fun uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize_phonemes(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaspeech_process(
     ): Short
@@ -1291,6 +1323,10 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory(
     ): Short
+    fun uniffi_actor_checksum_method_prosodiaspeechengine_is_matcha(
+    ): Short
+    fun uniffi_actor_checksum_method_prosodiaspeechengine_get_token_limit(
+    ): Short
     fun uniffi_actor_checksum_method_voiceassetprovider_load_voice_bytes(
     ): Short
     fun ffi_actor_uniffi_contract_version(
@@ -1337,7 +1373,13 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_litertactorengine_forward() != 30289.toShort()) {
+    if (lib.uniffi_actor_checksum_method_litertactorengine_forward() != 5996.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_litertactorengine_get_token_limit() != 61050.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_litertactorengine_is_matcha() != 26718.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_litertactorengine_reclaim_memory() != 58102.toShort()) {
@@ -1385,7 +1427,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_with_timestamps_blend() != 29930.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 46172.toShort()) {
+    if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 50012.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize_phonemes() != 16428.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaspeech_process() != 63471.toShort()) {
@@ -1451,10 +1496,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 46314.toShort()) {
+    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 40977.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_is_matcha() != 32180.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_get_token_limit() != 59867.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_voiceassetprovider_load_voice_bytes() != 32360.toShort()) {
@@ -2106,7 +2157,11 @@ public object FfiConverterTypeDefaultModelAssetManager: FfiConverter<DefaultMode
  */
 public interface LiteRtActorEngineInterface {
     
-    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
+    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
+    
+    fun `getTokenLimit`(): kotlin.Int
+    
+    fun `isMatcha`(): kotlin.Boolean
     
     fun `reclaimMemory`()
     
@@ -2205,12 +2260,36 @@ open class LiteRtActorEngine: Disposable, AutoCloseable, LiteRtActorEngineInterf
     }
 
     
-    @Throws(SpeechEngineException::class)override fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput {
+    @Throws(SpeechEngineException::class)override fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput {
             return FfiConverterTypeActorEngineOutput.lift(
     callWithPointer {
     uniffiRustCallWithError(SpeechEngineException) { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_method_litertactorengine_forward(
-        it, FfiConverterSequenceInt.lower(`phonemeIds`),FfiConverterTypeStyleVector.lower(`style`),FfiConverterFloat.lower(`speed`),FfiConverterOptionalSequenceFloat.lower(`durationScales`),FfiConverterOptionalSequenceFloat.lower(`f0Bias`),_status)
+        it, FfiConverterSequenceInt.lower(`phonemeIds`),FfiConverterTypeStyleVector.lower(`style`),FfiConverterFloat.lower(`speed`),FfiConverterOptionalSequenceFloat.lower(`vat`),FfiConverterOptionalSequenceFloat.lower(`durationScales`),FfiConverterOptionalSequenceFloat.lower(`f0Bias`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `getTokenLimit`(): kotlin.Int {
+            return FfiConverterInt.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_method_litertactorengine_get_token_limit(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `isMatcha`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_method_litertactorengine_is_matcha(
+        it, _status)
 }
     }
     )
@@ -2638,7 +2717,9 @@ public interface ProsodiaActorPipelineInterface {
     
     fun `synthesizeWithTimestampsBlend`(`speechEngine`: ProsodiaSpeechEngine, `text`: kotlin.String, `voiceBlends`: List<kotlin.String>, `speed`: kotlin.Float, `pitch`: kotlin.Float, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): SynthesisResult
     
-    fun `tokenize`(`phonemes`: kotlin.String): List<kotlin.Int>
+    fun `tokenize`(`phonemes`: kotlin.String, `isMatcha`: kotlin.Boolean): List<kotlin.Int>
+    
+    fun `tokenizePhonemes`(`phonemes`: kotlin.String, `isMatcha`: kotlin.Boolean): List<kotlin.Int>
     
     companion object
 }
@@ -2877,12 +2958,24 @@ open class ProsodiaActorPipeline: Disposable, AutoCloseable, ProsodiaActorPipeli
     }
     
 
-    override fun `tokenize`(`phonemes`: kotlin.String): List<kotlin.Int> {
+    override fun `tokenize`(`phonemes`: kotlin.String, `isMatcha`: kotlin.Boolean): List<kotlin.Int> {
             return FfiConverterSequenceInt.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(
-        it, FfiConverterString.lower(`phonemes`),_status)
+        it, FfiConverterString.lower(`phonemes`),FfiConverterBoolean.lower(`isMatcha`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `tokenizePhonemes`(`phonemes`: kotlin.String, `isMatcha`: kotlin.Boolean): List<kotlin.Int> {
+            return FfiConverterSequenceInt.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorpipeline_tokenize_phonemes(
+        it, FfiConverterString.lower(`phonemes`),FfiConverterBoolean.lower(`isMatcha`),_status)
 }
     }
     )
@@ -4441,9 +4534,13 @@ public interface ProsodiaSpeechEngine {
     
     fun `synthesize`(`input`: PipelineOutput): ActorEngineOutput
     
-    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
+    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
     
     fun `reclaimMemory`()
+    
+    fun `isMatcha`(): kotlin.Boolean
+    
+    fun `getTokenLimit`(): kotlin.Int
     
     companion object
 }
@@ -4465,13 +4562,14 @@ internal object uniffiCallbackInterfaceProsodiaSpeechEngine {
         }
     }
     internal object `forward`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod1 {
-        override fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+        override fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
             val uniffiObj = FfiConverterTypeProsodiaSpeechEngine.handleMap.get(uniffiHandle)
             val makeCall = { ->
                 uniffiObj.`forward`(
                     FfiConverterSequenceInt.lift(`phonemeIds`),
                     FfiConverterTypeStyleVector.lift(`style`),
                     FfiConverterFloat.lift(`speed`),
+                    FfiConverterOptionalSequenceFloat.lift(`vat`),
                     FfiConverterOptionalSequenceFloat.lift(`durationScales`),
                     FfiConverterOptionalSequenceFloat.lift(`f0Bias`),
                 )
@@ -4496,6 +4594,28 @@ internal object uniffiCallbackInterfaceProsodiaSpeechEngine {
             uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
         }
     }
+    internal object `isMatcha`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod3 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeProsodiaSpeechEngine.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`isMatcha`(
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `getTokenLimit`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod4 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: IntByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeProsodiaSpeechEngine.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`getTokenLimit`(
+                )
+            }
+            val writeReturn = { value: kotlin.Int -> uniffiOutReturn.setValue(FfiConverterInt.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
 
     internal object uniffiFree: UniffiCallbackInterfaceFree {
         override fun callback(handle: Long) {
@@ -4507,6 +4627,8 @@ internal object uniffiCallbackInterfaceProsodiaSpeechEngine {
         `synthesize`,
         `forward`,
         `reclaimMemory`,
+        `isMatcha`,
+        `getTokenLimit`,
         uniffiFree,
     )
 

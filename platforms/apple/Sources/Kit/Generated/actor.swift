@@ -648,7 +648,7 @@ public func FfiConverterTypeDefaultModelAssetManager_lower(_ value: DefaultModel
  */
 public protocol LiteRtActorEngineProtocol : AnyObject {
     
-    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
     
     func getTokenLimit()  -> Int32
     
@@ -710,12 +710,13 @@ public convenience init(modelPath: String) {
     
 
     
-open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> ActorEngineOutput {
+open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?)throws  -> ActorEngineOutput {
     return try  FfiConverterTypeActorEngineOutput.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
     uniffi_actor_fn_method_litertactorengine_forward(self.uniffiClonePointer(),
         FfiConverterSequenceInt32.lower(phonemeIds),
         FfiConverterTypeStyleVector.lower(style),
         FfiConverterFloat.lower(speed),
+        FfiConverterOptionSequenceFloat.lower(vat),
         FfiConverterOptionSequenceFloat.lower(durationScales),
         FfiConverterOptionSequenceFloat.lower(f0Bias),$0
     )
@@ -938,6 +939,8 @@ public protocol ProsodiaActorPipelineProtocol : AnyObject {
     
     func tokenize(phonemes: String, isMatcha: Bool)  -> [Int32]
     
+    func tokenizePhonemes(phonemes: String, isMatcha: Bool)  -> [Int32]
+    
 }
 
 open class ProsodiaActorPipeline:
@@ -1118,6 +1121,15 @@ open func synthesizeWithTimestampsBlend(speechEngine: ProsodiaSpeechEngine, text
 open func tokenize(phonemes: String, isMatcha: Bool) -> [Int32] {
     return try!  FfiConverterSequenceInt32.lift(try! rustCall() {
     uniffi_actor_fn_method_prosodiaactorpipeline_tokenize(self.uniffiClonePointer(),
+        FfiConverterString.lower(phonemes),
+        FfiConverterBool.lower(isMatcha),$0
+    )
+})
+}
+    
+open func tokenizePhonemes(phonemes: String, isMatcha: Bool) -> [Int32] {
+    return try!  FfiConverterSequenceInt32.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_tokenize_phonemes(self.uniffiClonePointer(),
         FfiConverterString.lower(phonemes),
         FfiConverterBool.lower(isMatcha),$0
     )
@@ -2741,7 +2753,7 @@ public protocol ProsodiaSpeechEngine : AnyObject {
     
     func synthesize(input: PipelineOutput)  -> ActorEngineOutput
     
-    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
     
     func reclaimMemory() 
     
@@ -2788,6 +2800,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
             phonemeIds: RustBuffer,
             style: RustBuffer,
             speed: Float,
+            vat: RustBuffer,
             durationScales: RustBuffer,
             f0Bias: RustBuffer,
             uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
@@ -2802,6 +2815,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
                      phonemeIds: try FfiConverterSequenceInt32.lift(phonemeIds),
                      style: try FfiConverterTypeStyleVector.lift(style),
                      speed: try FfiConverterFloat.lift(speed),
+                     vat: try FfiConverterOptionSequenceFloat.lift(vat),
                      durationScales: try FfiConverterOptionSequenceFloat.lift(durationScales),
                      f0Bias: try FfiConverterOptionSequenceFloat.lift(f0Bias)
                 )
@@ -3586,7 +3600,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_litertactorengine_forward() != 30289) {
+    if (uniffi_actor_checksum_method_litertactorengine_forward() != 5996) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_litertactorengine_get_token_limit() != 61050) {
@@ -3641,6 +3655,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize() != 50012) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_tokenize_phonemes() != 16428) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaspeech_process() != 63471) {
@@ -3706,7 +3723,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 46314) {
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 40977) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538) {

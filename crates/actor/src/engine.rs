@@ -28,6 +28,7 @@ pub trait ProsodiaSpeechEngine: Send + Sync {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
+        vat: Option<Vec<f32>>,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError>;
@@ -62,8 +63,44 @@ impl ProsodiaActorEngine {
     }
 
     pub fn process_and_synthesize(&self, span: stage::prosody_payload::ProsodySpan) -> ActorEngineOutput {
-        let pipeline_out = self.pipeline.process_span(span);
-        self.speech_engine.synthesize(pipeline_out)
+        let is_matcha = self.speech_engine.is_matcha();
+        let pipeline_out = self.pipeline.process_span(span.clone());
+        
+        let mut chunk_phonemes = String::new();
+        for tp in &pipeline_out.phonemes {
+            chunk_phonemes.push_str(&tp.phonemes);
+            chunk_phonemes.push_str(&tp.whitespace);
+        }
+        let trimmed_phonemes = chunk_phonemes.trim().to_string();
+        let phoneme_ids = self.pipeline.tokenize_phonemes(trimmed_phonemes, is_matcha);
+        
+        let vat = Some(vec![
+            span.emotion.valence as f32,
+            span.emotion.arousal as f32,
+            span.emotion.tension as f32,
+        ]);
+        
+        let duration_scales = span.acoustics.as_ref().and_then(|a| {
+            a.token_duration_scales.as_ref().map(|v| v.iter().map(|&x| x as f32).collect())
+        });
+        
+        let f0_bias = span.acoustics.as_ref().and_then(|a| {
+            a.token_f0_biases.as_ref().map(|v| v.iter().map(|&x| x as f32).collect())
+        });
+        
+        self.speech_engine.forward(
+            phoneme_ids,
+            pipeline_out.style,
+            pipeline_out.speed_multiplier as f32,
+            vat,
+            duration_scales,
+            f0_bias,
+        ).unwrap_or_else(|_e| {
+            ActorEngineOutput {
+                audio: Vec::new(),
+                pred_dur: Vec::new(),
+            }
+        })
     }
 
     pub fn reclaim_memory(&self) {
@@ -197,8 +234,9 @@ impl LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
-        _duration_scales: Option<Vec<f32>>,
-        _f0_bias: Option<Vec<f32>>,
+        vat: Option<Vec<f32>>,
+        duration_scales: Option<Vec<f32>>,
+        f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
         let mut wrapper_guard = self.get_or_init_interpreter()?;
         let wrapper = wrapper_guard.as_mut().unwrap();
@@ -216,6 +254,8 @@ impl LiteRtActorEngine {
             let mut vat_index: i32 = -1;
             let mut x_lengths_index: i32 = -1;
             let mut scales_index: i32 = -1;
+            let mut duration_scales_index: i32 = -1;
+            let mut f0_bias_index: i32 = -1;
 
             for i in 0..input_count {
                 let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, i);
@@ -244,6 +284,10 @@ impl LiteRtActorEngine {
                     }
                 } else if name.contains("vat") || name.contains("emotion") || name.contains("control") {
                     vat_index = i;
+                } else if name.contains("duration_scale") || name.contains("dur_scale") {
+                    duration_scales_index = i;
+                } else if name.contains("f0_bias") || name.contains("pitch_bias") {
+                    f0_bias_index = i;
                 }
             }
 
@@ -363,6 +407,22 @@ impl LiteRtActorEngine {
                             msg: format!("Failed to resize TFLite phoneme tensor to {} (status: {})", token_count, status),
                         });
                     }
+                    if duration_scales_index != -1 {
+                        tflite::TfLiteInterpreterResizeInputTensor(
+                            interpreter,
+                            duration_scales_index,
+                            dims.as_ptr(),
+                            2,
+                        );
+                    }
+                    if f0_bias_index != -1 {
+                        tflite::TfLiteInterpreterResizeInputTensor(
+                            interpreter,
+                            f0_bias_index,
+                            dims.as_ptr(),
+                            2,
+                        );
+                    }
                     let alloc_status = tflite::TfLiteInterpreterAllocateTensors(interpreter);
                     if alloc_status != 0 {
                         return Err(SpeechEngineError::Inference {
@@ -418,11 +478,52 @@ impl LiteRtActorEngine {
                 if vat_index != -1 {
                     let vat_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, vat_index);
                     if !vat_tensor.is_null() {
-                        let vat_data: [f32; 3] = [0.5, 0.5, 0.5];
+                        let vat_data = match vat {
+                            Some(ref v) if v.len() == 3 => [v[0], v[1], v[2]],
+                            _ => [0.5, 0.5, 0.5],
+                        };
                         tflite::TfLiteTensorCopyFromBuffer(
                             vat_tensor,
                             vat_data.as_ptr() as *const std::ffi::c_void,
                             vat_data.len() * std::mem::size_of::<f32>(),
+                        );
+                    }
+                }
+
+                // Copy duration scales
+                if duration_scales_index != -1 {
+                    let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, duration_scales_index);
+                    if !tensor.is_null() {
+                        let mut data = vec![1.0f32; token_count];
+                        if let Some(ref ds) = duration_scales {
+                            for (j, &val) in ds.iter().enumerate().take(token_count) {
+                                data[j] = val;
+                            }
+                        }
+                        let byte_size = tflite::TfLiteTensorByteSize(tensor);
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            tensor,
+                            data.as_ptr() as *const std::ffi::c_void,
+                            byte_size,
+                        );
+                    }
+                }
+
+                // Copy F0 bias
+                if f0_bias_index != -1 {
+                    let tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, f0_bias_index);
+                    if !tensor.is_null() {
+                        let mut data = vec![0.0f32; token_count];
+                        if let Some(ref fb) = f0_bias {
+                            for (j, &val) in fb.iter().enumerate().take(token_count) {
+                                data[j] = val;
+                            }
+                        }
+                        let byte_size = tflite::TfLiteTensorByteSize(tensor);
+                        tflite::TfLiteTensorCopyFromBuffer(
+                            tensor,
+                            data.as_ptr() as *const std::ffi::c_void,
+                            byte_size,
                         );
                     }
                 }
@@ -518,6 +619,12 @@ impl LiteRtActorEngine {
                 pred_dur = vec![avg_dur.max(1); token_count];
             }
 
+            if let Some(ref scales) = duration_scales {
+                for (j, &scale) in scales.iter().enumerate().take(pred_dur.len()) {
+                    pred_dur[j] = ((pred_dur[j] as f32 * scale).round() as i32).max(1);
+                }
+            }
+
             Ok(ActorEngineOutput {
                 audio: output_pcm,
                 pred_dur,
@@ -537,10 +644,11 @@ impl LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
+        vat: Option<Vec<f32>>,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
-        self.forward_impl(phoneme_ids, style, speed, duration_scales, f0_bias)
+        self.forward_impl(phoneme_ids, style, speed, vat, duration_scales, f0_bias)
     }
 
     pub fn reclaim_memory(&self) {
@@ -566,10 +674,11 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
+        vat: Option<Vec<f32>>,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
-        self.forward_impl(phoneme_ids, style, speed, duration_scales, f0_bias)
+        self.forward_impl(phoneme_ids, style, speed, vat, duration_scales, f0_bias)
     }
 
     fn reclaim_memory(&self) {
@@ -678,6 +787,7 @@ mod tests {
             phoneme_ids.clone(),
             style,
             1.0,
+            None,
             None,
             None,
         ).expect("Forward execution failed");
