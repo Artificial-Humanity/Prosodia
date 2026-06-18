@@ -936,10 +936,11 @@ public struct AcousticMatrixConfig {
     public var gainValenceGain: Double
     public var gainRangeMin: Double
     public var gainRangeMax: Double
+    public var sampleRate: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(expressiveness: Double, speedArousalGain: Double, speedTensionGain: Double, speedValenceGain: Double, speedRangeMin: Double, speedRangeMax: Double, gainArousalGain: Double, gainValenceGain: Double, gainRangeMin: Double, gainRangeMax: Double) {
+    public init(expressiveness: Double, speedArousalGain: Double, speedTensionGain: Double, speedValenceGain: Double, speedRangeMin: Double, speedRangeMax: Double, gainArousalGain: Double, gainValenceGain: Double, gainRangeMin: Double, gainRangeMax: Double, sampleRate: UInt32) {
         self.expressiveness = expressiveness
         self.speedArousalGain = speedArousalGain
         self.speedTensionGain = speedTensionGain
@@ -950,6 +951,7 @@ public struct AcousticMatrixConfig {
         self.gainValenceGain = gainValenceGain
         self.gainRangeMin = gainRangeMin
         self.gainRangeMax = gainRangeMax
+        self.sampleRate = sampleRate
     }
 }
 
@@ -987,6 +989,9 @@ extension AcousticMatrixConfig: Equatable, Hashable {
         if lhs.gainRangeMax != rhs.gainRangeMax {
             return false
         }
+        if lhs.sampleRate != rhs.sampleRate {
+            return false
+        }
         return true
     }
 
@@ -1001,6 +1006,7 @@ extension AcousticMatrixConfig: Equatable, Hashable {
         hasher.combine(gainValenceGain)
         hasher.combine(gainRangeMin)
         hasher.combine(gainRangeMax)
+        hasher.combine(sampleRate)
     }
 }
 
@@ -1018,7 +1024,8 @@ public struct FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer {
                 gainArousalGain: FfiConverterDouble.read(from: &buf), 
                 gainValenceGain: FfiConverterDouble.read(from: &buf), 
                 gainRangeMin: FfiConverterDouble.read(from: &buf), 
-                gainRangeMax: FfiConverterDouble.read(from: &buf)
+                gainRangeMax: FfiConverterDouble.read(from: &buf), 
+                sampleRate: FfiConverterUInt32.read(from: &buf)
         )
     }
 
@@ -1033,6 +1040,7 @@ public struct FfiConverterTypeAcousticMatrixConfig: FfiConverterRustBuffer {
         FfiConverterDouble.write(value.gainValenceGain, into: &buf)
         FfiConverterDouble.write(value.gainRangeMin, into: &buf)
         FfiConverterDouble.write(value.gainRangeMax, into: &buf)
+        FfiConverterUInt32.write(value.sampleRate, into: &buf)
     }
 }
 

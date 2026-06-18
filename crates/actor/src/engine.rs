@@ -6,6 +6,8 @@ use crate::tflite;
 
 const MATCHA_CFM_TEMPERATURE: f32 = 0.667;
 const STYLETTS2_HOP_SIZE: f64 = 512.0;
+const DEFAULT_TOKEN_DURATION: i32 = 8;
+const DEFAULT_VAT: [f32; 3] = [0.5, 0.5, 0.5];
 
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct ActorEngineOutput {
@@ -480,7 +482,7 @@ impl LiteRtActorEngine {
                     if !vat_tensor.is_null() {
                         let vat_data = match vat {
                             Some(ref v) if v.len() == 3 => [v[0], v[1], v[2]],
-                            _ => [0.5, 0.5, 0.5],
+                            _ => DEFAULT_VAT,
                         };
                         tflite::TfLiteTensorCopyFromBuffer(
                             vat_tensor,
@@ -608,7 +610,7 @@ impl LiteRtActorEngine {
 
             output_pcm.truncate(element_count);
 
-            let mut pred_dur = vec![8i32; token_count];
+            let mut pred_dur = vec![DEFAULT_TOKEN_DURATION; token_count];
             if is_matcha {
                 // Resample from 22050 to 24000
                 output_pcm = resample_linear(output_pcm, 22050.0, 24000.0);
