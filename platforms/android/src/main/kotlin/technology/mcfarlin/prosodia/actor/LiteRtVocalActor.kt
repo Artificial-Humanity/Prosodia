@@ -139,8 +139,12 @@ class LiteRtVocalActor(
                 acoustics = kitAcoustics
             )
 
-            val output = rustEngine.processAndSynthesize(kitSpan)
-            totalAudio.addAll(output.audio)
+            try {
+                val output = rustEngine.processAndSynthesize(kitSpan)
+                totalAudio.addAll(output.audio)
+            } catch (e: Exception) {
+                System.err.println("Warning: failed to process and synthesize span: ${e.message}")
+            }
         }
 
         return totalAudio

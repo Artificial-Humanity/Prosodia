@@ -29,11 +29,18 @@ namespace Prosodia.Platforms.Windows
         private int _bufferFrameCount;
 
         [StructLayout(LayoutKind.Sequential)]
+        private struct RustBuffer
+        {
+            public long capacity;
+            public long len;
+            public IntPtr data;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         private struct RustCallStatus
         {
-            public byte code;
-            public uint error_len;
-            public IntPtr error_buf;
+            public sbyte code;
+            public RustBuffer error_buf;
         }
 
         [DllImport("stage", CallingConvention = CallingConvention.Cdecl)]

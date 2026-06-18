@@ -1385,7 +1385,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_litertactorengine_reclaim_memory() != 58102.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 29516.toShort()) {
+    if (lib.uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize() != 34089.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory() != 18014.toShort()) {
@@ -2536,10 +2536,11 @@ open class ProsodiaActorEngine: Disposable, AutoCloseable, ProsodiaActorEngineIn
         }
     }
 
-    override fun `processAndSynthesize`(`span`: ProsodySpan): ActorEngineOutput {
+    
+    @Throws(SpeechEngineException::class)override fun `processAndSynthesize`(`span`: ProsodySpan): ActorEngineOutput {
             return FfiConverterTypeActorEngineOutput.lift(
     callWithPointer {
-    uniffiRustCall() { _status ->
+    uniffiRustCallWithError(SpeechEngineException) { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorengine_process_and_synthesize(
         it, FfiConverterTypeProsodySpan.lower(`span`),_status)
 }

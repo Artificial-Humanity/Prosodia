@@ -64,7 +64,7 @@ impl ProsodiaActorEngine {
         Arc::new(Self { pipeline, speech_engine })
     }
 
-    pub fn process_and_synthesize(&self, span: stage::prosody_payload::ProsodySpan) -> ActorEngineOutput {
+    pub fn process_and_synthesize(&self, span: stage::prosody_payload::ProsodySpan) -> Result<ActorEngineOutput, SpeechEngineError> {
         let is_matcha = self.speech_engine.is_matcha();
         let pipeline_out = self.pipeline.process_span(span.clone());
         
@@ -97,12 +97,7 @@ impl ProsodiaActorEngine {
             vat,
             duration_scales,
             f0_bias,
-        ).unwrap_or_else(|_e| {
-            ActorEngineOutput {
-                audio: Vec::new(),
-                pred_dur: Vec::new(),
-            }
-        })
+        )
     }
 
     pub fn reclaim_memory(&self) {
