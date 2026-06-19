@@ -47,6 +47,8 @@ pub enum PipelineError {
 #[derive(serde::Deserialize)]
 struct StyleTTS2Config {
     vocab: HashMap<String, i32>,
+    #[serde(default)]
+    is_matcha_ipa: Option<bool>,
 }
 
 #[uniffi::export(callback_interface)]
@@ -90,6 +92,7 @@ pub struct ProsodiaActorPipeline {
     vocab: HashMap<String, i32>,
     sample_rate: u32,
     lang_code: String,
+    is_matcha_ipa: bool,
 }
 
 #[uniffi::export]
@@ -110,12 +113,17 @@ impl ProsodiaActorPipeline {
             vocab: config.vocab,
             sample_rate,
             lang_code,
+            is_matcha_ipa: config.is_matcha_ipa.unwrap_or(true),
         }))
     }
 
     pub fn set_custom_g2p(&self, processor: Box<dyn ProsodiaG2PProcessor>) {
         let mut g2p = self.g2p.lock().unwrap();
         *g2p = processor;
+    }
+
+    fn should_map_ipa(&self, is_matcha: bool) -> bool {
+        is_matcha && self.is_matcha_ipa
     }
 
     pub fn tokenize_phonemes(&self, phonemes: String, is_matcha: bool) -> Vec<i32> {
@@ -125,7 +133,7 @@ impl ProsodiaActorPipeline {
     fn tokenize(&self, phonemes: &str, is_matcha: bool) -> Vec<i32> {
         let mut ids = Vec::new();
         ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
-        let mapped = if is_matcha {
+        let mapped = if self.should_map_ipa(is_matcha) {
             map_styletts2_to_matcha_ipa(phonemes)
         } else {
             phonemes.to_string()
@@ -307,7 +315,7 @@ impl ProsodiaActorPipeline {
                     let scale = d_scales.get(global_token_idx).copied().unwrap_or(1.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    let mapped_word_phonemes = if is_matcha {
+                    let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
                         map_styletts2_to_matcha_ipa(word_phonemes)
                     } else {
                         word_phonemes.to_string()
@@ -320,7 +328,7 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    let mapped_whitespace = if is_matcha {
+                    let mapped_whitespace = if self.should_map_ipa(is_matcha) {
                         map_styletts2_to_matcha_ipa(&token.whitespace)
                     } else {
                         token.whitespace.to_string()
@@ -346,7 +354,7 @@ impl ProsodiaActorPipeline {
                     let bias = biases.get(global_token_idx).copied().unwrap_or(0.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    let mapped_word_phonemes = if is_matcha {
+                    let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
                         map_styletts2_to_matcha_ipa(word_phonemes)
                     } else {
                         word_phonemes.to_string()
@@ -359,7 +367,7 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    let mapped_whitespace = if is_matcha {
+                    let mapped_whitespace = if self.should_map_ipa(is_matcha) {
                         map_styletts2_to_matcha_ipa(&token.whitespace)
                     } else {
                         token.whitespace.to_string()
@@ -410,7 +418,7 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                let mapped_word_phonemes = if is_matcha {
+                let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
                     map_styletts2_to_matcha_ipa(word_phonemes)
                 } else {
                     word_phonemes.to_string()
@@ -424,7 +432,7 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                let mapped_whitespace = if is_matcha {
+                let mapped_whitespace = if self.should_map_ipa(is_matcha) {
                     map_styletts2_to_matcha_ipa(whitespace)
                 } else {
                     whitespace.to_string()
@@ -559,7 +567,7 @@ impl ProsodiaActorPipeline {
             let mut filtered_states = Vec::new();
             let mut mapped_phonemes = String::new();
 
-            if is_matcha {
+            if self.should_map_ipa(is_matcha) {
                 for (idx, c) in trimmed_phonemes.chars().enumerate() {
                     if let Some(rep) = map_char_to_matcha_ipa(c) {
                         mapped_phonemes.push_str(rep);
@@ -644,7 +652,7 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                let mapped_word_phonemes = if is_matcha {
+                let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
                     map_styletts2_to_matcha_ipa(word_phonemes)
                 } else {
                     word_phonemes.to_string()
@@ -658,7 +666,7 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                let mapped_whitespace = if is_matcha {
+                let mapped_whitespace = if self.should_map_ipa(is_matcha) {
                     map_styletts2_to_matcha_ipa(whitespace)
                 } else {
                     whitespace.to_string()
@@ -1088,4 +1096,25 @@ mod tests {
         assert!((values[3] - 2.3333333).abs() < 1e-5);
         assert!((values[4] - 1.0).abs() < 1e-5);
     }
+
+    #[test]
+    fn test_custom_matcha_direct_tokenization() {
+        let g2p = Box::new(MockG2P);
+        let loader = VoiceLoader::new(Box::new(MockAssetProvider));
+        let config_json = r#"{"vocab":{"A":1,"B":2},"is_matcha_ipa":false}"#;
+        
+        let pipeline = ProsodiaActorPipeline::new(
+            g2p,
+            loader,
+            config_json.to_string(),
+            24000,
+            "en-us".to_string(),
+        ).unwrap();
+
+        assert!(!pipeline.is_matcha_ipa);
+
+        let ids = pipeline.tokenize_phonemes("A".to_string(), true);
+        assert_eq!(ids, vec![0, 1, 0]);
+    }
 }
+

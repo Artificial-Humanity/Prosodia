@@ -111,6 +111,7 @@ struct InterpreterWrapper {
     interpreter: *mut tflite::TfLiteInterpreter,
     last_phoneme_length: usize,
     is_matcha: bool,
+    sample_rate: u32,
 }
 
 unsafe impl Send for InterpreterWrapper {}
@@ -213,6 +214,7 @@ impl LiteRtActorEngine {
             }
 
             let is_matcha = has_x && has_x_lengths && has_scales;
+            let sample_rate = get_model_sample_rate(&self.model_path, is_matcha);
 
             *wrapper_lock = Some(InterpreterWrapper {
                 model,
@@ -220,6 +222,7 @@ impl LiteRtActorEngine {
                 interpreter,
                 last_phoneme_length: 0,
                 is_matcha,
+                sample_rate,
             });
 
             Ok(wrapper_lock)
@@ -607,8 +610,8 @@ impl LiteRtActorEngine {
 
             let mut pred_dur = vec![DEFAULT_TOKEN_DURATION; token_count];
             if is_matcha {
-                // Resample from 22050 to 24000
-                output_pcm = resample_linear(output_pcm, 22050.0, 24000.0);
+                let model_sr = wrapper.sample_rate;
+                output_pcm = resample_linear(output_pcm, model_sr as f32, 24000.0);
 
                 // Distribute total frames evenly across phonemes
                 let total_frames = (output_pcm.len() as f64 / STYLETTS2_HOP_SIZE) as i32;
@@ -731,6 +734,27 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
     }
 }
 
+fn get_model_sample_rate(model_path: &str, is_matcha: bool) -> u32 {
+    let path = std::path::Path::new(model_path);
+    if let Some(parent) = path.parent() {
+        let config_path = parent.join("config.json");
+        if config_path.exists() {
+            if let Ok(config_str) = std::fs::read_to_string(config_path) {
+                if let Ok(config_json) = serde_json::from_str::<serde_json::Value>(&config_str) {
+                    if let Some(sr) = config_json.get("sample_rate").and_then(|v| v.as_u64()) {
+                        return sr as u32;
+                    }
+                }
+            }
+        }
+    }
+    if is_matcha {
+        22050
+    } else {
+        24000
+    }
+}
+
 fn resample_linear(input: Vec<f32>, from_rate: f32, to_rate: f32) -> Vec<f32> {
     if input.is_empty() || (from_rate - to_rate).abs() < 1e-3 {
         return input;
@@ -799,5 +823,26 @@ mod tests {
         let output = resample_linear(input.clone(), 22050.0, 24000.0);
         assert!(!output.is_empty());
         assert_eq!(output.len(), 109);
+    }
+
+    #[test]
+    fn test_get_model_sample_rate_fallback() {
+        assert_eq!(get_model_sample_rate("nonexistent/model.tflite", true), 22050);
+        assert_eq!(get_model_sample_rate("nonexistent/model.tflite", false), 24000);
+    }
+
+    #[test]
+    fn test_get_model_sample_rate_from_config() {
+        let temp_dir = std::env::temp_dir();
+        let model_path = temp_dir.join("temp_model.tflite");
+        let config_path = temp_dir.join("config.json");
+        
+        let config_data = r#"{"sample_rate": 16000}"#;
+        std::fs::write(&config_path, config_data).unwrap();
+        
+        let rate = get_model_sample_rate(model_path.to_str().unwrap(), true);
+        assert_eq!(rate, 16000);
+        
+        let _ = std::fs::remove_file(config_path);
     }
 }
