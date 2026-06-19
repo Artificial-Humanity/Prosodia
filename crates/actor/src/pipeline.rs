@@ -1,10 +1,26 @@
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use once_cell::sync::Lazy;
 use stage::prosody_payload::ProsodySpan;
 use crate::g2p::{ProsodiaG2PProcessor, TokenPhonemes, MToken};
 use crate::asset_manager::StyleVector;
 use crate::engine::ProsodiaSpeechEngine;
 use crate::voice_loader::VoiceLoader;
+
+static WARNED_PHONEMES: Lazy<Mutex<HashSet<char>>> = Lazy::new(|| Mutex::new(HashSet::new()));
+
+fn warn_unknown_phoneme(c: char, is_alignment: bool) {
+    if let Ok(mut warned) = WARNED_PHONEMES.lock() {
+        if warned.insert(c) {
+            if is_alignment {
+                eprintln!("Warning: unknown phoneme character dropped from vocabulary in alignment: {:?}", c);
+            } else {
+                eprintln!("Warning: unknown phoneme character dropped from vocabulary: {:?}", c);
+            }
+        }
+    }
+}
+
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PipelineOutput {
@@ -142,7 +158,7 @@ impl ProsodiaActorPipeline {
             if let Some(&id) = self.vocab.get(&c.to_string()) {
                 ids.push(id);
             } else {
-                eprintln!("Warning: unknown phoneme character dropped from vocabulary: {:?}", c);
+                warn_unknown_phoneme(c, false);
             }
         }
         ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
@@ -575,7 +591,7 @@ impl ProsodiaActorPipeline {
                             if self.vocab.contains_key(&sub_c.to_string()) {
                                 filtered_states.push(trimmed_states[idx].clone());
                             } else {
-                                eprintln!("Warning: unknown phoneme character dropped from vocabulary in alignment: {:?}", sub_c);
+                                warn_unknown_phoneme(sub_c, true);
                             }
                         }
                     } else {
@@ -583,7 +599,7 @@ impl ProsodiaActorPipeline {
                         if self.vocab.contains_key(&c.to_string()) {
                             filtered_states.push(trimmed_states[idx].clone());
                         } else {
-                            eprintln!("Warning: unknown phoneme character dropped from vocabulary in alignment: {:?}", c);
+                            warn_unknown_phoneme(c, true);
                         }
                     }
                 }
@@ -593,7 +609,7 @@ impl ProsodiaActorPipeline {
                     if self.vocab.contains_key(&c.to_string()) {
                         filtered_states.push(trimmed_states[idx].clone());
                     } else {
-                        eprintln!("Warning: unknown phoneme character dropped from vocabulary in alignment: {:?}", c);
+                        warn_unknown_phoneme(c, true);
                     }
                 }
             }
@@ -1115,6 +1131,14 @@ mod tests {
 
         let ids = pipeline.tokenize_phonemes("A".to_string(), true);
         assert_eq!(ids, vec![0, 1, 0]);
+    }
+
+    #[test]
+    fn test_warn_unknown_phoneme_deduplication() {
+        assert!(WARNED_PHONEMES.lock().unwrap().insert('🔥'));
+        assert!(!WARNED_PHONEMES.lock().unwrap().insert('🔥'));
+        warn_unknown_phoneme('⭐', false);
+        assert!(!WARNED_PHONEMES.lock().unwrap().insert('⭐'));
     }
 }
 
