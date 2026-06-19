@@ -95,3 +95,11 @@ Prosodia_Old/
 # Android build cache
 apps/android-reader/.gradle/
 
+# Rust build target directory
+target/
+
+# Local path properties
+local.properties
+
+# Gradle and general build directories
+**/build/
