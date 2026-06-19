@@ -12,7 +12,6 @@ prosodia/ (Unified Repository Root)
 │   └── CONTRIBUTING.md          # Unified contribution and CLA guidelines
 ├── LICENSE                      # GNU General Public License v3.0 (GPL-3.0)
 ├── LICENSE-COMMERCIAL.md        # McFarlin Technologies Commercial License (Draft)
-├── Models/                      # Reference models and weight matrices (Gitignored)
 ├── Notes/                       # PRIVATE submodule — internal / in-transit docs (git submodule update --init)
 │   ├── CHANGELOG.md             # Internal engineering changelog (pruned only on tagged releases)
 │   ├── STATE.md                 # Current project state + immediate must-do items

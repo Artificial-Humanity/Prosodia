@@ -23,7 +23,7 @@ The app links the consolidated `platforms/apple` Swift package (`../../platforms
 
 ## 💻 Local Models for the Harness
 
-For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the project root `Models/` folder:
+For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the workspace-root `Models/` folder (one level above the Prosodia repo, shared across subprojects):
 
 ```text
 /Models/

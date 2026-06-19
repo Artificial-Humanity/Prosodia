@@ -792,7 +792,7 @@ mod tests {
 
     #[test]
     fn test_matcha_stock_forward() {
-        let model_path = "../../Models/matcha_stock.tflite";
+        let model_path = "../../../Models/matcha_stock.tflite";
         if !Path::new(model_path).exists() {
             println!("Skipping test: {} not found", model_path);
             return;

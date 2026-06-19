@@ -73,12 +73,12 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
-# Local model weights (large; fetched/installed out of band)
+# Local model weights (large; fetched/installed out of band).
+# Models now live at the workspace root (../Models), shared across subprojects.
 *.gguf
 *.onnx
 *.safetensors
 Models/
-!Models/Matcha-TTS/
 
 # Local credentials
 .netrc
