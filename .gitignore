@@ -103,3 +103,8 @@ local.properties
 
 # Gradle and general build directories
 **/build/
+
+# Android native libs (jniLibs) — build output, NOT source. build_android.sh
+# `rm -rf`s this dir and copies fresh .so from target/ on every build, so the
+# committed copies only cause churn + Git LFS pointer mismatches.
+platforms/android/src/main/jniLibs/
