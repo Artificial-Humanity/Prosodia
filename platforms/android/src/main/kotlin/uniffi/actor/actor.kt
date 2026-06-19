@@ -958,6 +958,8 @@ internal open class UniffiVTableCallbackInterfaceVoiceAssetProvider(
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -1035,6 +1037,8 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_actor_fn_method_prosodiaactorpipeline_set_custom_g2p(`ptr`: Pointer,`processor`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_actor_fn_method_prosodiaactorpipeline_should_map_ipa(`ptr`: Pointer,`isMatcha`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_actor_fn_method_prosodiaactorpipeline_synthesize(`ptr`: Pointer,`speechEngine`: Long,`text`: RustBuffer.ByValue,`voice`: RustBuffer.ByValue,`speed`: Float,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_method_prosodiaactorpipeline_synthesize_markup(`ptr`: Pointer,`speechEngine`: Long,`markupText`: RustBuffer.ByValue,`voice`: RustBuffer.ByValue,`speed`: Float,uniffi_out_err: UniffiRustCallStatus, 
@@ -1261,6 +1265,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_set_custom_g2p(
     ): Short
+    fun uniffi_actor_checksum_method_prosodiaactorpipeline_should_map_ipa(
+    ): Short
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize_markup(
@@ -1407,6 +1413,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_set_custom_g2p() != 16438.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_should_map_ipa() != 35058.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize() != 8917.toShort()) {
@@ -2706,6 +2715,8 @@ public interface ProsodiaActorPipelineInterface {
     
     fun `setCustomG2p`(`processor`: ProsodiaG2pProcessor)
     
+    fun `shouldMapIpa`(`isMatcha`: kotlin.Boolean): kotlin.Boolean
+    
     fun `synthesize`(`speechEngine`: ProsodiaSpeechEngine, `text`: kotlin.String, `voice`: kotlin.String, `speed`: kotlin.Float, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): SynthesisResult
     
     fun `synthesizeMarkup`(`speechEngine`: ProsodiaSpeechEngine, `markupText`: kotlin.String, `voice`: kotlin.String, `speed`: kotlin.Float): SynthesisResult
@@ -2881,6 +2892,18 @@ open class ProsodiaActorPipeline: Disposable, AutoCloseable, ProsodiaActorPipeli
 }
     }
     
+    
+
+    override fun `shouldMapIpa`(`isMatcha`: kotlin.Boolean): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorpipeline_should_map_ipa(
+        it, FfiConverterBoolean.lower(`isMatcha`),_status)
+}
+    }
+    )
+    }
     
 
     

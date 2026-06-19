@@ -36,6 +36,14 @@ class KotlinSpeechEngine(
     override fun reclaimMemory() {
         backend.reclaimMemory()
     }
+
+    override fun isMatcha(): Boolean {
+        return backend.isMatcha()
+    }
+
+    override fun getTokenLimit(): Int {
+        return backend.getTokenLimit()
+    }
 }
 
 /**

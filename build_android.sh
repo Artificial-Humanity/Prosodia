@@ -13,8 +13,30 @@ JNILIBS="$OUT/src/main/jniLibs"
 
 # NDK setup
 NDK_VERSION="26.1.10909125"
-ANDROID_NDK="${ANDROID_NDK_HOME:-/Users/lmcfarlin/Library/Android/sdk/ndk/$NDK_VERSION}"
 API=26
+
+HOST_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+case "$HOST_OS" in
+    darwin)
+        DEFAULT_NDK="/Users/lmcfarlin/Library/Android/sdk/ndk/$NDK_VERSION"
+        PREBUILT_ARCH="darwin-x86_64"
+        HOST_LIB_EXT="dylib"
+        DEFAULT_SDK_DIR="/Users/lmcfarlin/Library/Android/sdk"
+        ;;
+    linux)
+        DEFAULT_NDK="/home/lmcfarlin/Android/Sdk/ndk/$NDK_VERSION"
+        PREBUILT_ARCH="linux-x86_64"
+        HOST_LIB_EXT="so"
+        DEFAULT_SDK_DIR="/home/lmcfarlin/Android/Sdk"
+        ;;
+    *)
+        echo "Unsupported OS: $HOST_OS"
+        exit 1
+        ;;
+esac
+
+ANDROID_NDK="${ANDROID_NDK_HOME:-$DEFAULT_NDK}"
+ANDROID_SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$DEFAULT_SDK_DIR}}"
 
 if [ ! -d "$ANDROID_NDK" ]; then
     echo "Error: Android NDK not found at $ANDROID_NDK."
@@ -24,12 +46,25 @@ fi
 
 echo "==> Using Android NDK at $ANDROID_NDK"
 
+# Write local.properties dynamically for the current machine
+echo "==> Updating local.properties for the build..."
+cat << EOF > "$OUT/../../platforms/android/local.properties"
+sdk.dir=$ANDROID_SDK
+ndk.dir=$ANDROID_NDK
+EOF
+
+cat << EOF > "$OUT/../../apps/android-reader/local.properties"
+# Local configuration properties.
+sdk.dir=$ANDROID_SDK
+ndk.dir=$ANDROID_NDK
+EOF
+
 # Add Rust targets if missing
 echo "==> Verifying rustup targets..."
 rustup target add aarch64-linux-android x86_64-linux-android
 
 # Toolchain prebuilt bin path
-TOOLCHAIN_BIN="$ANDROID_NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin"
+TOOLCHAIN_BIN="$ANDROID_NDK/toolchains/llvm/prebuilt/$PREBUILT_ARCH/bin"
 
 # Export compilation flags for NDK
 export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TOOLCHAIN_BIN/aarch64-linux-android$API-clang"
@@ -56,7 +91,7 @@ for abi in "${!TARGETS[@]}"; do
     target="${TARGETS[$abi]}"
     echo "==> Building Rust crates for $abi ($target)…"
     
-    cargo build --target "$target" --release
+    cargo build --target "$target" --release -p folioparser -p stage -p director -p actor
     
     for crate in "${CRATES[@]}"; do
         # Copy compiled .so file
@@ -67,12 +102,12 @@ for abi in "${!TARGETS[@]}"; do
     done
 done
 
-# Generate Kotlin bindings from the built macOS release binaries
+# Generate Kotlin bindings from the built host release binaries
 echo "==> Generating Kotlin UniFFI bindings..."
 for crate in "${CRATES[@]}"; do
     echo "Generating bindings for $crate..."
     cargo run -q -p stage --bin uniffi-bindgen -- \
-        generate --library "target/release/lib${crate}.dylib" \
+        generate --library "target/release/lib${crate}.${HOST_LIB_EXT}" \
         --language kotlin --out-dir "$GEN_KOTLIN"
 done
 
