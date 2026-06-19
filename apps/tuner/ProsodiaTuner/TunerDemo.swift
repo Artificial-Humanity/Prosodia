@@ -127,7 +127,9 @@ final class ProductionRunner {
     }
 
     nonisolated static var modelsBase: URL {
-        projectRoot.appendingPathComponent("Models")
+        projectRoot
+            .deletingLastPathComponent() // up from the Prosodia repo to the workspace root
+            .appendingPathComponent("Models")
     }
 
     nonisolated static var resolvedModelPath: URL {
