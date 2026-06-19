@@ -1,25 +1,27 @@
 # Architecture
 
-Repository layout and module responsibilities — the single source of truth for topology.
+Repository layout and module responsibilities — the single source of truth for topology
+of **this repo**.
+
+Project Prosodia is one repo under the private `Artificial-Humanity` umbrella. Org-level
+files — the `AGENTS.md` manifest, the internal `Notes/`, the shared `Models/` reference
+directory, and the `.github/` org profile — live in the umbrella or as sibling repos, **not**
+in this repo. See the umbrella `AGENTS.md` for the full cross-repo topology.
 
 ```text
-prosodia/ (Unified Repository Root)
-├── .github/                     # Organization health, workflows & profile profiles
-├── AGENTS.md                    # Agent manifest & behavioral rules (stack matrix, operational mandates)
+prosodia/ (Project Prosodia — one repo under the private Artificial-Humanity umbrella)
 ├── Cargo.toml                   # Root Manifest defining workspace members and shared profiles
+├── Cargo.lock                   # Pinned dependency versions
 ├── Docs/                        # PUBLIC canon documentation
 │   ├── ARCHITECTURE.md          # This file — repository layout & structure
-│   └── CONTRIBUTING.md          # Unified contribution and CLA guidelines
+│   ├── CONTRIBUTING.md          # Unified contribution and CLA guidelines
+│   └── ROADMAP.md               # Public forward-looking roadmap
 ├── LICENSE                      # GNU General Public License v3.0 (GPL-3.0)
 ├── LICENSE-COMMERCIAL.md        # McFarlin Technologies Commercial License (Draft)
-├── Notes/                       # PRIVATE submodule — internal / in-transit docs (git submodule update --init)
-│   ├── CHANGELOG.md             # Internal engineering changelog (pruned only on tagged releases)
-│   ├── STATE.md                 # Current project state + immediate must-do items
-│   ├── open-decisions.md        # Open decisions / deferred next steps
-│   ├── code-review-findings.md  # Code-review audit findings
-│   └── …                        # working notes & scratch (kebab-case)
 ├── README.md                    # Master architectural framework documentation
-├── ROADMAP.md                   # Public forward-looking roadmap
+├── build_android.sh             # Android NDK build helper
+├── build_frameworks.sh          # Apple XCFramework build helper
+├── prosodia_config.json         # Runtime configuration
 │
 ├── crates/                      # ==========================================
 │   │                            # CRATERS LAYER: Safe, Local Neural Systems
