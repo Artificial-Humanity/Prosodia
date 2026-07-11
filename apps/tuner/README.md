@@ -26,9 +26,15 @@ The app links the consolidated `platforms/apple` Swift package (`../../platforms
 For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the workspace-root `Models/` folder (one level above the Prosodia repo, shared across subprojects):
 
 ```text
-/Models/
+/Models/                              # gitignored — this listing is the record (updated 2026-07-11)
 ├── gemma-4-E2B-it.litertlm           # Gemma 4 E2B LiteRT-LM (Default Director model)
 ├── gemma-4-E4B-it.litertlm           # Gemma 4 E4B LiteRT-LM
+├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate
+├── styletts2_lite.tflite             # Active Actor model — currently Sonora v1-ljspeech float32 e2e
+├── matcha_stock.tflite               # Stock Matcha e2e TFLite (export-spike reference)
+├── Matcha-TTS-Original/              # Vendored, locally-modified shivammehta25/Matcha-TTS source + ONNX/TFLite export artifacts
+├── Matcha-TTS-LiteRT-Community/      # HF clone: litert-community/Matcha-TTS — split-graph fp16 TFLite + espeak-free G2P assets
+├── Sonora/                           # HF clone: lmcfarlin/Sonora — our trained checkpoints & TFLite exports (v1-ljspeech)
 └── StyleTTS2FineTune/                # StyleTTS2 Actor weights & fine-tuning pipeline
 ```
 
