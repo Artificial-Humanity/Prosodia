@@ -925,6 +925,8 @@ public protocol ProsodiaActorPipelineProtocol : AnyObject {
     
     func setCustomG2p(processor: ProsodiaG2pProcessor) 
     
+    func shouldMapIpa(isMatcha: Bool)  -> Bool
+    
     func synthesize(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, durationScales: [Float]?, f0Bias: [Float]?) throws  -> SynthesisResult
     
     func synthesizeMarkup(speechEngine: ProsodiaSpeechEngine, markupText: String, voice: String, speed: Float) throws  -> SynthesisResult
@@ -1042,6 +1044,14 @@ open func setCustomG2p(processor: ProsodiaG2pProcessor) {try! rustCall() {
         FfiConverterCallbackInterfaceProsodiaG2pProcessor.lower(processor),$0
     )
 }
+}
+    
+open func shouldMapIpa(isMatcha: Bool) -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorpipeline_should_map_ipa(self.uniffiClonePointer(),
+        FfiConverterBool.lower(isMatcha),$0
+    )
+})
 }
     
 open func synthesize(speechEngine: ProsodiaSpeechEngine, text: String, voice: String, speed: Float, durationScales: [Float]?, f0Bias: [Float]?)throws  -> SynthesisResult {
@@ -3634,6 +3644,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_set_custom_g2p() != 16438) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorpipeline_should_map_ipa() != 35058) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_synthesize() != 8917) {

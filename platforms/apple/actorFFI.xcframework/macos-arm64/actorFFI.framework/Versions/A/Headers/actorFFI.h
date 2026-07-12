@@ -512,6 +512,11 @@ void uniffi_actor_fn_method_prosodiaactorpipeline_reclaim_memory(void*_Nonnull p
 void uniffi_actor_fn_method_prosodiaactorpipeline_set_custom_g2p(void*_Nonnull ptr, uint64_t processor, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_SHOULD_MAP_IPA
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_SHOULD_MAP_IPA
+int8_t uniffi_actor_fn_method_prosodiaactorpipeline_should_map_ipa(void*_Nonnull ptr, int8_t is_matcha, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_SYNTHESIZE
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORPIPELINE_SYNTHESIZE
 RustBuffer uniffi_actor_fn_method_prosodiaactorpipeline_synthesize(void*_Nonnull ptr, uint64_t speech_engine, RustBuffer text, RustBuffer voice, float speed, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
@@ -1096,6 +1101,12 @@ uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_reclaim_memory(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_SET_CUSTOM_G2P
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_SET_CUSTOM_G2P
 uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_set_custom_g2p(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_SHOULD_MAP_IPA
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORPIPELINE_SHOULD_MAP_IPA
+uint16_t uniffi_actor_checksum_method_prosodiaactorpipeline_should_map_ipa(void
     
 );
 #endif

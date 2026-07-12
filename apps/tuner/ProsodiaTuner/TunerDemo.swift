@@ -149,38 +149,8 @@ final class ProductionRunner {
         VocalActorRegistry.shared.canMakeActor(for: Self.resolvedModelPath)
     }
 
-    /// Synthesizes sample sentences with the configured Director and Actor.
-    func speak(config: AuditionConfiguration, model: DirectorModel?) async {
-        guard !isSpeaking, canSpeak else { return }
-        if config.canUseMlx {
-            guard let model, model.isAvailable else { return }
-        }
-        guard let actor = getActor() else { return }
-
-        isSpeaking = true
-        activeModel = model
-        defer {
-            isSpeaking = false
-            Task {
-                await preview(config: config, model: model)
-            }
-        }
-
-        let document = InMemoryBookDocument(chapters: SamplePassageStore.shared.passages)
-        let director = getDirector(config: config, model: model)
-        await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
-
-        let controller = await Stage.StageCoordinator.run(
-            document: document,
-            director: director,
-            actor: actor,
-            lookahead: 5
-        )
-        activePlaybackController = controller
-        await controller.awaitFinished()
-        activePlaybackController = nil
-    }
-
+    /// Synthesizes one sample passage with the configured Director and Actor.
+    /// (Whole-screen speak was removed 2026-07-11 — audio is auditioned per passage.)
     func speakPassage(_ text: String, config: AuditionConfiguration, model: DirectorModel?) async {
         guard !isSpeaking, canSpeak else { return }
         if config.canUseMlx {
@@ -259,17 +229,30 @@ final class DirectorModelStore {
 
     init() {
         var loadedModels = Self.load()
-        var pathChanged = false
+        // Persisted paths are absolute, so every repo restructure strands them. Instead of
+        // per-move migration shims, re-resolve any entry whose file is gone by filename
+        // against the current shared Models/ folder.
+        var healedPaths: [String: String] = [:]
         for i in 0..<loadedModels.count {
-            if loadedModels[i].path.contains("apps/Models") {
-                loadedModels[i].path = loadedModels[i].path.replacingOccurrences(of: "apps/Models", with: "Models")
-                pathChanged = true
+            let stale = loadedModels[i]
+            guard !stale.isAvailable else { continue }
+            let candidatePath = ProductionRunner.modelsBase
+                .appendingPathComponent(stale.directory.lastPathComponent)
+                .standardizedFileURL.path
+            let candidate = DirectorModel(name: stale.name, path: candidatePath)
+            if candidate.isAvailable {
+                loadedModels[i].path = candidatePath
+                healedPaths[stale.path] = candidatePath
             }
         }
+        // Healing can converge on a path that is already listed — keep the first.
+        var seenPaths = Set<String>()
+        loadedModels.removeAll { !seenPaths.insert($0.path).inserted }
         models = loadedModels
-        selectedID = UserDefaults.standard.string(forKey: Self.selectedKey)
+        let storedSelection = UserDefaults.standard.string(forKey: Self.selectedKey)
+        selectedID = storedSelection.map { healedPaths[$0] ?? $0 }
         if models.isEmpty { seedDefaults() }
-        else if pathChanged { save() }
+        else if !healedPaths.isEmpty { save() }
         reconcileSelection()
     }
 

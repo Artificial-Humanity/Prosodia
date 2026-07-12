@@ -105,6 +105,10 @@ class RustCoordinatedPlaybackController: PlaybackController {
                 
                 // Fetch next chunk on background queue to keep cooperative thread pool free
                 guard let chunk = await getNextChunk() else {
+                    // schedule() returns when a buffer is queued, not played; wait for
+                    // playback to complete before declaring the session finished, or the
+                    // caller may release the sink (and its engine) mid-audio.
+                    await audioSink.drain()
                     eventContinuation.yield(.finished)
                     break
                 }

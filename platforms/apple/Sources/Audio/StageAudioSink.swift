@@ -37,6 +37,9 @@ public actor StageAudioSink {
     /// Continuations of tasks suspended due to bounded queue backpressure.
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
+    /// Continuations of tasks suspended in ``drain()`` until playback completes.
+    private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+
     #if os(iOS) || targetEnvironment(macCatalyst) || os(tvOS) || os(watchOS)
     /// Background task monitoring system audio session interruptions (e.g., calls).
     private var interruptionTask: Task<Void, Never>?
@@ -121,6 +124,19 @@ public actor StageAudioSink {
         })
     }
 
+    /// Suspends until every scheduled buffer has finished playing, or the sink
+    /// is stopped. ``schedule(samples:)`` returns once a buffer is *queued*, so
+    /// callers that tear the sink down on completion must drain first —
+    /// otherwise the engine deallocates before the tail (or, for a single
+    /// short buffer, any) audio is heard.
+    public func drain() async {
+        while connected && queuedBuffersCount > 0 {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                drainWaiters.append(continuation)
+            }
+        }
+    }
+
     /// Callback triggered when a scheduled buffer finishes rendering.
     /// - Parameter frameCount: The length of the completed buffer in frames.
     private func bufferFinished(frameCount: Int64) {
@@ -129,6 +145,12 @@ public actor StageAudioSink {
         if self.queuedBuffersCount < 2 && !waiters.isEmpty {
             let waiter = waiters.removeFirst()
             waiter.resume()
+        }
+        if self.queuedBuffersCount == 0 && !drainWaiters.isEmpty {
+            for waiter in drainWaiters {
+                waiter.resume()
+            }
+            drainWaiters.removeAll()
         }
     }
 
@@ -178,6 +200,10 @@ public actor StageAudioSink {
             waiter.resume()
         }
         waiters.removeAll()
+        for waiter in drainWaiters {
+            waiter.resume()
+        }
+        drainWaiters.removeAll()
     }
 
     #if os(iOS) || targetEnvironment(macCatalyst) || os(tvOS) || os(watchOS)

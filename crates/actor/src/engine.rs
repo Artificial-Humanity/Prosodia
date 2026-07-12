@@ -67,37 +67,78 @@ impl ProsodiaActorEngine {
     pub fn process_and_synthesize(&self, span: stage::prosody_payload::ProsodySpan) -> Result<ActorEngineOutput, SpeechEngineError> {
         let is_matcha = self.speech_engine.is_matcha();
         let pipeline_out = self.pipeline.process_span(span.clone());
-        
-        let mut chunk_phonemes = String::new();
-        for tp in &pipeline_out.phonemes {
-            chunk_phonemes.push_str(&tp.phonemes);
-            chunk_phonemes.push_str(&tp.whitespace);
-        }
-        let trimmed_phonemes = chunk_phonemes.trim().to_string();
-        let phoneme_ids = self.pipeline.tokenize_phonemes(trimmed_phonemes, is_matcha);
-        
+
         let vat = Some(vec![
             span.emotion.valence as f32,
             span.emotion.arousal as f32,
             span.emotion.tension as f32,
         ]);
-        
-        let duration_scales = span.acoustics.as_ref().and_then(|a| {
+
+        let duration_scales: Option<Vec<f32>> = span.acoustics.as_ref().and_then(|a| {
             a.token_duration_scales.as_ref().map(|v| v.iter().map(|&x| x as f32).collect())
         });
-        
-        let f0_bias = span.acoustics.as_ref().and_then(|a| {
+
+        let f0_bias: Option<Vec<f32>> = span.acoustics.as_ref().and_then(|a| {
             a.token_f0_biases.as_ref().map(|v| v.iter().map(|&x| x as f32).collect())
         });
-        
-        self.speech_engine.forward(
-            phoneme_ids,
-            pipeline_out.style,
-            pipeline_out.speed_multiplier as f32,
-            vat,
-            duration_scales,
-            f0_bias,
-        )
+
+        // Group the span's G2P tokens into chunks that fit the engine's static
+        // token limit (the e2e TFLite export bakes a [1, 50] phoneme input, so a
+        // typical sentence overflows a single forward pass). Each chunk is
+        // synthesized separately and the audio concatenated. A limit of 0 means
+        // unbounded.
+        let token_limit = self.speech_engine.get_token_limit().max(0) as usize;
+        let mut chunks: Vec<String> = Vec::new();
+        let mut current = String::new();
+        for tp in &pipeline_out.phonemes {
+            let mut candidate = current.clone();
+            candidate.push_str(&tp.phonemes);
+            candidate.push_str(&tp.whitespace);
+            let over_limit = token_limit > 0
+                && !current.trim().is_empty()
+                && self
+                    .pipeline
+                    .tokenize_phonemes(candidate.trim().to_string(), is_matcha)
+                    .len()
+                    > token_limit;
+            if over_limit {
+                chunks.push(current.trim().to_string());
+                current = String::new();
+                current.push_str(&tp.phonemes);
+                current.push_str(&tp.whitespace);
+            } else {
+                current = candidate;
+            }
+        }
+        if !current.trim().is_empty() {
+            chunks.push(current.trim().to_string());
+        }
+
+        if chunks.is_empty() {
+            return Ok(ActorEngineOutput { audio: Vec::new(), pred_dur: Vec::new() });
+        }
+
+        // Per-token duration/F0 arrays are indexed against the whole span's id
+        // sequence; chunk-splitting would misalign them, so they only pass
+        // through on single-chunk spans. (Today's Matcha e2e graph exposes no
+        // such tensors, so nothing is lost when a span splits.)
+        let single_chunk = chunks.len() == 1;
+        let mut audio: Vec<f32> = Vec::new();
+        let mut pred_dur: Vec<i32> = Vec::new();
+        for chunk in chunks {
+            let phoneme_ids = self.pipeline.tokenize_phonemes(chunk, is_matcha);
+            let out = self.speech_engine.forward(
+                phoneme_ids,
+                pipeline_out.style.clone(),
+                pipeline_out.speed_multiplier as f32,
+                vat.clone(),
+                if single_chunk { duration_scales.clone() } else { None },
+                if single_chunk { f0_bias.clone() } else { None },
+            )?;
+            audio.extend(out.audio);
+            pred_dur.extend(out.pred_dur);
+        }
+        Ok(ActorEngineOutput { audio, pred_dur })
     }
 
     pub fn reclaim_memory(&self) {
@@ -815,6 +856,271 @@ mod tests {
 
         assert!(!output.audio.is_empty(), "Expected non-empty output audio");
         assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected pred_dur to match phoneme count");
+    }
+
+    /// Regression test for the 50-token static-limit overflow (2026-07-11): a
+    /// typical sentence tokenizes past the e2e export's [1, 50] phoneme input,
+    /// and `process_and_synthesize` must chunk rather than fail. Runs the real
+    /// app render path: G2P → process_span → chunked forward.
+    #[test]
+    fn test_span_render_chunks_past_static_limit() {
+        let model_path = "../../../Models/styletts2_lite.tflite";
+        let config_path = "../../../Models/config.json";
+        if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
+            println!("Skipping test: staged model/config not found");
+            return;
+        }
+
+        struct NoVoices;
+        impl crate::voice_loader::VoiceAssetProvider for NoVoices {
+            fn load_voice_bytes(&self, _voice_name: String) -> Option<Vec<u8>> { None }
+        }
+
+        struct G2pWrap(std::sync::Arc<crate::g2p::ProsodiaSpeech>);
+        impl crate::g2p::ProsodiaG2PProcessor for G2pWrap {
+            fn process(&self, text: String) -> Vec<crate::g2p::MToken> { self.0.process(text) }
+        }
+
+        struct EngineWrap(std::sync::Arc<LiteRtActorEngine>);
+        impl ProsodiaSpeechEngine for EngineWrap {
+            fn synthesize(&self, input: PipelineOutput) -> ActorEngineOutput {
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::synthesize(&self.0, input)
+            }
+            fn forward(
+                &self,
+                phoneme_ids: Vec<i32>,
+                style: StyleVector,
+                speed: f32,
+                vat: Option<Vec<f32>>,
+                duration_scales: Option<Vec<f32>>,
+                f0_bias: Option<Vec<f32>>,
+            ) -> Result<ActorEngineOutput, SpeechEngineError> {
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::forward(&self.0, phoneme_ids, style, speed, vat, duration_scales, f0_bias)
+            }
+            fn reclaim_memory(&self) {
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::reclaim_memory(&self.0)
+            }
+            fn is_matcha(&self) -> bool {
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::is_matcha(&self.0)
+            }
+            fn get_token_limit(&self) -> i32 {
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::get_token_limit(&self.0)
+            }
+        }
+
+        let config_json = std::fs::read_to_string(config_path).unwrap();
+        let pipeline = crate::pipeline::ProsodiaActorPipeline::new(
+            Box::new(G2pWrap(crate::g2p::ProsodiaSpeech::new())),
+            crate::voice_loader::VoiceLoader::new(Box::new(NoVoices)),
+            config_json,
+            24000,
+            "en-us".to_string(),
+        ).expect("pipeline construction failed");
+
+        let engine = ProsodiaActorEngine {
+            pipeline,
+            speech_engine: Box::new(EngineWrap(LiteRtActorEngine::new(model_path.to_string()))),
+        };
+
+        let span = stage::prosody_payload::ProsodySpan {
+            text: "The morning light spilled across the quiet kitchen table.".to_string(),
+            emotion: stage::prosody::EmotionVector { valence: 0.0, arousal: 0.0, tension: 0.0 },
+            leading_pause: 0.0,
+            acoustics: None,
+        };
+
+        let out = engine
+            .process_and_synthesize(span)
+            .expect("span render failed — static-limit chunking regressed?");
+        let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        println!(
+            "app path: {} samples ({:.2}s @24kHz), peak {:.6}",
+            out.audio.len(),
+            out.audio.len() as f32 / 24000.0,
+            peak
+        );
+        assert!(!out.audio.is_empty(), "expected non-empty audio");
+        assert!(peak > 0.01, "output audio is near-silent (peak {})", peak);
+
+        // Listenable artifact for manual audition (gitignored target/ dir):
+        // minimal 32-bit-float mono WAV, header written by hand to avoid a
+        // dev-dependency for a debug artifact.
+        let sr: u32 = 24000;
+        let data_len = (out.audio.len() * 4) as u32;
+        let mut wav: Vec<u8> = Vec::with_capacity(44 + data_len as usize);
+        wav.extend(b"RIFF");
+        wav.extend((36 + data_len).to_le_bytes());
+        wav.extend(b"WAVEfmt ");
+        wav.extend(16u32.to_le_bytes());
+        wav.extend(3u16.to_le_bytes()); // IEEE float
+        wav.extend(1u16.to_le_bytes()); // mono
+        wav.extend(sr.to_le_bytes());
+        wav.extend((sr * 4).to_le_bytes());
+        wav.extend(4u16.to_le_bytes());
+        wav.extend(32u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend(data_len.to_le_bytes());
+        for s in &out.audio {
+            wav.extend(s.to_le_bytes());
+        }
+        if std::fs::write("../../target/span_render_test.wav", &wav).is_ok() {
+            println!("wrote ../../target/span_render_test.wav");
+        }
+    }
+
+    /// TEMP diagnostic: same phrase as the reference-ids test, but through our
+    /// Rust G2P + IPA mapping — prints phonemes/ids for diffing and writes
+    /// audio for A/B audition against ref_render_test.wav.
+    #[test]
+    fn test_our_g2p_render_tmp() {
+        let model_path = "../../../Models/styletts2_lite.tflite";
+        let config_path = "../../../Models/config.json";
+        if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
+            println!("Skipping: staged model/config not found");
+            return;
+        }
+        struct NoVoices;
+        impl crate::voice_loader::VoiceAssetProvider for NoVoices {
+            fn load_voice_bytes(&self, _voice_name: String) -> Option<Vec<u8>> { None }
+        }
+        struct G2pWrap(std::sync::Arc<crate::g2p::ProsodiaSpeech>);
+        impl crate::g2p::ProsodiaG2PProcessor for G2pWrap {
+            fn process(&self, text: String) -> Vec<crate::g2p::MToken> { self.0.process(text) }
+        }
+        let config_json = std::fs::read_to_string(config_path).unwrap();
+        let pipeline = crate::pipeline::ProsodiaActorPipeline::new(
+            Box::new(G2pWrap(crate::g2p::ProsodiaSpeech::new())),
+            crate::voice_loader::VoiceLoader::new(Box::new(NoVoices)),
+            config_json,
+            24000,
+            "en-us".to_string(),
+        ).unwrap();
+
+        let span = stage::prosody_payload::ProsodySpan {
+            text: "The morning light.".to_string(),
+            emotion: stage::prosody::EmotionVector { valence: 0.0, arousal: 0.0, tension: 0.0 },
+            leading_pause: 0.0,
+            acoustics: None,
+        };
+        let out_pipe = pipeline.process_span(span);
+        let mut phonemes = String::new();
+        for tp in &out_pipe.phonemes {
+            phonemes.push_str(&tp.phonemes);
+            phonemes.push_str(&tp.whitespace);
+        }
+        let trimmed = phonemes.trim().to_string();
+        println!("our raw phonemes: {:?}", trimmed);
+        println!("our mapped IPA:   {:?}", crate::pipeline::map_styletts2_to_matcha_ipa(&trimmed));
+        let ids = pipeline.tokenize_phonemes(trimmed, true);
+        println!("our ids: {:?}", ids);
+
+        let engine = LiteRtActorEngine::new(model_path.to_string());
+        let out = engine.forward(ids, out_pipe.style, 1.0, None, None, None).expect("forward failed");
+        let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        println!("our render: {} samples ({:.2}s), peak {:.4}", out.audio.len(), out.audio.len() as f32 / 24000.0, peak);
+        let sr: u32 = 24000;
+        let data_len = (out.audio.len() * 4) as u32;
+        let mut wav: Vec<u8> = Vec::with_capacity(44 + data_len as usize);
+        wav.extend(b"RIFF");
+        wav.extend((36 + data_len).to_le_bytes());
+        wav.extend(b"WAVEfmt ");
+        wav.extend(16u32.to_le_bytes());
+        wav.extend(3u16.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(sr.to_le_bytes());
+        wav.extend((sr * 4).to_le_bytes());
+        wav.extend(4u16.to_le_bytes());
+        wav.extend(32u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend(data_len.to_le_bytes());
+        for s in &out.audio {
+            wav.extend(s.to_le_bytes());
+        }
+        std::fs::write("../../target/g2p_render_test.wav", &wav).unwrap();
+        println!("wrote ../../target/g2p_render_test.wav");
+    }
+
+    /// TEMP diagnostic: forward pre-built espeak-IPA reference ids (written by
+    /// a Python helper to target/ref_ids.json) and write the audio for manual
+    /// audition — isolates the G2P frontend from the model.
+    #[test]
+    fn test_reference_ids_render_tmp() {
+        let model_path = "../../../Models/styletts2_lite.tflite";
+        let ids_path = "../../target/ref_ids.json";
+        if !Path::new(model_path).exists() || !Path::new(ids_path).exists() {
+            println!("Skipping: model or ref_ids.json missing");
+            return;
+        }
+        let ids: Vec<i32> = serde_json::from_str(&std::fs::read_to_string(ids_path).unwrap()).unwrap();
+        println!("reference ids: {:?}", ids);
+        for (model, out_name) in [
+            (model_path, "../../target/ref_render_test.wav"),
+            ("../../../Models/matcha_stock.tflite", "../../target/ref_render_stock.wav"),
+        ] {
+            if !Path::new(model).exists() {
+                println!("skipping {model} (not found)");
+                continue;
+            }
+            let engine = LiteRtActorEngine::new(model.to_string());
+            let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
+            let out = engine.forward(ids.clone(), style, 1.0, None, None, None).expect("forward failed");
+            let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+            println!("{model}: {} samples ({:.2}s), peak {:.4}", out.audio.len(), out.audio.len() as f32 / 24000.0, peak);
+            let sr: u32 = 24000;
+            let data_len = (out.audio.len() * 4) as u32;
+            let mut wav: Vec<u8> = Vec::with_capacity(44 + data_len as usize);
+            wav.extend(b"RIFF");
+            wav.extend((36 + data_len).to_le_bytes());
+            wav.extend(b"WAVEfmt ");
+            wav.extend(16u32.to_le_bytes());
+            wav.extend(3u16.to_le_bytes());
+            wav.extend(1u16.to_le_bytes());
+            wav.extend(sr.to_le_bytes());
+            wav.extend((sr * 4).to_le_bytes());
+            wav.extend(4u16.to_le_bytes());
+            wav.extend(32u16.to_le_bytes());
+            wav.extend(b"data");
+            wav.extend(data_len.to_le_bytes());
+            for s in &out.audio {
+                wav.extend(s.to_le_bytes());
+            }
+            std::fs::write(out_name, &wav).unwrap();
+            println!("wrote {out_name}");
+        }
+    }
+
+    /// Direct engine forward against the staged Sonora e2e export (skips when
+    /// the gitignored `Models/styletts2_lite.tflite` is absent).
+    #[test]
+    fn test_sonora_e2e_forward() {
+        let model_path = "../../../Models/styletts2_lite.tflite";
+        if !Path::new(model_path).exists() {
+            println!("Skipping test: {} not found", model_path);
+            return;
+        }
+
+        let engine = LiteRtActorEngine::new(model_path.to_string());
+        assert!(engine.is_matcha(), "Expected loaded model to be detected as Matcha");
+
+        let phoneme_ids = vec![12, 15, 18, 5, 9];
+        let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
+
+        let output = engine.forward(
+            phoneme_ids.clone(),
+            style,
+            1.0,
+            None,
+            None,
+            None,
+        ).expect("Forward execution failed");
+
+        let peak = output.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        println!(
+            "sonora e2e: {} samples, peak amplitude {:.6}, pred_dur len {}",
+            output.audio.len(), peak, output.pred_dur.len()
+        );
+        assert!(!output.audio.is_empty(), "Expected non-empty output audio");
+        assert!(peak > 0.001, "Output audio is silent (peak {})", peak);
     }
 
     #[test]

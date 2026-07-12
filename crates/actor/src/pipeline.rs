@@ -157,11 +157,20 @@ impl ProsodiaActorPipeline {
         for c in mapped.chars() {
             if let Some(&id) = self.vocab.get(&c.to_string()) {
                 ids.push(id);
+                if is_matcha {
+                    // Matcha trains with add_blank=True — blank id 0 interspersed
+                    // between every symbol (matcha.utils.intersperse), so the model
+                    // expects [0, p1, 0, p2, …, pn, 0]. Feeding compact ids to a
+                    // blank-trained checkpoint yields fast, garbled speech.
+                    ids.push(0);
+                }
             } else {
                 warn_unknown_phoneme(c, false);
             }
         }
-        ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
+        if !is_matcha {
+            ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
+        }
         ids
     }
 
@@ -1131,6 +1140,15 @@ mod tests {
 
         let ids = pipeline.tokenize_phonemes("A".to_string(), true);
         assert_eq!(ids, vec![0, 1, 0]);
+
+        // Matcha checkpoints train with add_blank=True (matcha.utils.intersperse):
+        // a blank id 0 between every symbol, not just at the bounds.
+        let ids = pipeline.tokenize_phonemes("AB".to_string(), true);
+        assert_eq!(ids, vec![0, 1, 0, 2, 0]);
+
+        // StyleTTS2 tokenization keeps plain 0-bounds with no interspersion.
+        let ids = pipeline.tokenize_phonemes("AB".to_string(), false);
+        assert_eq!(ids, vec![0, 1, 2, 0]);
     }
 
     #[test]

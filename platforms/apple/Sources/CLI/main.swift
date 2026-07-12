@@ -168,7 +168,7 @@ struct ProsodiaCLI {
             
             print("Synthesis completed successfully! (Wrote \(result.audio.count) samples at \(result.sampleRate)Hz)")
         } catch {
-            print("Error occurred during synthesis: \(error.localizedDescription)")
+            print("Error occurred during synthesis: \(error)")
         }
     }
     

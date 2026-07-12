@@ -329,9 +329,13 @@ struct TunerContentView: View {
                         segment: segment,
                         canSpeak: runner.canSpeak,
                         isBusy: runner.isRunning || runner.isSpeaking,
+                        isSpeaking: runner.isSpeaking,
                         config: config,
                         speak: {
                             Task { await runner.speakPassage(segment.text, config: config, model: store.selected) }
+                        },
+                        stop: {
+                            Task { await runner.stopActive() }
                         },
                         feedback: {
                             feedbackSegment = segment
@@ -382,34 +386,6 @@ struct TunerContentView: View {
             ToolbarItem(placement: .primaryAction) {
                 modelMenu
             }
-        }
-
-        if runner.canSpeak {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await runner.speak(config: config, model: store.selected) }
-                } label: {
-                    if runner.isSpeaking {
-                        ProgressView()
-                    } else {
-                        Label("Speak", systemImage: "speaker.wave.2.fill")
-                    }
-                }
-                .disabled(
-                    runner.isSpeaking
-                    || runner.isRunning
-                    || (config.canUseMlx && store.selected?.isAvailable != true)
-                )
-            }
-        }
-
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                Task { await runner.stopActive() }
-            } label: {
-                Label("Stop", systemImage: "stop.fill")
-            }
-            .disabled(!runner.isRunning && !runner.isSpeaking)
         }
     }
 
@@ -946,8 +922,10 @@ private struct SegmentRow: View {
     let segment: StubVocalActor.RenderedSegment
     let canSpeak: Bool
     let isBusy: Bool
+    let isSpeaking: Bool
     let config: AuditionConfiguration
     let speak: () -> Void
+    let stop: () -> Void
     let feedback: () -> Void
 
     var body: some View {
@@ -975,6 +953,14 @@ private struct SegmentRow: View {
                         }
                         .labelStyle(.iconOnly)
                         .disabled(isBusy)
+
+                        Button {
+                            stop()
+                        } label: {
+                            Label("Stop", systemImage: "stop.fill")
+                        }
+                        .labelStyle(.iconOnly)
+                        .disabled(!isSpeaking)
                     }
                 }
             }
