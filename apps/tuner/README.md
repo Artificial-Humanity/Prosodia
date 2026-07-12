@@ -21,6 +21,29 @@ The app links the consolidated `platforms/apple` Swift package (`../../platforms
 
 ---
 
+## 🔨 Building
+
+The harness sits on top of prebuilt Rust FFI xcframeworks, so building is a two-system chain. The one-shot path:
+
+```bash
+./build.sh          # rebuilds the Rust xcframeworks, then the app (extra args pass through to xcodebuild)
+```
+
+which is equivalent to `../../build_frameworks.sh` followed by:
+
+```bash
+xcodebuild -project ProsodiaTuner.xcodeproj -scheme ProsodiaTuner \
+  -destination "platform=macOS,arch=arm64" build
+```
+
+Notes:
+
+- **Scheme is `ProsodiaTuner`; destinations must be arm64** — the FFI xcframeworks carry no x86_64 slice.
+- A **"Check FFI Framework Freshness"** build phase fails any build (including Xcode GUI Run) whose xcframeworks are older than the Rust sources under `crates/`, naming the newer file — rerun `build.sh` or `../../build_frameworks.sh` when it fires. It only checks; it never builds Rust itself.
+- Do **not** use legacy `xcodebuild -target` builds: the LiteRT-LM package checkout has a Bazel `BUILD` file at its root, which collides with the `build/` directory that target-style builds create on case-insensitive filesystems.
+
+---
+
 ## 💻 Local Models for the Harness
 
 For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the workspace-root `Models/` folder (one level above the Prosodia repo, shared across subprojects):

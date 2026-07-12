@@ -65,6 +65,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CC11111111111111111111C9 /* Build configuration list for PBXNativeTarget "ProsodiaTuner" */;
 			buildPhases = (
+				CC11111111111111111111CF /* Check FFI Framework Freshness */,
 				CC11111111111111111111CE /* Seed SamplePassages.txt */,
 				CC11111111111111111111CA /* Sources */,
 				CC11111111111111111111C8 /* Frameworks */,
@@ -136,6 +137,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		CC11111111111111111111CF /* Check FFI Framework Freshness */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Check FFI Framework Freshness";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Tripwire: fail fast if the prebuilt Rust FFI xcframeworks are older than the Rust\n# sources that feed them. Does NO building on purpose (cargo inside Xcode build phases\n# fights script sandboxing and the SPM binary-target resolution order) - it just turns\n# silent staleness into a loud error. Requires ENABLE_USER_SCRIPT_SANDBOXING = NO so it\n# may scan crates/ outside this project's declared inputs.\nPROSODIA_ROOT=\"$(cd \"${SRCROOT}/../..\" && pwd)\"\n\nREF=\"\"\nfor fw in actorFFI stageFFI directorFFI folioparserFFI; do\n    plist=\"${PROSODIA_ROOT}/platforms/apple/${fw}.xcframework/Info.plist\"\n    if [ ! -f \"$plist\" ]; then\n        echo \"error: ${fw}.xcframework is missing - run ./build_frameworks.sh from the Prosodia repo root (or apps/tuner/build.sh).\"\n        exit 1\n    fi\n    if [ -z \"$REF\" ] || [ \"$plist\" -ot \"$REF\" ]; then\n        REF=\"$plist\"\n    fi\ndone\n\nSTALE=\"$(find \"${PROSODIA_ROOT}/crates\" -name '*.rs' -newer \"$REF\" -print -quit)\"\nif [ -z \"$STALE\" ]; then\n    STALE=\"$(find \"${PROSODIA_ROOT}/crates\" -name 'Cargo.toml' -newer \"$REF\" -print -quit)\"\nfi\nif [ -z \"$STALE\" ] && [ \"${PROSODIA_ROOT}/Cargo.lock\" -nt \"$REF\" ]; then\n    STALE=\"${PROSODIA_ROOT}/Cargo.lock\"\nfi\n\nif [ -n \"$STALE\" ]; then\n    echo \"error: FFI xcframeworks are stale - newer Rust source: ${STALE}. Run ./build_frameworks.sh from the Prosodia repo root (or apps/tuner/build.sh).\"\n    exit 1\nfi\n";
+		};
 		CC11111111111111111111CE /* Seed SamplePassages.txt */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -208,7 +228,7 @@
 				DEVELOPMENT_TEAM = JWM93GE7RS;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -270,7 +290,7 @@
 				DEVELOPMENT_TEAM = JWM93GE7RS;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
