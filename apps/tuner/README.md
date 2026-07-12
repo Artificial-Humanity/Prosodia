@@ -49,19 +49,33 @@ Notes:
 For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the workspace-root `Models/` folder (one level above the Prosodia repo, shared across subprojects):
 
 ```text
-/Models/                              # gitignored — this listing is the record (updated 2026-07-11)
-├── gemma-4-E2B-it.litertlm           # Gemma 4 E2B LiteRT-LM (Default Director model)
-├── gemma-4-E4B-it.litertlm           # Gemma 4 E4B LiteRT-LM
-├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate
-├── styletts2_lite.tflite             # Active Actor model — currently Sonora v1-ljspeech float32 e2e
-├── matcha_stock.tflite               # Stock Matcha e2e TFLite (export-spike reference)
-├── Matcha-TTS-Original/              # Vendored, locally-modified shivammehta25/Matcha-TTS source + ONNX/TFLite export artifacts
-├── Matcha-TTS-LiteRT-Community/      # HF clone: litert-community/Matcha-TTS — split-graph fp16 TFLite + espeak-free G2P assets
-├── Sonora/                           # HF clone: lmcfarlin/Sonora — our trained checkpoints & TFLite exports (v1-ljspeech)
-└── StyleTTS2FineTune/                # StyleTTS2 Actor weights & fine-tuning pipeline
+/Models/                              # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout)
+├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
+├── styletts2_lite.tflite             # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12) — stays at root
+├── Google/
+│   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
+│   └── gemma-4-E4B-it.litertlm      # Gemma 4 E4B LiteRT-LM
+├── Sonora/                           # HF clone: lmcfarlin/Sonora — our checkpoints + TFLite exports (v1-ljspeech/ incl. litert-split/)
+├── litert-community/
+│   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
+├── shivammehta25/
+│   └── Matcha-TTS/                   # ⚠️ NOT a clean clone: June-2026 export-spike workspace (vendored source + ONNX/broken-TFLite artifacts; see its ARCHIVE.md)
+├── IIEleven11/
+│   └── StyleTTS2FineTune/            # StyleTTS2 fine-tuning pipeline (academic/side-discussion)
+└── semidark/
+    ├── StyleTTS2/                    # StyleTTS2 fork (academic/side-discussion)
+    └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
-The speak functionality also checks for the fine-tuning checkpoint file in our harness at `StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
+> [!WARNING]
+> **The 2026-07-12 restructure moved the Gemma models into `Google/`, but `TunerDemo.swift` still
+> hard-codes `gemma-4-*.litertlm` at the `Models/` root** (the Debt-F bug class — model paths
+> hard-coded in app source). Until Debt F (role-based model config) lands, either keep root-level
+> copies/symlinks of the Gemma files on the machine running the harness, or expect
+> "Gemma (missing)". `config.json` and `styletts2_lite.tflite` intentionally remain at root for the
+> same reason.
+
+The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 
 ---
 
