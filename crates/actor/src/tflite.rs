@@ -58,3 +58,18 @@ pub const kTfLiteInt32: i32 = 2;
 #[allow(non_upper_case_globals)]
 pub const kTfLiteInt64: i32 = 4;
 
+
+// ── XNNPACK delegate ────────────────────────────────────────────────────
+// Exported by the Apple LiteRT-LM dylib (CLiteRTLM_mac); the Linux
+// libtensorflowlite_c is built with XNNPACK off, so these must only be
+// referenced on Apple targets.
+#[repr(C)]
+pub struct TfLiteDelegate { _unused: [u8; 0] }
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+unsafe extern "C" {
+    pub fn TfLiteInterpreterOptionsAddDelegate(options: *mut TfLiteInterpreterOptions, delegate: *mut TfLiteDelegate);
+    /// `options == null` selects the delegate's built-in defaults.
+    pub fn TfLiteXNNPackDelegateCreate(options: *const std::os::raw::c_void) -> *mut TfLiteDelegate;
+    pub fn TfLiteXNNPackDelegateDelete(delegate: *mut TfLiteDelegate);
+}

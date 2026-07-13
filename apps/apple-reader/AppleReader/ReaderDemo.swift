@@ -45,6 +45,24 @@ final class ProductionRunner {
         return actor
     }
 
+
+    /// Loads the actor and runs one throwaway forward in the background so the
+    /// first Speak doesn't pay the model load and XNNPACK weight packing.
+    /// No-op when the model is absent or an actor is already cached.
+    func warmUpActor() {
+        guard cachedActor == nil, canSpeak else { return }
+        let modelFile = Self.resolvedModelPath
+        let voiceDir = Self.resolvedVoiceDirectory
+        Task.detached(priority: .utility) {
+            guard let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) else { return }
+            _ = resolved.render(payload: encodeDirective(directive: ProsodyDirective(preset: .baseline), text: "Hi."))
+            await MainActor.run { [weak self] in
+                guard let self, self.cachedActor == nil else { return }
+                self.cachedActor = resolved
+            }
+        }
+    }
+
     private func getDirector(config: AuditionConfiguration, model: DirectorModel?) -> any Stage.DirectorInference {
         // Preset mode: never cache. The stub director bakes in the directive at
         // construction, and the cache key below doesn't include it — so a cached

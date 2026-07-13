@@ -57,6 +57,7 @@ struct TunerContentView: View {
             }
             .toolbar { toolbarContent(store: store, config: config) }
             .task {
+                runner.warmUpActor()
                 config.activePreset = presetStore.selected
                 config.loadedPresetID = presetStore.selectedID
                 await runner.preview(config: config, model: store.selected)
