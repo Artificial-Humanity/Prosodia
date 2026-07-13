@@ -59,7 +59,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 ├── shivammehta25/
-│   └── Matcha-TTS/                   # ⚠️ NOT a clean clone: June-2026 export-spike workspace (vendored source + ONNX/broken-TFLite artifacts; see its ARCHIVE.md)
+│   └── Matcha-TTS/                   # Clean upstream clone (reference). The old spike workspace was rescued + pruned 2026-07-13 (history: github.com/Artificial-Humanity/StyleTTS2FineTune; ONNX: Prosodia-Storage bucket archive/)
 ├── IIEleven11/
 │   └── StyleTTS2FineTune/            # StyleTTS2 fine-tuning pipeline (academic/side-discussion)
 └── semidark/
