@@ -13,18 +13,18 @@ Everything runs locally on-device via Google LiteRT (formerly TensorFlow Lite) a
 Our monorepo organizes the workspace into simple layers:
 
 ### 1. Crates (The Safe, Local Neural Core)
-*   [**`core`**](file:///Users/lmcfarlin/Projects/Prosodia/crates/core): The vocabulary index, BPE tokenizer, and shared traits. The bedrock of our dependency graph.
-*   [**`folioparser`**](file:///Users/lmcfarlin/Projects/Prosodia/crates/folioparser): Parses EPUB XML structures, extracts plain text, and prevents us from getting lost in OPF manifests.
-*   [**`director`**](file:///Users/lmcfarlin/Projects/Prosodia/crates/director): The Emotional Director. Driven by Gemma 4 (LiteRT-LM), it reads book passages and provides performance notes—such as Valence, Arousal, Tension (VAD), and casting assignments.
-*   [**`actor`**](file:///Users/lmcfarlin/Projects/Prosodia/crates/actor): The Voice Talent. Driven by StyleTTS2 (LiteRT), it takes the performance notes and synthesizes raw floating-point PCM audio matrices.
-*   [**`stage`**](file:///Users/lmcfarlin/Projects/Prosodia/crates/stage): The Stage Manager. Coordinates the Director and the Actor, schedules queues, and runs around holding a clipboard making sure everything plays gaplessly.
+*   [**`core`**](crates/core): The vocabulary index, BPE tokenizer, and shared traits. The bedrock of our dependency graph.
+*   [**`folioparser`**](crates/folioparser): Parses EPUB XML structures, extracts plain text, and prevents us from getting lost in OPF manifests.
+*   [**`director`**](crates/director): The Emotional Director. Driven by Gemma 4 (LiteRT-LM), it reads book passages and provides performance notes—such as Valence, Arousal, Tension (VAD), and casting assignments.
+*   [**`actor`**](crates/actor): The Voice Talent. Driven by StyleTTS2 (LiteRT), it takes the performance notes and synthesizes raw floating-point PCM audio matrices.
+*   [**`stage`**](crates/stage): The Stage Manager. Coordinates the Director and the Actor, schedules queues, and runs around holding a clipboard making sure everything plays gaplessly.
 
 ### 2. Platforms (Hardware Bridges)
-*   [**`apple`**](file:///Users/lmcfarlin/Projects/Prosodia/platforms/apple): A Swift Package combining the FFI target bridges and custom `AVAudioEngine` PCM loops.
+*   [**`apple`**](platforms/apple): A Swift Package combining the FFI target bridges and custom `AVAudioEngine` PCM loops.
 
 ### 3. Downstream Apps
-*   [**`tuner`**](file:///Users/lmcfarlin/Projects/Prosodia/apps/tuner): The Rehearsal Studio mixing board. Tweak VAD sliders, swap casting parameters, A/B test models, and listen to the dramatic results.
-*   [**`tuner-extension`**](file:///Users/lmcfarlin/Projects/Prosodia/apps/tuner-extension): Chrome Manifest V3 extension companion.
+*   [**`tuner`**](apps/tuner): The Rehearsal Studio mixing board. Tweak VAD sliders, swap casting parameters, A/B test models, and listen to the dramatic results.
+*   [**`tuner-extension`**](apps/tuner-extension): Chrome Manifest V3 extension companion.
 
 ---
 

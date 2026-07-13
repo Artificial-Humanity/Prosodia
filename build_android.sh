@@ -18,16 +18,16 @@ API=26
 HOST_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$HOST_OS" in
     darwin)
-        DEFAULT_NDK="/Users/lmcfarlin/Library/Android/sdk/ndk/$NDK_VERSION"
+        DEFAULT_NDK="$HOME/Library/Android/sdk/ndk/$NDK_VERSION"
         PREBUILT_ARCH="darwin-x86_64"
         HOST_LIB_EXT="dylib"
-        DEFAULT_SDK_DIR="/Users/lmcfarlin/Library/Android/sdk"
+        DEFAULT_SDK_DIR="$HOME/Library/Android/sdk"
         ;;
     linux)
-        DEFAULT_NDK="/home/lmcfarlin/Android/Sdk/ndk/$NDK_VERSION"
+        DEFAULT_NDK="$HOME/Android/Sdk/ndk/$NDK_VERSION"
         PREBUILT_ARCH="linux-x86_64"
         HOST_LIB_EXT="so"
-        DEFAULT_SDK_DIR="/home/lmcfarlin/Android/Sdk"
+        DEFAULT_SDK_DIR="$HOME/Android/Sdk"
         ;;
     *)
         echo "Unsupported OS: $HOST_OS"
