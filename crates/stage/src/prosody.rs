@@ -1,5 +1,3 @@
-use std::sync::RwLock;
-
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct EmotionVector {
     pub valence: f64,

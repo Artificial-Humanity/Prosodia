@@ -213,7 +213,10 @@ pub struct StageCoordinator {
     sample_rate: u32,
     state: Arc<(Mutex<CoordinatorState>, Condvar)>,
     lookahead_limit: usize,
-    worker_thread: Mutex<Option<std::thread::JoinHandle<()>>>,
+    /// Held (never read) so the lookahead worker's JoinHandle lives with the
+    /// coordinator instead of detaching at spawn; underscore-prefixed to
+    /// document that intent and silence dead_code.
+    _worker_thread: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 #[uniffi::export]
@@ -276,7 +279,7 @@ impl StageCoordinator {
             sample_rate,
             state,
             lookahead_limit: limit,
-            worker_thread: Mutex::new(worker_thread),
+            _worker_thread: Mutex::new(worker_thread),
         })
     }
 
