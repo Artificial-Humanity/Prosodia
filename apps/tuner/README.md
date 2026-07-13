@@ -66,7 +66,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
     └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
-The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + TFLite exports, `v1-ljspeech/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model, and lives at `Sonora/model/` inside the Sonora project directory (moved 2026-07-13).
+The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + TFLite exports, `v1-ljspeech/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model, and lives at the workspace-root `Registry/Sonora/`, a sibling of `Reference/` (layout end-state C, 2026-07-13).
 
 > [!NOTE]
 > **Model paths now resolve through `prosodia_models.json`** (repo root — role-based config,
