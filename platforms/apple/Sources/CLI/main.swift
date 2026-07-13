@@ -127,7 +127,7 @@ struct ProsodiaCLI {
         print("Text to synthesize: \"\(textToSynthesize)\"")
  
         do {
-            let modelURL = modelsDir.appendingPathComponent("styletts2_lite.tflite")
+            let modelURL = modelsDir.appendingPathComponent("sonora.tflite")
             let configURL = modelsDir.appendingPathComponent("config.json")
             
             let configData = try Data(contentsOf: configURL)

@@ -32,7 +32,7 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
     public static let fallback = ProsodiaModels(
         modelsBase: "../Reference/Models",
         roles: [
-            "actor": ModelRoleEntry(path: "styletts2_lite.tflite", display: "Sonora Actor (v1-ljspeech)"),
+            "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (v1-ljspeech)"),
             "voices": ModelRoleEntry(path: ".", display: "Voice packs directory"),
             "director-light": ModelRoleEntry(path: "Google/gemma-4-E2B-it.litertlm", display: "Gemma 4 E2B"),
             "director-heavy": ModelRoleEntry(path: "Google/gemma-4-E4B-it.litertlm", display: "Gemma 4 E4B"),

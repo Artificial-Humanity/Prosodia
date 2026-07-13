@@ -864,7 +864,7 @@ mod tests {
     /// app render path: G2P → process_span → chunked forward.
     #[test]
     fn test_span_render_chunks_past_static_limit() {
-        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/sonora.tflite";
         let config_path = "../../../Reference/Models/config.json";
         if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
             println!("Skipping test: staged model/config not found");
@@ -973,7 +973,7 @@ mod tests {
     /// audio for A/B audition against ref_render_test.wav.
     #[test]
     fn test_our_g2p_render_tmp() {
-        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/sonora.tflite";
         let config_path = "../../../Reference/Models/config.json";
         if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
             println!("Skipping: staged model/config not found");
@@ -1045,7 +1045,7 @@ mod tests {
     /// audition — isolates the G2P frontend from the model.
     #[test]
     fn test_reference_ids_render_tmp() {
-        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/sonora.tflite";
         let ids_path = "../../target/ref_ids.json";
         if !Path::new(model_path).exists() || !Path::new(ids_path).exists() {
             println!("Skipping: model or ref_ids.json missing");
@@ -1090,10 +1090,10 @@ mod tests {
     }
 
     /// Direct engine forward against the staged Sonora e2e export (skips when
-    /// the gitignored `Reference/Models/styletts2_lite.tflite` is absent).
+    /// the gitignored `Reference/Models/sonora.tflite` is absent).
     #[test]
     fn test_sonora_e2e_forward() {
-        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/sonora.tflite";
         if !Path::new(model_path).exists() {
             println!("Skipping test: {} not found", model_path);
             return;

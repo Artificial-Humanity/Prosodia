@@ -51,7 +51,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 ```text
 /Reference/Models/                    # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout; moved under Reference/ 2026-07-13)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
-├── styletts2_lite.tflite             # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12) — stays at root
+├── sonora.tflite                     # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
 │   └── gemma-4-E4B-it.litertlm      # Gemma 4 E4B LiteRT-LM
@@ -73,7 +73,7 @@ The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + T
 > Debt F, commit `577a598`): the apps look up `actor`, `voices`, and `director-*` roles instead of
 > hard-coding filenames, so the `Google/` Gemma location is handled by config. ⚠️ Authored
 > remotely without `xcodebuild` — verify both app targets build (`apps/tuner/build.sh`) before
-> deleting any root-level compatibility copies. `config.json` and `styletts2_lite.tflite` remain
+> deleting any root-level compatibility copies. `config.json` and `sonora.tflite` remain
 > at the `Reference/Models/` root because the Rust engine reads the config adjacent to the model file.
 
 The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
