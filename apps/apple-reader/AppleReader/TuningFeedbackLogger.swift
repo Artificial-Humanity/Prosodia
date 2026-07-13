@@ -24,7 +24,7 @@ struct TuningFeedbackLogger {
         emotion: EmotionVector,
         speed: Double,
         volume: Double,
-        voiceBlend: String,
+        castingProfile: String,
         comment: String,
         spans: [ProsodySpan],
         mode: String,
@@ -43,8 +43,8 @@ struct TuningFeedbackLogger {
         - **Passage**: "\(text)"
         - **Parameters**: Valence: \(String(format: "%.2f", emotion.valence)) | Arousal: \(String(format: "%.2f", emotion.arousal)) | Tension: \(String(format: "%.2f", emotion.tension))
         - **Modulation**: Speed ×\(String(format: "%.2f", speed)) | Volume ×\(String(format: "%.2f", volume))
-        - **Voice Blend**: \(voiceBlend)
-        - **Global Config**: Expressiveness: \(String(format: "%.2f", globalConfig.expressiveness)) | Speed Gains (A/T/V): \(String(format: "%.2f/%.2f/%.3f", globalConfig.speedArousalGain, globalConfig.speedTensionGain, globalConfig.speedValenceGain)) | Speed Limits: \(String(format: "%.2f...%.2f", globalConfig.speedMin, globalConfig.speedMax)) | Vol Gains (A/V): \(String(format: "%.2f/%.2f", globalConfig.gainArousalGain, globalConfig.gainValenceGain)) | Vol Limits: \(String(format: "%.2f...%.2f", globalConfig.gainMin, globalConfig.gainMax)) | Pauses (Sentence/Clause): \(String(format: "%.2fs/%.2fs", globalConfig.pauseSentence, globalConfig.pauseClause)) | Blend (Sigma/Min/Proximity): \(String(format: "%.2f/%.2f/%.2f", globalConfig.blendSigma, globalConfig.blendMinimumFraction, globalConfig.blendProximityThreshold))
+        - **Casting Profile**: \(castingProfile)
+        - **Global Config**: Expressiveness: \(String(format: "%.2f", globalConfig.expressiveness)) | Speed Gains (A/T/V): \(String(format: "%.2f/%.2f/%.3f", globalConfig.speedArousalGain, globalConfig.speedTensionGain, globalConfig.speedValenceGain)) | Speed Limits: \(String(format: "%.2f...%.2f", globalConfig.speedMin, globalConfig.speedMax)) | Vol Gains (A/V): \(String(format: "%.2f/%.2f", globalConfig.gainArousalGain, globalConfig.gainValenceGain)) | Vol Limits: \(String(format: "%.2f...%.2f", globalConfig.gainMin, globalConfig.gainMax)) | Pauses (Sentence/Clause): \(String(format: "%.2fs/%.2fs", globalConfig.pauseSentence, globalConfig.pauseClause))
         """
         
         if !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

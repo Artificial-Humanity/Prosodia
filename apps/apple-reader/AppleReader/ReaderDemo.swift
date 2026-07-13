@@ -149,7 +149,6 @@ final class ProductionRunner {
         let document = InMemoryBookDocument(chapters: SamplePassageStore.shared.passages)
         let director = getDirector(config: config, model: model)
         let actor = getActor()
-        await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
         let controller = await Stage.StageCoordinator.run(
             document: document,
@@ -180,7 +179,6 @@ final class ProductionRunner {
         let document = InMemoryBookDocument(chapters: [text])
         let director = getDirector(config: config, model: model)
         let actor = getActor()
-        await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
         let controller = await Stage.StageCoordinator.run(
             document: document,

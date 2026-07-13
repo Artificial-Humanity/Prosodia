@@ -34,7 +34,7 @@ struct TunerContentView: View {
             }
             return "Preview = metadata only. Speak = StyleTTS2 actor audio with the emotion above."
         }
-        return "Preview shows VAD and voice blends. Add the StyleTTS2 actor model under /Models to enable Speak."
+        return "Preview shows VAD and acoustics. Add the actor model under /Models to enable Speak."
     }
 
     var body: some View {
@@ -88,11 +88,6 @@ struct TunerContentView: View {
                 }
             }
             .onChange(of: config.mlxNarrationMode) { _, _ in
-                Task {
-                    await runner.preview(config: config, model: store.selected)
-                }
-            }
-            .onChange(of: config.mlxBaseVoice) { _, _ in
                 Task {
                     await runner.preview(config: config, model: store.selected)
                 }
@@ -158,14 +153,6 @@ struct TunerContentView: View {
 
             case .director:
                 @Bindable var config = config
-                Picker("Base Voice", selection: $config.mlxBaseVoice) {
-                    Text("None (Dynamic Blend Only)").tag(nil as String?)
-                    ForEach(AuditionPresetStore.availableVoices, id: \.self) { voice in
-                        Text(voice).tag(voice as String?)
-                    }
-                }
-                .pickerStyle(.menu)
-
                 Picker("Narration Mode", selection: $config.mlxNarrationMode) {
                     ForEach(NarrationMode.allCases, id: \.self) { mode in
                         Text(mode == .solo ? "Solo Narrator (Caricature)" : "Full Cast (Replacement)").tag(mode)
@@ -217,7 +204,6 @@ struct TunerContentView: View {
         presetSlider("Pitch (Tone)", value: $config.activePreset.pitch, range: -20.0...20.0, step: 0.5)
         presetSlider("Age Profile", value: $config.activePreset.ageProfile, range: -1.0...1.0, step: 0.05)
         presetSlider("Masculinity", value: $config.activePreset.masculinity, range: -1.0...1.0, step: 0.05)
-        presetSlider("Vocal Energy", value: $config.activePreset.vocalEnergy, range: 0.0...2.0, step: 0.05)
         presetSlider("Strain/Rasp", value: $config.activePreset.strainOrRasp, range: 0.0...1.0, step: 0.05)
 
         HStack(spacing: 12) {
@@ -467,7 +453,6 @@ struct TunerContentView: View {
         Pitch: \(String(format: "%.2f", preset.pitch))
         Age Profile: \(String(format: "%.2f", preset.ageProfile))
         Masculinity: \(String(format: "%.2f", preset.masculinity))
-        Vocal Energy: \(String(format: "%.2f", preset.vocalEnergy))
         Strain/Rasp: \(String(format: "%.2f", preset.strainOrRasp))
         """
         #if canImport(AppKit)
@@ -529,35 +514,6 @@ struct TunerContentView: View {
                     }
                 ),
                 range: 0.5...10.0
-            )
-
-            globalKnobSlider(
-                "Voice Blend Sigma",
-                value: Binding(
-                    get: { min(max(config.globalConfig.blendSigma, 0.05), 1.0) },
-                    set: { config.globalConfig.blendSigma = $0 }
-                ),
-                range: 0.05...1.0
-            )
-
-            globalKnobSlider(
-                "Min Voice Blend %",
-                value: Binding(
-                    get: { min(max(config.globalConfig.blendMinimumFraction * 100, 0.0), 30.0) },
-                    set: { config.globalConfig.blendMinimumFraction = $0 / 100.0 }
-                ),
-                range: 0.0...30.0,
-                step: 1.0
-            )
-
-            globalKnobSlider(
-                "Blend Proximity Threshold",
-                value: Binding(
-                    get: { min(max(config.globalConfig.blendProximityThreshold, 0.0), 0.5) },
-                    set: { config.globalConfig.blendProximityThreshold = $0 }
-                ),
-                range: 0.0...0.5,
-                step: 0.01
             )
 
             globalKnobSlider(
@@ -716,7 +672,7 @@ struct TunerContentView: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("Global Acoustic & Blending Knobs")
+            Text("Global Acoustic Knobs")
         }
     }
 }
@@ -770,7 +726,7 @@ struct FeedbackSheet: View {
                     
                     // Acoustics Details (Grid)
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Acoustics & Voice Blend")
+                        Text("Acoustics & Casting")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.secondary)
                         
@@ -897,7 +853,7 @@ struct FeedbackSheet: View {
                             emotion: segment.directive.emotion,
                             speed: segment.speedMultiplier,
                             volume: segment.directive.acoustics?.gainMultiplier ?? AcousticMatrix.gain(for: segment.directive.emotion),
-                            voiceBlend: blend,
+                            castingProfile: blend,
                             comment: comment,
                             spans: segment.spans,
                             mode: config.emotionMode.rawValue,

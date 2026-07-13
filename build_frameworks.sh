@@ -15,6 +15,12 @@
 
 set -euo pipefail
 
+if [ "$(uname -s)" != "Darwin" ]; then
+    echo "error: build_frameworks.sh builds Apple xcframeworks (needs xcodebuild, consumes .dylib) and must run on macOS." >&2
+    echo "       On Linux, use ./build_android.sh instead." >&2
+    exit 1
+fi
+
 cd "$(dirname "$0")"
 ROOT="$(pwd)"
 OUT="$ROOT/platforms/apple"

@@ -13,11 +13,7 @@ public struct ProsodiaConfig: Codable, Equatable, Sendable {
     public var gainValenceGain: Double = 0.08
     public var gainMin: Double = 0.60
     public var gainMax: Double = 1.20
-    
-    public var blendSigma: Double = 0.27
-    public var blendMinimumFraction: Double = 0.05
-    public var blendProximityThreshold: Double = 0.15
-    
+
     public var pauseSentence: Double = 0.28
     public var pauseClause: Double = 0.25
     
@@ -44,10 +40,6 @@ public func applyConfigToStageAndActors(_ config: ProsodiaConfig) {
     
     PhrasePause.sentence = config.pauseSentence
     PhrasePause.clause = config.pauseClause
-
-    // Voice-blend tuning (blendSigma / blendMinimumFraction / blendProximityThreshold)
-    // previously fed the removed MLX voice matrix. Rewire to the LiteRT StyleTTS2
-    // voice-blend path once it lands.
 }
 
 public final class ProsodiaConfigManager: @unchecked Sendable {
@@ -82,10 +74,16 @@ public final class ProsodiaConfigManager: @unchecked Sendable {
             return URL(fileURLWithPath: envPath)
         }
         
-        let devPath = "/Users/lmcfarlin/Projects/Prosodia/prosodia_config.json"
-        let devDir = "/Users/lmcfarlin/Projects/Prosodia"
-        if FileManager.default.isWritableFile(atPath: devDir) || FileManager.default.fileExists(atPath: devPath) {
-            return URL(fileURLWithPath: devPath)
+        // In development, use the tracked config at the Prosodia repo root (derived
+        // from this source file's location) so tuning edits land in version control.
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // ProsodiaConfig.swift parent (ProsodiaTuner)
+            .deletingLastPathComponent() // ProsodiaTuner (outer)
+            .deletingLastPathComponent() // apps (outer)
+            .deletingLastPathComponent() // Project Root (Prosodia)
+        let devPath = repoRoot.appendingPathComponent("prosodia_config.json")
+        if FileManager.default.isWritableFile(atPath: repoRoot.path) || FileManager.default.fileExists(atPath: devPath.path) {
+            return devPath
         }
         
         let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)

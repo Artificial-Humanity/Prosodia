@@ -27,14 +27,13 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
     var pitch: Double = 0.0
     var ageProfile: Double = 0.0
     var masculinity: Double = 0.0
-    var vocalEnergy: Double = 1.0
     var strainOrRasp: Double = 0.0
 
     enum CodingKeys: String, CodingKey {
-        case id, name, valence, arousal, tension, speed, volume, pitch, ageProfile, masculinity, vocalEnergy, strainOrRasp
+        case id, name, valence, arousal, tension, speed, volume, pitch, ageProfile, masculinity, strainOrRasp
     }
 
-    init(id: UUID = UUID(), name: String, valence: Double, arousal: Double, tension: Double, speed: Double, volume: Double, pitch: Double = 0.0, ageProfile: Double = 0.0, masculinity: Double = 0.0, vocalEnergy: Double = 1.0, strainOrRasp: Double = 0.0) {
+    init(id: UUID = UUID(), name: String, valence: Double, arousal: Double, tension: Double, speed: Double, volume: Double, pitch: Double = 0.0, ageProfile: Double = 0.0, masculinity: Double = 0.0, strainOrRasp: Double = 0.0) {
         self.id = id
         self.name = name
         self.valence = valence
@@ -45,7 +44,6 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         self.pitch = pitch
         self.ageProfile = ageProfile
         self.masculinity = masculinity
-        self.vocalEnergy = vocalEnergy
         self.strainOrRasp = strainOrRasp
     }
 
@@ -61,7 +59,6 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         self.pitch = try container.decodeIfPresent(Double.self, forKey: .pitch) ?? 0.0
         self.ageProfile = try container.decodeIfPresent(Double.self, forKey: .ageProfile) ?? 0.0
         self.masculinity = try container.decodeIfPresent(Double.self, forKey: .masculinity) ?? 0.0
-        self.vocalEnergy = try container.decodeIfPresent(Double.self, forKey: .vocalEnergy) ?? 1.0
         self.strainOrRasp = try container.decodeIfPresent(Double.self, forKey: .strainOrRasp) ?? 0.0
     }
 
@@ -93,7 +90,7 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
     var directive: ProsodyDirective {
         ProsodyDirective(emotion: emotion, acoustics: acoustics)
     }
-    static func from(_ preset: EmotionPreset, availableVoices: [String] = AuditionPresetStore.availableVoices) -> AuditionPreset {
+    static func from(_ preset: EmotionPreset) -> AuditionPreset {
         let emotion = preset
         return AuditionPreset(
             name: preset.rawValue.capitalized,
@@ -105,7 +102,6 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
             pitch: 0.0,
             ageProfile: 0.0,
             masculinity: 0.0,
-            vocalEnergy: 1.0,
             strainOrRasp: 0.0
         )
     }
@@ -114,29 +110,6 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
 @MainActor
 @Observable
 final class AuditionPresetStore {
-    nonisolated static var availableVoices: [String] {
-        let voiceDir = ProductionRunner.resolvedVoiceDirectory
-        
-        var voices: [String] = []
-        if let contents = try? FileManager.default.contentsOfDirectory(at: voiceDir, includingPropertiesForKeys: nil) {
-            for file in contents {
-                let ext = file.pathExtension.lowercased()
-                if ext == "safetensors" || ext == "npy" {
-                    let name = file.deletingPathExtension().lastPathComponent
-                    if !name.contains("epochs_") {
-                        voices.append(name)
-                    }
-                }
-            }
-        }
-        
-        if !voices.isEmpty {
-            return voices.sorted()
-        }
-        
-        return ["narrator", "sad", "whisper", "happy", "angry"]
-    }
-
     var presets: [AuditionPreset]
     var selectedID: UUID {
         didSet { saveSelection() }
@@ -262,7 +235,6 @@ final class AuditionConfiguration {
     var activePreset: AuditionPreset = .from(.tender)
     var loadedPresetID: UUID?
     var globalConfig: ProsodiaConfig = ProsodiaConfigManager.shared.config
-    var mlxBaseVoice: String? = nil
     var mlxNarrationMode: Stage.NarrationMode = .solo
 
     init() {

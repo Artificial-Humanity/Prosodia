@@ -159,7 +159,6 @@ final class ProductionRunner {
 
         let document = InMemoryBookDocument(chapters: [text])
         let director = getDirector(config: config, model: model)
-        await actor.setBaseVoice(config.emotionMode == .director ? config.mlxBaseVoice : nil)
 
         let controller = await Stage.StageCoordinator.run(
             document: document,
@@ -394,7 +393,7 @@ actor CachingDirectorEngine: Stage.DirectorInference {
         if let cached = Self.cache[cacheKey] {
             return cached
         } else {
-            let result = await base.annotate(passage: passage)
+            let result = base.annotate(passage: passage)
             if !result.isEmpty {
                 Self.cache[cacheKey] = result
             }
@@ -406,3 +405,4 @@ actor CachingDirectorEngine: Stage.DirectorInference {
         cache.removeAll()
     }
 }
+
