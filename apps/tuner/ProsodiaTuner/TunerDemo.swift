@@ -50,6 +50,14 @@ final class ProductionRunner {
     }
 
     private func getDirector(config: AuditionConfiguration, model: DirectorModel?) -> any Stage.DirectorInference {
+        // Preset mode: never cache. The stub director bakes in the directive at
+        // construction, and the cache key below doesn't include it — so a cached
+        // stub silently freezes preset edits (speed, VAD, volume, casting) made
+        // after the first Speak. Building a stub is free; only the Gemma path
+        // needs caching.
+        guard config.emotionMode == .director else {
+            return config.makeDirector(model: model)
+        }
         if let cached = cachedDirector,
            cachedDirectorModel == model,
            cachedDirectorEmotionMode == config.emotionMode,
