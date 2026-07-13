@@ -74,7 +74,7 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # Local model weights (large; fetched/installed out of band).
-# Models now live at the workspace root (../Reference/Models), shared across subprojects.
+# Models now live at the workspace root (../Reference/models), shared across subprojects.
 *.gguf
 *.onnx
 *.safetensors

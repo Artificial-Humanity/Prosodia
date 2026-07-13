@@ -1,5 +1,5 @@
 {
-  "modelsBase" : "../Reference/Models",
+  "modelsBase" : "../Reference/models",
   "roles" : {
     "actor" : { "path" : "sonora.tflite", "display" : "Sonora Actor (v1-ljspeech)" },
     "voices" : { "path" : ".", "display" : "Voice packs directory" },
