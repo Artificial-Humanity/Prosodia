@@ -46,16 +46,15 @@ Notes:
 
 ## 💻 Local Models for the Harness
 
-For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the workspace-root `Models/` folder (one level above the Prosodia repo, shared across subprojects):
+For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the shared `Reference/Models/` folder at the workspace root (`../Reference/Models` from the Prosodia repo — moved under `Reference/` 2026-07-13 to mark these as reference assets, not workspaces):
 
 ```text
-/Models/                              # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout)
+/Reference/Models/                    # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout; moved under Reference/ 2026-07-13)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
 ├── styletts2_lite.tflite             # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
 │   └── gemma-4-E4B-it.litertlm      # Gemma 4 E4B LiteRT-LM
-├── Sonora/                           # HF clone: lmcfarlin/Sonora — our checkpoints + TFLite exports (v1-ljspeech/ incl. litert-split/)
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 ├── shivammehta25/
@@ -67,13 +66,15 @@ For real speech in the harness on macOS, models are resolved relative to the pro
     └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
+The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + TFLite exports, `v1-ljspeech/` incl. `litert-split/`) is **not** under `Reference/Models/`: it is a working artifact registry, not a reference model, and lives at `Sonora/model/` inside the Sonora project directory (moved 2026-07-13).
+
 > [!NOTE]
 > **Model paths now resolve through `prosodia_models.json`** (repo root — role-based config,
 > Debt F, commit `577a598`): the apps look up `actor`, `voices`, and `director-*` roles instead of
 > hard-coding filenames, so the `Google/` Gemma location is handled by config. ⚠️ Authored
 > remotely without `xcodebuild` — verify both app targets build (`apps/tuner/build.sh`) before
 > deleting any root-level compatibility copies. `config.json` and `styletts2_lite.tflite` remain
-> at the Models root because the Rust engine reads the config adjacent to the model file.
+> at the `Reference/Models/` root because the Rust engine reads the config adjacent to the model file.
 
 The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 

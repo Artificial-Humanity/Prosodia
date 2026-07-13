@@ -4,7 +4,7 @@ Repository layout and module responsibilities — the single source of truth for
 of **this repo**.
 
 Project Prosodia is one repo under the private `Artificial-Humanity` umbrella. Org-level
-files — the `AGENTS.md` manifest, the internal `Notes/`, the shared `Models/` reference
+files — the `AGENTS.md` manifest, the internal `Notes/`, the shared `Reference/Models/` reference
 directory, and the `.github/` org profile — live in the umbrella or as sibling repos, **not**
 in this repo. See the umbrella `AGENTS.md` for the full cross-repo topology.
 

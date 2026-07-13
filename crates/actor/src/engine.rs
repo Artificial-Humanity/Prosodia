@@ -833,7 +833,7 @@ mod tests {
 
     #[test]
     fn test_matcha_stock_forward() {
-        let model_path = "../../../Models/matcha_stock.tflite";
+        let model_path = "../../../Reference/Models/matcha_stock.tflite";
         if !Path::new(model_path).exists() {
             println!("Skipping test: {} not found", model_path);
             return;
@@ -864,8 +864,8 @@ mod tests {
     /// app render path: G2P → process_span → chunked forward.
     #[test]
     fn test_span_render_chunks_past_static_limit() {
-        let model_path = "../../../Models/styletts2_lite.tflite";
-        let config_path = "../../../Models/config.json";
+        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let config_path = "../../../Reference/Models/config.json";
         if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
             println!("Skipping test: staged model/config not found");
             return;
@@ -973,8 +973,8 @@ mod tests {
     /// audio for A/B audition against ref_render_test.wav.
     #[test]
     fn test_our_g2p_render_tmp() {
-        let model_path = "../../../Models/styletts2_lite.tflite";
-        let config_path = "../../../Models/config.json";
+        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
+        let config_path = "../../../Reference/Models/config.json";
         if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
             println!("Skipping: staged model/config not found");
             return;
@@ -1045,7 +1045,7 @@ mod tests {
     /// audition — isolates the G2P frontend from the model.
     #[test]
     fn test_reference_ids_render_tmp() {
-        let model_path = "../../../Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
         let ids_path = "../../target/ref_ids.json";
         if !Path::new(model_path).exists() || !Path::new(ids_path).exists() {
             println!("Skipping: model or ref_ids.json missing");
@@ -1055,7 +1055,7 @@ mod tests {
         println!("reference ids: {:?}", ids);
         for (model, out_name) in [
             (model_path, "../../target/ref_render_test.wav"),
-            ("../../../Models/matcha_stock.tflite", "../../target/ref_render_stock.wav"),
+            ("../../../Reference/Models/matcha_stock.tflite", "../../target/ref_render_stock.wav"),
         ] {
             if !Path::new(model).exists() {
                 println!("skipping {model} (not found)");
@@ -1090,10 +1090,10 @@ mod tests {
     }
 
     /// Direct engine forward against the staged Sonora e2e export (skips when
-    /// the gitignored `Models/styletts2_lite.tflite` is absent).
+    /// the gitignored `Reference/Models/styletts2_lite.tflite` is absent).
     #[test]
     fn test_sonora_e2e_forward() {
-        let model_path = "../../../Models/styletts2_lite.tflite";
+        let model_path = "../../../Reference/Models/styletts2_lite.tflite";
         if !Path::new(model_path).exists() {
             println!("Skipping test: {} not found", model_path);
             return;
