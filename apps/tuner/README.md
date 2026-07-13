@@ -67,13 +67,13 @@ For real speech in the harness on macOS, models are resolved relative to the pro
     └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
-> [!WARNING]
-> **The 2026-07-12 restructure moved the Gemma models into `Google/`, but `TunerDemo.swift` still
-> hard-codes `gemma-4-*.litertlm` at the `Models/` root** (the Debt-F bug class — model paths
-> hard-coded in app source). Until Debt F (role-based model config) lands, either keep root-level
-> copies/symlinks of the Gemma files on the machine running the harness, or expect
-> "Gemma (missing)". `config.json` and `styletts2_lite.tflite` intentionally remain at root for the
-> same reason.
+> [!NOTE]
+> **Model paths now resolve through `prosodia_models.json`** (repo root — role-based config,
+> Debt F, commit `577a598`): the apps look up `actor`, `voices`, and `director-*` roles instead of
+> hard-coding filenames, so the `Google/` Gemma location is handled by config. ⚠️ Authored
+> remotely without `xcodebuild` — verify both app targets build (`apps/tuner/build.sh`) before
+> deleting any root-level compatibility copies. `config.json` and `styletts2_lite.tflite` remain
+> at the Models root because the Rust engine reads the config adjacent to the model file.
 
 The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 
