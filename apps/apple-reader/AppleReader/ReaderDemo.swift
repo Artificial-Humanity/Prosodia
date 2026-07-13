@@ -110,30 +110,20 @@ final class ProductionRunner {
 
     // MARK: - Real audio (macOS, model files required)
 
-    nonisolated static var projectRoot: URL {
-        #if os(macOS)
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // ReaderDemo.swift parent (AppleReader)
-            .deletingLastPathComponent() // AppleReader (outer)
-            .deletingLastPathComponent() // apps (outer)
-            .deletingLastPathComponent() // Project Root (Prosodia)
-        #else
-        URL(fileURLWithPath: "/dev/null")
-        #endif
-    }
+    // Model locations resolve through prosodia_models.json (role-based; Debt F) —
+    // no #filePath walks and no model filename literals in app source.
 
     nonisolated static var modelsBase: URL {
-        projectRoot
-            .deletingLastPathComponent() // up from the Prosodia repo to the workspace root
-            .appendingPathComponent("Models")
+        ProsodiaModelsManager.shared.modelsBase
     }
 
     nonisolated static var resolvedModelPath: URL {
-        modelsBase.appendingPathComponent("styletts2_lite.tflite")
+        ProsodiaModelsManager.shared.url(forRole: "actor")
+            ?? modelsBase.appendingPathComponent("actor.tflite")
     }
 
     nonisolated static var resolvedVoiceDirectory: URL {
-        modelsBase
+        ProsodiaModelsManager.shared.url(forRole: "voices") ?? modelsBase
     }
 
     var canSpeak: Bool {
@@ -218,8 +208,12 @@ final class ProductionRunner {
 struct DirectorModel: Codable, Identifiable, Hashable, Sendable {
     var name: String
     var path: String
+    /// Role key from prosodia_models.json for config-seeded entries; nil for
+    /// user-added models. The role — not the absolute path — is the durable
+    /// identity, so Models/ restructures no longer strand persisted entries.
+    var role: String? = nil
 
-    var id: String { path }
+    var id: String { role ?? path }
     var directory: URL { URL(fileURLWithPath: path) }
     var displayName: String { name }
 
@@ -250,17 +244,33 @@ final class DirectorModelStore {
 
     init() {
         var loadedModels = Self.load()
-        var pathChanged = false
+        // Role-seeded entries re-resolve their path from prosodia_models.json on
+        // every launch — the role key is the durable identity, so restructures
+        // never strand them. Legacy path-persisted entries whose file is gone
+        // adopt a role by filename match (one-time migration onto role keys);
+        // user-added entries keep their explicit absolute paths.
+        var migratedIDs: [String: String] = [:]
         for i in 0..<loadedModels.count {
-            if loadedModels[i].path.contains("apps/Models") {
-                loadedModels[i].path = loadedModels[i].path.replacingOccurrences(of: "apps/Models", with: "Models")
-                pathChanged = true
+            if loadedModels[i].role == nil, !loadedModels[i].isAvailable,
+               let role = ProsodiaModelsManager.shared.role(
+                   matchingFilename: loadedModels[i].directory.lastPathComponent) {
+                migratedIDs[loadedModels[i].id] = role
+                loadedModels[i].role = role
+            }
+            if let role = loadedModels[i].role,
+               let url = ProsodiaModelsManager.shared.url(forRole: role) {
+                loadedModels[i].path = url.standardizedFileURL.path
+                loadedModels[i].name = ProsodiaModelsManager.shared.display(forRole: role)
             }
         }
+        // Migration can converge on an id that is already listed — keep the first.
+        var seenIDs = Set<String>()
+        loadedModels.removeAll { !seenIDs.insert($0.id).inserted }
         models = loadedModels
-        selectedID = UserDefaults.standard.string(forKey: Self.selectedKey)
+        let storedSelection = UserDefaults.standard.string(forKey: Self.selectedKey)
+        selectedID = storedSelection.map { migratedIDs[$0] ?? $0 }
         if models.isEmpty { seedDefaults() }
-        else if pathChanged { save() }
+        else { save() }
         reconcileSelection()
     }
 
@@ -301,13 +311,17 @@ final class DirectorModelStore {
     }
 
     private func seedDefaults() {
-        let base = ProductionRunner.modelsBase
-        
-        // Seed LiteRT-LM defaults: Gemma 4 (E2B is first/default), the only director backend.
-        for file in ["gemma-4-E2B-it.litertlm", "gemma-4-E4B-it.litertlm"] {
-            let url = base.appendingPathComponent(file)
-            if FileManager.default.fileExists(atPath: url.path) {
-                models.append(DirectorModel(name: file, path: url.path))
+        // Seed the Director roles configured in prosodia_models.json, in its
+        // directorRoleOrder (the first available entry becomes the default).
+        for role in ProsodiaModelsManager.shared.directorRoles {
+            guard let url = ProsodiaModelsManager.shared.url(forRole: role) else { continue }
+            let model = DirectorModel(
+                name: ProsodiaModelsManager.shared.display(forRole: role),
+                path: url.path,
+                role: role
+            )
+            if model.isAvailable {
+                models.append(model)
             }
         }
 

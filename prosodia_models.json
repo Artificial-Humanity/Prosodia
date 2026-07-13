@@ -1,0 +1,10 @@
+{
+  "modelsBase" : "../Models",
+  "roles" : {
+    "actor" : { "path" : "styletts2_lite.tflite", "display" : "Sonora Actor (v1-ljspeech)" },
+    "voices" : { "path" : ".", "display" : "Voice packs directory" },
+    "director-light" : { "path" : "Google/gemma-4-E2B-it.litertlm", "display" : "Gemma 4 E2B" },
+    "director-heavy" : { "path" : "Google/gemma-4-E4B-it.litertlm", "display" : "Gemma 4 E4B" }
+  },
+  "directorRoleOrder" : [ "director-light", "director-heavy" ]
+}

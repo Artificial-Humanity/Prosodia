@@ -138,8 +138,9 @@ final class ReaderViewModel {
             actor = StubVocalActor()
         }
         
-        let directorModelFile = ProductionRunner.modelsBase.appendingPathComponent("gemma-4-E2B-it.litertlm")
-        if FileManager.default.fileExists(atPath: directorModelFile.path) {
+        // Default Director resolves through prosodia_models.json (role-based; Debt F).
+        if let directorModelFile = ProsodiaModelsManager.shared.url(forRole: "director-light"),
+           FileManager.default.fileExists(atPath: directorModelFile.path) {
             director = DirectorRegistry.shared.makeDirector(for: directorModelFile, narrationMode: .solo) ?? StubDirectorInference()
         } else {
             director = StubDirectorInference()
