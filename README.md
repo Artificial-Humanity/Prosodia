@@ -49,6 +49,11 @@ cargo build --release
 
 Dual-licensed under the GNU General Public License v3.0 and a commercial license. See the [Docs](Docs) folder for details.
 
+The Director→Actor expressive-control design is the subject of a
+[defensive publication](Docs/defensive-publication-expressive-control.md) (2026-07-13): a dated,
+enabling technical disclosure placing the mechanism — including contemplated variants — in the
+public record as prior art, free for anyone to implement.
+
 ---
 
 *“Speak the speech, I pray you, as I pronounced it to you, trippingly on the tongue.” — Hamlet* 💀🎬
