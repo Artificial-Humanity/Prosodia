@@ -33,6 +33,7 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
         modelsBase: "../Reference/models",
         roles: [
             "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (v1-ljspeech)"),
+            "actor-split": ModelRoleEntry(path: "../../Registry/Sonora/v1-ljspeech/litert-split", display: "Sonora Actor (v1 litert-split, Plan A multi-graph)"),
             "voices": ModelRoleEntry(path: ".", display: "Voice packs directory"),
             "director-light": ModelRoleEntry(path: "Google/gemma-4-E2B-it.litertlm", display: "Gemma 4 E2B"),
             "director-heavy": ModelRoleEntry(path: "Google/gemma-4-E4B-it.litertlm", display: "Gemma 4 E4B"),

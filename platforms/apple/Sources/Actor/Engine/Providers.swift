@@ -183,19 +183,40 @@ public actor LiteRtVocalActor: Stage.VocalActor {
 public struct LiteRtVocalActorProvider: VocalActorProvider {
     public init() {}
 
+    /// True when `modelURL` is a split-model directory (multi-graph Plan A
+    /// runtime): textenc graph + host embedding table + config.
+    private func isSplitModelDirectory(_ url: URL) -> Bool {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir),
+              isDir.boolValue else { return false }
+        let hasTextenc = ((try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? [])
+            .contains { $0.hasPrefix("matcha_textenc") && $0.hasSuffix(".tflite") }
+        return hasTextenc &&
+               FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path) &&
+               FileManager.default.fileExists(atPath: url.appendingPathComponent("emb.bin").path)
+    }
+
+    /// The engine-contract config sits INSIDE a split-model directory, and
+    /// NEXT TO a monolithic .tflite file.
+    private func configURL(for modelURL: URL) -> URL {
+        if isSplitModelDirectory(modelURL) {
+            return modelURL.appendingPathComponent("config.json")
+        }
+        return modelURL.deletingLastPathComponent().appendingPathComponent("config.json")
+    }
+
     public func canHandle(modelURL: URL) -> Bool {
+        if isSplitModelDirectory(modelURL) { return true }
         let ext = modelURL.pathExtension.lowercased()
         let isTflite = ext == "tflite" || modelURL.path.hasSuffix(".tflite")
-        let configURL = modelURL.deletingLastPathComponent().appendingPathComponent("config.json")
         return isTflite &&
                FileManager.default.fileExists(atPath: modelURL.path) &&
-               FileManager.default.fileExists(atPath: configURL.path)
+               FileManager.default.fileExists(atPath: configURL(for: modelURL).path)
     }
 
     public func makeActor(modelURL: URL, voiceDirectoryURL: URL?) -> any Stage.VocalActor {
-        let configURL = modelURL.deletingLastPathComponent().appendingPathComponent("config.json")
         let voiceDir = voiceDirectoryURL ?? modelURL.deletingLastPathComponent()
-        return try! LiteRtVocalActor(modelURL: modelURL, configURL: configURL, voiceDirectoryURL: voiceDir)
+        return try! LiteRtVocalActor(modelURL: modelURL, configURL: configURL(for: modelURL), voiceDirectoryURL: voiceDir)
     }
 }
 

@@ -49,6 +49,8 @@ unsafe extern "C" {
     ) -> i32;
 
     pub fn TfLiteTensorByteSize(tensor: *const TfLiteTensor) -> usize;
+    pub fn TfLiteTensorNumDims(tensor: *const TfLiteTensor) -> i32;
+    pub fn TfLiteTensorDim(tensor: *const TfLiteTensor, dim_index: i32) -> i32;
     pub fn TfLiteTensorName(tensor: *const TfLiteTensor) -> *const c_char;
     pub fn TfLiteTensorType(tensor: *const TfLiteTensor) -> i32;
 }

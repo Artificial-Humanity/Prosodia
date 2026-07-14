@@ -68,6 +68,13 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 
 The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + TFLite exports, `v1-ljspeech/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model, and lives at the workspace-root `Registry/Sonora/`, a sibling of `Reference/` (layout end-state C, 2026-07-13).
 
+> [!TIP]
+> **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
+> (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`) — the `actor-split` role in
+> `prosodia_models.json` points at the registry's `litert-split/` set. To audition it, swap the
+> `actor` role's path to that directory: host-side Euler ODE, real per-token durations from `logw`
+> (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
+
 > [!NOTE]
 > **Model paths now resolve through `prosodia_models.json`** (repo root — role-based config,
 > Debt F, commit `577a598`): the apps look up `actor`, `voices`, and `director-*` roles instead of

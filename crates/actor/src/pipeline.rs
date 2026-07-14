@@ -62,9 +62,31 @@ pub enum PipelineError {
 
 #[derive(serde::Deserialize)]
 struct StyleTTS2Config {
-    vocab: HashMap<String, i32>,
+    /// Engine-contract form: explicit symbol → id map.
+    #[serde(default)]
+    vocab: Option<HashMap<String, i32>>,
+    /// Split-graph config form: ordered symbol list (id = index).
+    #[serde(default)]
+    symbols: Option<Vec<String>>,
     #[serde(default)]
     is_matcha_ipa: Option<bool>,
+}
+
+impl StyleTTS2Config {
+    fn into_vocab(self) -> Result<(HashMap<String, i32>, Option<bool>), String> {
+        if let Some(vocab) = self.vocab {
+            return Ok((vocab, self.is_matcha_ipa));
+        }
+        if let Some(symbols) = self.symbols {
+            let vocab = symbols
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| (s, i as i32))
+                .collect();
+            return Ok((vocab, self.is_matcha_ipa));
+        }
+        Err("config.json has neither a \"vocab\" map nor a \"symbols\" list".to_string())
+    }
 }
 
 #[uniffi::export(callback_interface)]
@@ -123,13 +145,16 @@ impl ProsodiaActorPipeline {
     ) -> Result<Arc<Self>, PipelineError> {
         let config: StyleTTS2Config = serde_json::from_str(&config_json)
             .map_err(|e| PipelineError::JsonParse { msg: e.to_string() })?;
+        let (vocab, is_matcha_ipa) = config
+            .into_vocab()
+            .map_err(|msg| PipelineError::JsonParse { msg })?;
         Ok(Arc::new(Self {
             g2p: Mutex::new(g2p),
             voice_loader,
-            vocab: config.vocab,
+            vocab,
             sample_rate,
             lang_code,
-            is_matcha_ipa: config.is_matcha_ipa.unwrap_or(true),
+            is_matcha_ipa: is_matcha_ipa.unwrap_or(true),
         }))
     }
 

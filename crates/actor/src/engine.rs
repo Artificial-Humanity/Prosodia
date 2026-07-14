@@ -186,6 +186,10 @@ impl Drop for InterpreterWrapper {
 pub struct LiteRtActorEngine {
     model_path: String,
     inner: Mutex<Option<InterpreterWrapper>>,
+    /// Lazily-built multi-graph runtime when `model_path` is a split-model
+    /// directory (textenc/decoder/vocoder graphs + emb.bin + config.json)
+    /// instead of a single .tflite file.
+    split: Mutex<Option<crate::split_engine::SplitGraphEngine>>,
 }
 
 #[uniffi::export]
@@ -195,7 +199,53 @@ impl LiteRtActorEngine {
         Arc::new(Self {
             model_path,
             inner: Mutex::new(None),
+            split: Mutex::new(None),
         })
+    }
+}
+
+impl LiteRtActorEngine {
+    fn is_split(&self) -> bool {
+        crate::split_engine::is_split_model_dir(std::path::Path::new(&self.model_path))
+    }
+
+    fn get_or_init_split(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, Option<crate::split_engine::SplitGraphEngine>>, SpeechEngineError>
+    {
+        let mut guard = self.split.lock().map_err(|_| SpeechEngineError::Inference {
+            msg: "split engine mutex poisoned".to_string(),
+        })?;
+        if guard.is_none() {
+            let engine =
+                crate::split_engine::SplitGraphEngine::new(std::path::Path::new(&self.model_path))
+                    .map_err(|msg| SpeechEngineError::Inference { msg })?;
+            *guard = Some(engine);
+        }
+        Ok(guard)
+    }
+
+    fn forward_split(
+        &self,
+        phoneme_ids: Vec<i32>,
+        speed: f32,
+        duration_scales: Option<Vec<f32>>,
+    ) -> Result<ActorEngineOutput, SpeechEngineError> {
+        let guard = self.get_or_init_split()?;
+        let engine = guard.as_ref().unwrap();
+        let out = engine
+            .forward(
+                &phoneme_ids,
+                speed,
+                duration_scales.as_deref(),
+                MATCHA_CFM_TEMPERATURE,
+                None,
+            )
+            .map_err(|msg| SpeechEngineError::Inference { msg })?;
+        // Same output contract as the monolithic Matcha path: resample the
+        // model-native rate to the stage's 24 kHz.
+        let audio = resample_linear(out.audio, engine.cfg.sample_rate as f32, 24000.0);
+        Ok(ActorEngineOutput { audio, pred_dur: out.pred_dur })
     }
 }
 
@@ -311,6 +361,14 @@ impl LiteRtActorEngine {
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
+        if self.is_split() {
+            // Multi-graph Plan A path. The split recipe is single-speaker with
+            // no F0 predictor input yet: style/vat/f0_bias do not apply (the
+            // VAT-conditioned actor is milestone 3); duration_scales DO apply,
+            // host-side, on the realized durations.
+            let _ = (&style, &vat, &f0_bias);
+            return self.forward_split(phoneme_ids, speed, duration_scales);
+        }
         let mut wrapper_guard = self.get_or_init_interpreter()?;
         let wrapper = wrapper_guard.as_mut().unwrap();
 
@@ -707,6 +765,9 @@ impl LiteRtActorEngine {
 
     fn reclaim_memory_impl(&self) {
         *self.inner.lock().unwrap() = None;
+        if let Ok(mut split) = self.split.lock() {
+            *split = None;
+        }
     }
 }
 
@@ -759,6 +820,11 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
     }
 
     fn is_matcha(&self) -> bool {
+        if self.is_split() {
+            // The split recipe is Matcha by construction (blank-interspersed
+            // ids, Matcha symbol inventory).
+            return true;
+        }
         if let Ok(guard) = self.get_or_init_interpreter() {
             guard.as_ref().map(|w| w.is_matcha).unwrap_or(false)
         } else {
@@ -767,6 +833,13 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
     }
 
     fn get_token_limit(&self) -> i32 {
+        if self.is_split() {
+            // The fixed-shape textenc pads to MAX_TEXT interspersed tokens.
+            return match self.get_or_init_split() {
+                Ok(guard) => guard.as_ref().map(|e| e.cfg.max_text as i32).unwrap_or(50),
+                Err(_) => 50,
+            };
+        }
         if let Ok(guard) = self.get_or_init_interpreter() {
             if let Some(ref wrapper) = *guard {
                 if wrapper.is_matcha {
@@ -1153,6 +1226,37 @@ mod tests {
         );
         assert!(!output.audio.is_empty(), "Expected non-empty output audio");
         assert!(peak > 0.001, "Output audio is silent (peak {})", peak);
+    }
+
+    /// End-to-end dispatch through LiteRtActorEngine with a split-model
+    /// DIRECTORY path: detection, token limit, forward, 24 kHz resample.
+    /// Skips when the registry clone is absent.
+    #[test]
+    fn test_split_dispatch_through_engine() {
+        let dir = "../../../Registry/Sonora/v1-ljspeech/litert-split";
+        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
+            println!("Skipping: split model dir not found");
+            return;
+        }
+        let engine = LiteRtActorEngine::new(dir.to_string());
+        assert!(engine.is_matcha(), "split dir must report matcha");
+        assert_eq!(engine.get_token_limit(), 256, "split token limit = MAX_TEXT");
+
+        let ids = vec![0, 12, 0, 15, 0, 18, 0, 5, 0, 9, 0];
+        let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
+        let out = engine
+            .forward(ids.clone(), style, 1.0, None, None, None)
+            .expect("split dispatch forward");
+        let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        println!(
+            "split dispatch: {} samples @24k, peak {:.4}, pred_dur len {}",
+            out.audio.len(),
+            peak,
+            out.pred_dur.len()
+        );
+        assert!(!out.audio.is_empty());
+        assert!(peak > 0.001, "silent output (peak {peak})");
+        assert_eq!(out.pred_dur.len(), ids.len(), "real per-token durations");
     }
 
     #[test]

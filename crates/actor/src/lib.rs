@@ -10,4 +10,5 @@ pub mod normalization;
 pub mod tagger;
 pub mod lexicon;
 pub mod tflite;
+pub mod split_engine;
 
