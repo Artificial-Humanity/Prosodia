@@ -1,5 +1,9 @@
 # 📖 Prosodia: The On-Device Dramatic Audiobook Engine
 
+<p align="center">
+  <img src="assets/hero.png" width="500" alt="Project Prosodia Storytelling Illustration" />
+</p>
+
 Welcome to **Prosodia**! 🎭✨
 
 Prosodia is an on-device, directable neural audiobook engine. Instead of a robotic text-to-speech voice reading books like they're reciting tax codes, Prosodia acts as a digital rehearsal studio. It analyzes the text, determines the emotional subtext, blends custom voice casting profiles, and narrates audiobooks with performance-grade human expression.
