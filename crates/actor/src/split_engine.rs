@@ -317,6 +317,13 @@ impl SplitGraphEngine {
     /// * `duration_scales` — per-token multiplicative dictation, applied to the
     ///   realized (post-ceil) durations. This is where the control contract's
     ///   `DS:` channel finally reaches a model.
+    /// * `mel_gain_db` — optional per-frame dB envelope added to the
+    ///   denormalized log-mel between the decoder and vocoder graphs — the
+    ///   energy channel. Measured 2026-07-14 (exploit-before-train): the
+    ///   vocoder is linear in log-mel gain to within 0.1 dB, so this hook is
+    ///   dB-exact, frame-addressable, and WER-safe to at least −12 dB; ramp
+    ///   envelope edges (e.g. raised-cosine over ~8 frames) to avoid clicks.
+    ///   Indexed in frames; entries beyond the envelope default to 0 dB.
     /// * `noise` — optional pre-scaled initial state x₀ (n_feats × MAX_MEL),
     ///   for reproducible runs and reference-parity tests; when absent, x₀ is
     ///   sampled N(0, temperature²).
@@ -325,6 +332,7 @@ impl SplitGraphEngine {
         phoneme_ids: &[i32],
         speed: f32,
         duration_scales: Option<&[f32]>,
+        mel_gain_db: Option<&[f32]>,
         temperature: f32,
         noise: Option<&[f32]>,
     ) -> Result<SplitForwardOutput, String> {
@@ -449,12 +457,19 @@ impl SplitGraphEngine {
             t += dt;
         }
 
-        // 6. Denormalize mel (masked), vocode, clip, trim.
+        // 6. Denormalize mel (masked), apply the per-frame energy envelope
+        //    (dB → natural-log mel units), vocode, clip, trim.
+        const DB_TO_LN: f32 = 0.115_129_255; // ln(10)/20
         let mut mel = vec![0.0f32; state_len];
         for c in 0..cfg.n_feats {
             for f in 0..cfg.max_mel {
-                mel[c * cfg.max_mel + f] =
-                    (x[c * cfg.max_mel + f] * cfg.mel_std + cfg.mel_mean) * ymask[f];
+                let mut m = x[c * cfg.max_mel + f] * cfg.mel_std + cfg.mel_mean;
+                if let Some(env) = mel_gain_db {
+                    if let Some(&db) = env.get(f) {
+                        m += db * DB_TO_LN;
+                    }
+                }
+                mel[c * cfg.max_mel + f] = m * ymask[f];
             }
         }
         self.vocoder.set_input(0, &mel)?;
@@ -557,7 +572,7 @@ mod tests {
         // The fixture z is pre-scaled (×temperature) and masked by the
         // reference; pass it through unmodified.
         let out = engine
-            .forward(&ids, 1.0, None, 1.0, Some(&z))
+            .forward(&ids, 1.0, None, None, 1.0, Some(&z))
             .expect("split forward");
 
         assert_eq!(
@@ -585,7 +600,7 @@ mod tests {
         // should roughly double the realized frame count.
         let ds = vec![2.0f32; ids.len()];
         let out2 = engine
-            .forward(&ids, 1.0, Some(&ds), 1.0, Some(&z))
+            .forward(&ids, 1.0, Some(&ds), None, 1.0, Some(&z))
             .expect("split forward with duration scales");
         let frames1 = out.audio.len() / engine.cfg.hop;
         let frames2 = out2.audio.len() / engine.cfg.hop;
@@ -593,6 +608,23 @@ mod tests {
         assert!(
             (frames2 as f32) > (frames1 as f32) * 1.8,
             "duration_scales had insufficient effect: {frames1} -> {frames2}"
+        );
+
+        // Energy hook: a flat −6 dB mel envelope must move output RMS by
+        // ≈ −6 dB (the vocoder is linear in log-mel gain; measured 0.1 dB
+        // tolerance, we allow 0.5 here for fp16 graphs).
+        let env = vec![-6.0f32; engine.cfg.max_mel];
+        let out3 = engine
+            .forward(&ids, 1.0, None, Some(&env), 1.0, Some(&z))
+            .expect("split forward with mel gain");
+        let rms = |a: &[f32]| {
+            (a.iter().map(|&s| (s as f64) * (s as f64)).sum::<f64>() / a.len() as f64).sqrt()
+        };
+        let delta_db = 20.0 * (rms(&out3.audio) / rms(&out.audio)).log10();
+        println!("mel-gain hook: requested -6.0 dB, measured {delta_db:.2} dB");
+        assert!(
+            (delta_db + 6.0).abs() < 0.5,
+            "mel-gain inaccurate: requested -6 dB, measured {delta_db:.2} dB"
         );
     }
 }

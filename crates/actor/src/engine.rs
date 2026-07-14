@@ -233,11 +233,16 @@ impl LiteRtActorEngine {
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
         let guard = self.get_or_init_split()?;
         let engine = guard.as_ref().unwrap();
+        // mel_gain_db (the energy channel) is not routed from the payload yet:
+        // wiring G:/per-frame energy through ProsodiaSpeechEngine::forward is a
+        // cross-stack FFI signature change (Swift + Kotlin implementers) that
+        // lands with the milestone-3 VAT conditioning rework of this seam.
         let out = engine
             .forward(
                 &phoneme_ids,
                 speed,
                 duration_scales.as_deref(),
+                None,
                 MATCHA_CFM_TEMPERATURE,
                 None,
             )
