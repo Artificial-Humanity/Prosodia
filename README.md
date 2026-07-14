@@ -20,7 +20,7 @@ Our monorepo organizes the workspace into simple layers:
 *   [**`core`**](crates/core): The vocabulary index, BPE tokenizer, and shared traits. The bedrock of our dependency graph.
 *   [**`folioparser`**](crates/folioparser): Parses EPUB XML structures, extracts plain text, and prevents us from getting lost in OPF manifests.
 *   [**`director`**](crates/director): The Emotional Director. Driven by Gemma 4 (LiteRT-LM), it reads book passages and provides performance notes—such as Valence, Arousal, Tension (VAD), and casting assignments.
-*   [**`actor`**](crates/actor): The Voice Talent. Driven by StyleTTS2 (LiteRT), it takes the performance notes and synthesizes raw floating-point PCM audio matrices.
+*   [**`actor`**](crates/actor): The Voice Talent. Driven by [**Sonora**](https://github.com/Artificial-Humanity/Sonora) (LiteRT), our directable TTS model built on the Matcha-TTS architecture, it takes the performance notes and synthesizes raw floating-point PCM audio matrices.
 *   [**`stage`**](crates/stage): The Stage Manager. Coordinates the Director and the Actor, schedules queues, and runs around holding a clipboard making sure everything plays gaplessly.
 
 ### 2. Platforms (Hardware Bridges)
