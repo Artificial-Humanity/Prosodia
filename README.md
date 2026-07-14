@@ -25,8 +25,13 @@ Our monorepo organizes the workspace into simple layers:
 
 ### 2. Platforms (Hardware Bridges)
 *   [**`apple`**](platforms/apple): A Swift Package combining the FFI target bridges and custom `AVAudioEngine` PCM loops.
+*   [**`android`**](platforms/android): Kotlin/NDK bridge streaming to C++ Oboe / AAudio queues.
+*   [**`linux`**](platforms/linux): Desktop background runner mapped to ALSA / PulseAudio.
+*   [**`windows`**](platforms/windows): C#/.NET library driving WASAPI exclusive-mode low-latency streaming.
 
 ### 3. Downstream Apps
+*   [**`apple-reader`**](apps/apple-reader): The SwiftUI local-first eBook reader for iOS/macOS.
+*   [**`android-reader`**](apps/android-reader): The Jetpack Compose counterpart — early scaffold, not yet at feature parity.
 *   [**`tuner`**](apps/tuner): The Rehearsal Studio mixing board. Tweak VAD sliders, swap casting parameters, A/B test models, and listen to the dramatic results.
 *   [**`tuner-extension`**](apps/tuner-extension): Chrome Manifest V3 extension companion.
 
