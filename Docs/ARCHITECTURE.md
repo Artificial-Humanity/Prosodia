@@ -16,8 +16,7 @@ prosodia/ (Project Prosodia — one repo under the private Artificial-Humanity u
 │   ├── ARCHITECTURE.md          # This file — repository layout & structure
 │   ├── CONTRIBUTING.md          # Unified contribution and CLA guidelines
 │   └── ROADMAP.md               # Public forward-looking roadmap
-├── LICENSE                      # GNU General Public License v3.0 (GPL-3.0)
-├── LICENSE-COMMERCIAL.md        # McFarlin Technologies Commercial License (Draft)
+├── LICENSE                      # Apache License 2.0 (Apache-2.0)
 ├── README.md                    # Master architectural framework documentation
 ├── build_android.sh             # Android NDK build helper
 ├── build_frameworks.sh          # Apple XCFramework build helper

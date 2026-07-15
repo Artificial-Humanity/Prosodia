@@ -1,6 +1,6 @@
 # Defensive Publication — Director-Dictated Disentangled Prosody and Voice-Casting Control for On-Device Expressive Speech Narration
 
-**Publisher:** McFarlin Technologies, LLC / Artificial Humanity
+**Publisher:** Artificial Humanity
 **First published:** 2026-07-13, in the public Prosodia repository (github.com/Artificial-Humanity/Prosodia)
 **Prior public disclosure:** the working implementation of the mechanisms described here has been
 public in this repository's source code since 2026-06-13 (see git history of

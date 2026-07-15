@@ -56,7 +56,7 @@ cargo build --release
 
 ## 📄 License
 
-Dual-licensed under the GNU General Public License v3.0 and a commercial license. See the [Docs](Docs) folder for details.
+Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 The Director→Actor expressive-control design is the subject of a
 [defensive publication](Docs/defensive-publication-expressive-control.md) (2026-07-13): a dated,
