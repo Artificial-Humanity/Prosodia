@@ -81,7 +81,7 @@ EOF
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>${module}</string>
-    <key>CFBundleIdentifier</key><string>technology.mcfarlin.${module}</string>
+    <key>CFBundleIdentifier</key><string>io.artificialhumanity.${module}</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>${module}</string>
     <key>CFBundlePackageType</key><string>FMWK</string>

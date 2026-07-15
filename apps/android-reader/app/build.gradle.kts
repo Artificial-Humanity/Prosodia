@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "technology.mcfarlin.prosodia.reader"
+    namespace = "io.artificialhumanity.prosodia.reader"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "technology.mcfarlin.prosodia.reader"
+        applicationId = "io.artificialhumanity.prosodia.reader"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

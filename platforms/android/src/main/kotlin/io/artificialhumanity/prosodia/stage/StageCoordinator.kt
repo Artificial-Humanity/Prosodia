@@ -1,10 +1,10 @@
-package technology.mcfarlin.prosodia.stage
+package io.artificialhumanity.prosodia.stage
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import technology.mcfarlin.prosodia.audio.StageAudioSink
+import io.artificialhumanity.prosodia.audio.StageAudioSink
 
 // MARK: - NarrationSourceAdapter
 

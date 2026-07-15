@@ -1,4 +1,4 @@
-package technology.mcfarlin.prosodia.stage
+package io.artificialhumanity.prosodia.stage
 
 import kotlinx.coroutines.flow.Flow
 import java.io.File

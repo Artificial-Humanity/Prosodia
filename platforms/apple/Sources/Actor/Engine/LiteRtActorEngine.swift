@@ -6,7 +6,7 @@ import Kit
 /// A ``ProsodiaActorBackend`` powered by the Google LiteRT (TensorFlow Lite) runtime executed in the Rust core.
 public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend {
 
-    private static let log = Logger(subsystem: "com.mcfarlin.ProsodiaStage", category: "LiteRtActorEngine")
+    private static let log = Logger(subsystem: "io.artificialhumanity.ProsodiaStage", category: "LiteRtActorEngine")
 
     private let rustEngine: Kit.LiteRtActorEngine
 

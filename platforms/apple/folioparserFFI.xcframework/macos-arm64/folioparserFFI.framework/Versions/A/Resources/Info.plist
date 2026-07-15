@@ -4,7 +4,7 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>folioparserFFI</string>
-    <key>CFBundleIdentifier</key><string>technology.mcfarlin.folioparserFFI</string>
+    <key>CFBundleIdentifier</key><string>io.artificialhumanity.folioparserFFI</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>folioparserFFI</string>
     <key>CFBundlePackageType</key><string>FMWK</string>

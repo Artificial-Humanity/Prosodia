@@ -1,4 +1,4 @@
-package technology.mcfarlin.prosodia.audio
+package io.artificialhumanity.prosodia.audio
 
 import android.media.AudioAttributes
 import android.media.AudioFormat

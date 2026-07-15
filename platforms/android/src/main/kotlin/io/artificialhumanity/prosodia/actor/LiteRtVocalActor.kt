@@ -1,4 +1,4 @@
-package technology.mcfarlin.prosodia.actor
+package io.artificialhumanity.prosodia.actor
 
 import uniffi.actor.ActorEngineOutput
 import uniffi.actor.PipelineOutput

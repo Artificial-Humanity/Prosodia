@@ -1,4 +1,4 @@
-package technology.mcfarlin.prosodia.reader
+package io.artificialhumanity.prosodia.reader
 
 import android.content.Context
 import android.net.Uri
@@ -43,9 +43,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import technology.mcfarlin.prosodia.actor.LiteRtVocalActor
-import technology.mcfarlin.prosodia.director.LiteRtLmDirector
-import technology.mcfarlin.prosodia.stage.*
+import io.artificialhumanity.prosodia.actor.LiteRtVocalActor
+import io.artificialhumanity.prosodia.director.LiteRtLmDirector
+import io.artificialhumanity.prosodia.stage.*
 import java.io.File
 import java.io.FileOutputStream
 

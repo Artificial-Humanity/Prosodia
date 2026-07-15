@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "technology.mcfarlin.prosodia"
+    namespace = "io.artificialhumanity.prosodia"
     compileSdk = 34
 
     defaultConfig {

@@ -4,7 +4,7 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>actorFFI</string>
-    <key>CFBundleIdentifier</key><string>technology.mcfarlin.actorFFI</string>
+    <key>CFBundleIdentifier</key><string>io.artificialhumanity.actorFFI</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>actorFFI</string>
     <key>CFBundlePackageType</key><string>FMWK</string>

@@ -7,7 +7,7 @@ import Stage
 public actor LiteRtLmDirector: Stage.DirectorInference {
 
     /// Logger instance used to output telemetry.
-    private static let log = Logger(subsystem: "com.mcfarlin.ProsodiaStage", category: "LiteRtLmDirector")
+    private static let log = Logger(subsystem: "io.artificialhumanity.ProsodiaStage", category: "LiteRtLmDirector")
 
     /// The UniFFI Rust-backed GemmaDirector instance.
     nonisolated private let rustDirector: GemmaDirector

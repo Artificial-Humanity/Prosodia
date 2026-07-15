@@ -1,7 +1,7 @@
-package technology.mcfarlin.prosodia.director
+package io.artificialhumanity.prosodia.director
 
 import kotlinx.coroutines.runBlocking
-import technology.mcfarlin.prosodia.stage.NarrationMode
+import io.artificialhumanity.prosodia.stage.NarrationMode
 
 /**
  * A DirectorInference backed by a LiteRT-LM model executed via the Rust core GemmaDirector.
