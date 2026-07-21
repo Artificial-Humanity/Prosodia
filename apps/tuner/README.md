@@ -54,7 +54,8 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 ├── sonora.tflite                     # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
-│   └── gemma-4-E4B-it.litertlm      # Gemma 4 E4B LiteRT-LM
+│   ├── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
+│   └── gemma-4-26B-A4B-it-qat-q4_0-gguf/  # Gemma 4 26B-A4B MoE (128 experts/8 active, 256K ctx), QAT q4_0 GGUF, Apache-2.0 — OFFLINE server-side Director for Sonora book_ingest labeling (served via the ollama OpenAI API, :11434); NOT an on-device/Tuner model
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 ├── shivammehta25/
