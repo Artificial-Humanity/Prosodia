@@ -8,4 +8,10 @@
 
 ## Planned
 
-_TBD._
+- **Fine-tuned on-device Director (Gemma 4 E2B).** Distill the lab's conveyance-markup
+  director into the E2B-class model the apps already run as the `director-light` role,
+  completing the fully on-device pipeline: text → conveyance markup → expressive synthesis.
+  Gated on the conveyance markup schema stabilizing and the markup→acoustics round-trip
+  validation passing; acceptance is parity with the lab director on held-out audited
+  material. *(Added 2026-07-20; rationale and trigger detail in the private notes:
+  `Notes/Prosodia/director-finetune-gemma-e2b.md`.)*
