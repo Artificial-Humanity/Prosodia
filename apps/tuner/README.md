@@ -51,7 +51,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
 ```text
 /Reference/models/                    # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout; moved under Reference/ 2026-07-13)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
-├── sonora.tflite                     # Active Actor model — Sonora v1-ljspeech float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2) — stays at root
+├── sonora.tflite                     # Active Actor model — Sonora baseline-ljspeech-22k float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2; registry artifact renamed from v1-ljspeech 2026-07-22) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
 │   ├── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
@@ -67,7 +67,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
     └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
-The Sonora HF registry clone (artificial-humanity/Sonora — our checkpoints + TFLite exports, `v1-ljspeech/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model, and lives at the workspace-root `Registry/Sonora/`, a sibling of `Reference/` (layout end-state C, 2026-07-13).
+The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model. It's checked out as the `Sonora-HF` sibling repo directly (superseding the older `Registry/Sonora/` gitignored-clone layout from the umbrella-workspace era).
 
 > [!TIP]
 > **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
