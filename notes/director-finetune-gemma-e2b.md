@@ -45,3 +45,25 @@ config edit, no app changes.
 
 Related: [[vat-audit-verdicts]], [[scm-markup-schema]], [[audio-review-directory]],
 `notes/director-narrative-memory.md`, `notes/next-steps.md` (milestone 3+).
+
+## Curriculum evidence (quote-pilot-v3 director bench, 2026-07-22/23)
+
+The three-director bench (E2B/E4B/26B, same texts+engines) answered what to tune — and what
+not to:
+
+* **Expression judgment is NOT the gap** — 28/28 owner fives across arms; E2B's affect reads
+  tied 26B. Do not spend tuning budget here.
+* **The two real gaps:** (1) *format discipline* — 2/10 malformed-JSON failures + a
+  "mid_female" register-category error; (2) *casting vocabulary* — 26B wins on concrete
+  acoustic anchors ("warm baritone", "soft-breathy", "smooth timbre") that measurably steer
+  actor engines; E2B's descriptors are vaguer and steer worse.
+* **Distillation recipe:** SFT/LoRA on 26B direction outputs (context → direction JSON pairs;
+  thousands already banked from campaign manifests + book_ingest passes, more free to generate
+  offline — 26B is the lab director anyway). Stack with **schema-constrained decoding** at
+  inference (ollama JSON-schema mode / LiteRT-LM constrained gen) so malformed JSON is
+  impossible-by-construction even before tuning lands.
+* **Eval harness is standing:** rerun `make_director_bench.py` with a tuned-E2B arm vs stock
+  E2B vs 26B — same 10-line protocol, filename-tagged, owner-auditioned.
+* **On-box tooling ready:** llama_factory + unsloth_studio containers (tune from the bf16 IT
+  checkpoint, LoRA), then GGUF for lab ollama; device path re-exports to `.litertlm` via the
+  AI-Edge pipeline.
