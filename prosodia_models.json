@@ -1,5 +1,5 @@
 {
-  "modelsBase": "../Reference/models",
+  "modelsBase": "../models",
   "roles": {
     "actor": {
       "path": "sonora.tflite",
