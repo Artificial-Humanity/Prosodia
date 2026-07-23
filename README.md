@@ -48,7 +48,7 @@ cargo build --release
 ```
 
 ### Run the Rehearsal workbench
-1. Make sure you have models populated in the workspace `Reference/models/` directory (one level above this repo; see `prosodia_models.json`).
+1. Make sure you have models populated in the shared `../models` library (`/data/models`; see `prosodia_models.json`).
 2. Open `apps/tuner/ProsodiaTuner.xcodeproj` in Xcode.
 3. Select the `Tuner` scheme, hit **Run**, and start playing with the VAD sliders! 🎛️
 

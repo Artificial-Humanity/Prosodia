@@ -3,7 +3,7 @@
 > Placeholder — the public, forward-looking direction for Project Prosodia.
 >
 > Near-term execution detail and the current must-do list live in the private
-> `Notes/STATE.md`; this roadmap captures the longer-horizon milestones and releases
+> `notes/STATE.md`; this roadmap captures the longer-horizon milestones and releases
 > as they firm up.
 
 ## Planned
@@ -14,4 +14,4 @@
   Gated on the conveyance markup schema stabilizing and the markup→acoustics round-trip
   validation passing; acceptance is parity with the lab director on held-out audited
   material. *(Added 2026-07-20; rationale and trigger detail in the private notes:
-  `Notes/Prosodia/director-finetune-gemma-e2b.md`.)*
+  `notes/director-finetune-gemma-e2b.md`.)*

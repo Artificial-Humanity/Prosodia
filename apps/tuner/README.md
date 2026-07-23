@@ -46,10 +46,10 @@ Notes:
 
 ## 💻 Local Models for the Harness
 
-For real speech in the harness on macOS, models are resolved relative to the project workspace directory structure. Default models are seeded from the shared `Reference/models/` folder at the workspace root (`../Reference/models` from the Prosodia repo — moved under `Reference/` 2026-07-13 to mark these as reference assets, not workspaces):
+For real speech in the harness on macOS, models are resolved via `prosodia_models.json` (`modelsBase: ../models`). The shared library lives at `/data/models` on ai-lab-0 (`/Volumes/data/models` from the Mac over NFS; renamed from `/data/reference/models` in the 2026-07-23 /data reorganization — the old workspace-root `Reference/models` symlink was removed with the umbrella repo):
 
 ```text
-/Reference/models/                    # gitignored — this listing is the record (restructured 2026-07-12: org/repo layout; moved under Reference/ 2026-07-13)
+/data/models/                         # this listing is the record (org/repo layout since 2026-07-12; /data/models since the 2026-07-23 /data reorg)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
 ├── sonora.tflite                     # Active Actor model — Sonora baseline-ljspeech-22k float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2; registry artifact renamed from v1-ljspeech 2026-07-22) — stays at root
 ├── Google/
@@ -67,7 +67,7 @@ For real speech in the harness on macOS, models are resolved relative to the pro
     └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
 ```
 
-The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `Reference/models/`: it is a working artifact registry, not a reference model. It's checked out as the `Sonora-HF` sibling repo directly (superseding the older `Registry/Sonora/` gitignored-clone layout from the umbrella-workspace era).
+The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `/data/models`: it is a working artifact registry, not a reference model. It's checked out at `Sonora/huggingface/` (superseding the `Registry/Sonora/` gitignored-clone layout from the retired umbrella-workspace era).
 
 > [!TIP]
 > **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
@@ -82,7 +82,7 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > hard-coding filenames, so the `Google/` Gemma location is handled by config. ⚠️ Authored
 > remotely without `xcodebuild` — verify both app targets build (`apps/tuner/build.sh`) before
 > deleting any root-level compatibility copies. `config.json` and `sonora.tflite` remain
-> at the `Reference/models/` root because the Rust engine reads the config adjacent to the model file.
+> at the `/data/models` root because the Rust engine reads the config adjacent to the model file.
 
 The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 

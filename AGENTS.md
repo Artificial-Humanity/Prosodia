@@ -31,7 +31,7 @@ as the single source of truth for repo topology.
 * **`apps/tuner-extension`** provides Chrome Manifest V3 companion controls.
 * **`apps/apple-reader`** (SwiftUI) and **`apps/android-reader`** (Jetpack Compose) are the reader apps wired to the `StageCoordinator` pipeline.
 * Model artifacts (the Sonora actor model consumed via `apps/tuner`) are drawn from the shared
-  `Reference/models` archive maintained on the `ai-lab-0` machine — see the `AI-Lab-AMD` repo's
+  `/data/models` archive maintained on the `ai-lab-0` machine — see the `AI-Lab-AMD` repo's
   `AGENTS.md` for that archive's promotion/read-only policy.
 
 ---

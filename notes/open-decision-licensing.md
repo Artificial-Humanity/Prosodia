@@ -60,7 +60,13 @@ ever becomes the priority; note GPLv3 effectively blocks iOS/App Store embedding
 public Prosodia repo contains the working control-contract code (`crates/stage/src/prosody_payload.rs`
 et al.), the casting grid and acoustic matrix, and a README naming the director→actor design with
 VAD and casting. The detailed invention-capture (patent-disclosure-expressive-control.md + Eureka
-drafts + root PATENT.md) is **private** (this umbrella repo).
+drafts + root PATENT.md) was **private** in the umbrella repo. ⚠️ **Status change
+(flagged 2026-07-23):** the umbrella was retired 2026-07-22 and
+`patent-disclosure-expressive-control.md` now sits in this repo's `notes/` — which is
+PUBLIC — so the detailed capture is no longer private (in git history regardless of any
+later removal). Owner decision pending on whether that stands as a deliberate defensive
+publication or the note should be relocated; the Eureka drafts / root `PATENT.md`
+whereabouts post-umbrella are unrecorded here.
 
 **Consequences:**
 

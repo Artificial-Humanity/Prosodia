@@ -10,7 +10,7 @@ the curated snapshot is [STATE.md](STATE.md).
 ## ⭐ TL;DR — the one live workstream
 
 **Verify at the desktop, then start directability.** The actor model is **trained, exported,
-fidelity-verified, and human-auditioned** (Sonora v1-ljspeech, Epoch 199 — see
+fidelity-verified, and human-auditioned** (Sonora baseline-ljspeech-22k, Epoch 199 — see
 [Sonora STATE](../Sonora/STATE.md)): the 2026-07-12 encoder-LayerNorm fix restored onnx2tf
 export fidelity (deterministic ONNX↔TFLite cosine 1.0000, ASR WER 0.000), the artifact was
 verified **through the shipping Rust engine** on Linux, and a parallel LiteRT split-graph lane
@@ -33,9 +33,9 @@ was materialized at parity. The immediate queue:
 ## 1. Active workstream — Actor model, export & on-device audio  **(primary)**
 
 **Context (updated 2026-07-13):** the actor exists and speaks — and is now **desktop-auditioned
-through the shipping app** (intelligible, pacing fine). `Reference/models/sonora.tflite` (renamed from
+through the shipping app** (intelligible, pacing fine). `/data/models/sonora.tflite` (renamed from
 `styletts2_lite.tflite` 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2) is
-the fidelity-fixed Sonora v1-ljspeech float32 e2e export, verified through
+the fidelity-fixed Sonora baseline-ljspeech-22k float32 e2e export, verified through
 `engine.rs::forward_impl` on Linux (ASR on the engine's own render: verbatim) and human-auditioned
 via the litert-lane samples. Model paths now resolve through `prosodia_models.json` (Debt F,
 `577a598` — desktop build-check pending). Voice `.safetensors` packs remain absent (voice blending
@@ -228,7 +228,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
 #### 🔄 Training & Fine-Tuning milestones (ordered)
 Make the first success boring; add novelty only after it sings.
 - [x] **1 — Plain fine-tune on RunPod (Plan A) or Local Strix Halo (Plan B)** (no VAT) — Completed on local AMD ROCm container (resolute). Trained to Epoch 260; optimal convergence selected at Epoch 199.
-- [x] **2 — Export-verify the trained checkpoint** — ONNX → `onnx2tf` → TFLite (Float32/Float16) with HiFi-GAN vocoder embedded. Checkpoint assets successfully stored at **[artificial-humanity/Sonora](https://huggingface.co/artificial-humanity/Sonora)** (directory `v1-ljspeech`).
+- [x] **2 — Export-verify the trained checkpoint** — ONNX → `onnx2tf` → TFLite (Float32/Float16) with HiFi-GAN vocoder embedded. Checkpoint assets successfully stored at **[artificial-humanity/Sonora](https://huggingface.co/artificial-humanity/Sonora)** (directory `baseline-ljspeech-22k`).
 - [ ] **3 — Directability fine-tune** — add VAT conditioning, retrain with VAT labels, verify
   directability in the Tuner. Gated by **B**.
 - [ ] **4 — Casting / blend layer** — re-derive anchor embeddings in speaker-embedding space; verify the casting grid.
@@ -262,7 +262,7 @@ breaks the mandate). The `onnx2tf` spike succeeded (validated on `model_e2e.onnx
 > places.)* **Our Epoch-199 checkpoint is converted and verified** on this path (per-graph corr
 > 1.000000, e2e fp16 waveform corr ≥0.9996 vs torch, GPU-clean, ASR-verbatim, human-ear validated —
 > details in [Sonora STATE](../Sonora/STATE.md); artifacts pushed to HF at
-> [`v1-ljspeech/litert-split`](https://huggingface.co/artificial-humanity/Sonora/tree/main/v1-ljspeech/litert-split);
+> [`baseline-ljspeech-22k/litert-split`](https://huggingface.co/artificial-humanity/Sonora/tree/main/baseline-ljspeech-22k/litert-split);
 > conversion workspace + env recipe at `/data/toolchain/litert-conversion/`, built from the
 > [litert-samples](https://github.com/google-ai-edge/litert-samples) conversion harness). It is
 > Plan A on merit, not necessity — its advantages are structural and already banked: host-visible
@@ -277,7 +277,7 @@ breaks the mandate). The `onnx2tf` spike succeeded (validated on `model_e2e.onnx
 > **Fallback (Plan B) — the monolithic `torch → ONNX → onnx2tf → TFLite` e2e graph.** Proven back
 > on track by the 2026-07-12 encoder-LayerNorm fix (deterministic ONNX↔TFLite parity, cosine
 > 1.0000), and it is what the desktop Tuner **auditions today** (staged as
-> `Reference/models/sonora.tflite`) until the multi-graph runtime lands. Keep it maintained as the
+> `/data/models/sonora.tflite`) until the multi-graph runtime lands. Keep it maintained as the
 > fallback should the litert-torch toolchain regress on a future checkpoint, and keep the
 > `torch → ONNX` stage as the permanent numerical **oracle** every onnx2tf export is graded against
 > — it is what caught *and* verified the LayerNorm fix (`onnx2tf` TFLite garbled while the ONNX
@@ -380,26 +380,26 @@ The exported graph's tensor **names** are matched by substring (case-insensitive
 - **output 0:** the PCM waveform, `f32`, mono **24 kHz** (matches `StageAudioSink`/coordinator).
 
 ### Vocab / `config.json` (✅ done locally)
-Generated `Reference/models/config.json` = `{"sample_rate": 24000, "vocab": {symbol: index}}`. The **locked
+Generated `/data/models/config.json` = `{"sample_rate": 24000, "vocab": {symbol: index}}`. The **locked
 Matcha vocab** (Gate 1, commit `7143617`, 2026-06-18) is exactly **178 unique symbols, dense indices
 0–177**: the StyleTTS2-derived table (`[_pad] + punctuation + letters + IPA` from
 `StyleTTS2/text_utils.py`) was deduped — the duplicate apostrophe `'` removed and the modifier-letter
 schwa `ᵊ` added — so there is **no spare embedding row** anymore. (The earlier note about a
 `177-symbols / n_token: 178` one-spare-row convention described the *old* StyleTTS2 derivation and no
 longer holds; don't reintroduce it.) The trained model must use this exact mapping, and the Rust G2P
-must agree with it. `config.json` is gitignored (lives under `Reference/models/`); regenerate with the same
+must agree with it. `config.json` is gitignored (lives under `/data/models/`); regenerate with the same
 derivation if the symbol set ever changes — and change it in lockstep across G2P, training, and this file.
 
-**Done looks like:** `Reference/models/` contains the actor model (✅ staged 2026-07-11 as `styletts2_lite.tflite`, renamed `sonora.tflite` 2026-07-13 — the Sonora
-v1-ljspeech float32 e2e export, contract pre-verified), `config.json` (✅, `sample_rate` corrected to
+**Done looks like:** `/data/models/` contains the actor model (✅ staged 2026-07-11 as `styletts2_lite.tflite`, renamed `sonora.tflite` 2026-07-13 — the Sonora
+baseline-ljspeech-22k float32 e2e export, contract pre-verified), `config.json` (✅, `sample_rate` corrected to
 22050 for the 22.05 kHz Phase 0 voice), and the `anchor_*` voices; the Tuner produces intelligible
 audio (✅ **export-fidelity fixed 2026-07-12: the `onnx2tf` conversion bug was root-caused to the
 encoder LayerNorm and fixed at the source — re-exported TFLite now passes deterministic ONNX-parity
 (cosine 1.0000); see Sonora STATE.md §1 and `scripts/export_fidelity_referee.py`.** Remaining: ~~push
 the re-exported artifacts to HF~~ (✅ done by 2026-07-13), then a real listen through the desktop
 Tuner at temperature > 0 — deferred to a desktop session. Runtime fixes that landed en route and stay: sink drain, static-limit
-chunking, Matcha blank interspersion, per-passage play/stop UI). Source repos now live alongside in `Reference/models/` — `shivammehta25/Matcha-TTS/` (spike workspace — see its ARCHIVE.md)
-(vendored source + export artifacts, renamed from `Matcha-TTS/`) and `litert-community/Matcha-TTS/` (HF clone; G2P + split-graph reference); the Sonora registry clone moved to the workspace-root `Registry/Sonora/` (2026-07-13) — canonical
+chunking, Matcha blank interspersion, per-passage play/stop UI). Source repos now live alongside in `/data/models/` — `shivammehta25/Matcha-TTS/` (spike workspace — see its ARCHIVE.md)
+(vendored source + export artifacts, renamed from `Matcha-TTS/`) and `litert-community/Matcha-TTS/` (HF clone; G2P + split-graph reference); the Sonora registry clone moved to the workspace-root `Sonora/huggingface/` (2026-07-13) — canonical
 listing in `Prosodia/apps/tuner/README.md`.
 
 ---

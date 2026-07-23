@@ -34,4 +34,4 @@ FolioParser (parse + segment in one crate) or stay split across `folioparser` + 
 No change proposed now — recorded so the reuse relationship is discoverable from the parser itself.
 
 See `book-prose-operations.md` (operations plan) and `book-prose-synthesis-spike.md`
-(rationale) in the `Sonora-GH` training repo's `notes/`.
+(rationale) in the `Sonora/github` training repo's `notes/`.

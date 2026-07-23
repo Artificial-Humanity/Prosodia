@@ -30,7 +30,7 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
     /// Mirrors the committed `prosodia_models.json`, so a missing config file
     /// degrades to the standard shared-workspace layout instead of a dead app.
     public static let fallback = ProsodiaModels(
-        modelsBase: "../Reference/models",
+        modelsBase: "../models",
         roles: [
             "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (v1-ljspeech)"),
             "actor-split": ModelRoleEntry(path: "../../Registry/Sonora/v1-ljspeech/litert-split", display: "Sonora Actor (v1 litert-split, Plan A multi-graph)"),
@@ -101,7 +101,7 @@ public final class ProsodiaModelsManager: Sendable {
             // Fallback-config case: no file to anchor to; assume the umbrella
             // workspace layout under the user's home.
             self.modelsBase = home
-                .appendingPathComponent("Projects/Artificial-Humanity/Reference/models")
+                .appendingPathComponent("Projects/Artificial-Humanity/models")
                 .standardizedFileURL
         }
     }

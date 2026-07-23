@@ -44,4 +44,4 @@ role artifact via `prosodia_models.json` — the Debt-F role-key design means de
 config edit, no app changes.
 
 Related: [[vat-audit-verdicts]], [[scm-markup-schema]], [[audio-review-directory]],
-`Notes/Prosodia/director-narrative-memory.md`, `Notes/Prosodia/next-steps.md` (milestone 3+).
+`notes/director-narrative-memory.md`, `notes/next-steps.md` (milestone 3+).
