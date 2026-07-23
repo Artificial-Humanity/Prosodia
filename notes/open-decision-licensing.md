@@ -1,14 +1,18 @@
-# Open Decision — Licensing & IP Posture (decided in principle 2026-07-13)
+# Licensing & IP Posture — DECIDED (closed 2026-07-23)
 
-_The owner's stated goals, why the current licenses fit them, the tightenings, and the IP/prior-art
-analysis. Status: **current licensing affirmed**; remaining actions listed at the bottom._
+_**Final decision (owner, 2026-07-23): defensive declaration on GitHub + fully open license
+for all of it.** No patent pursuit; the public, dated, enabled disclosure is the deliberate
+prior-art anchor, and the detailed invention-capture notes are intentionally public in this
+repo. The analysis below is kept as the record of how the decision was reached._
 
 ## The component goals (owner's words, 2026-07-13)
 
 * **Prosodia** — the novel system: an on-device *thinking model* (Director) continuously directing an
   on-device *TTS model* (Actor) to produce human-like speech from plain text, plus the conversational
   capacity of that text. **Might be sold** if a market appears. Dual license (GPL-3.0 + commercial
-  exception, McFarlin Technologies, LLC) was adopted as a theft safeguard.
+  exception, McFarlin Technologies, LLC) was adopted as a theft safeguard at the time.
+  *(Superseded by the 2026-07-23 decision: Prosodia is now fully open — Apache-2.0, per the
+  repo LICENSE.)*
 * **Sonora** — the model: dynamic prosody + multi-voicing at a tiny size. **For everyone**; the return
   is recognition. Apache-2.0 (repo and HF weights; upstream Matcha MIT preserved).
 
@@ -60,13 +64,10 @@ ever becomes the priority; note GPLv3 effectively blocks iOS/App Store embedding
 public Prosodia repo contains the working control-contract code (`crates/stage/src/prosody_payload.rs`
 et al.), the casting grid and acoustic matrix, and a README naming the director→actor design with
 VAD and casting. The detailed invention-capture (patent-disclosure-expressive-control.md + Eureka
-drafts + root PATENT.md) was **private** in the umbrella repo. ⚠️ **Status change
-(flagged 2026-07-23):** the umbrella was retired 2026-07-22 and
-`patent-disclosure-expressive-control.md` now sits in this repo's `notes/` — which is
-PUBLIC — so the detailed capture is no longer private (in git history regardless of any
-later removal). Owner decision pending on whether that stands as a deliberate defensive
-publication or the note should be relocated; the Eureka drafts / root `PATENT.md`
-whereabouts post-umbrella are unrecorded here.
+drafts + root PATENT.md) was **private** in the umbrella repo at the time of this analysis.
+**Resolved 2026-07-23:** with the defensive-declaration decision (header), the capture note's
+presence in this public repo's `notes/` is deliberate — it strengthens the prior-art anchor
+rather than leaking anything worth protecting.
 
 **Consequences:**
 
