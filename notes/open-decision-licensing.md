@@ -52,7 +52,7 @@ ever becomes the priority; note GPLv3 effectively blocks iOS/App Store embedding
    permissive. **Expresso is CC-BY-NC-4.0** and is penciled into the roadmap (casting grid /
    milestone 3) — replace it as a *training* source (fine as listening reference). Full survey with
    verified licenses now lives in
-   [dataset-landscape.md](../Sonora/dataset-landscape.md) — headline keepers: LibriTTS-R (CC-BY),
+   [dataset-landscape.md](../../Sonora/github/notes/dataset-landscape.md) — headline keepers: LibriTTS-R (CC-BY),
    Parler's annotated LibriTTS-R (CC-BY), cdminix/libritts-r-aligned prosody measures (CC-BY),
    **Emilia-YODAS subset only** (CC-BY — the original 101k-h Emilia subset stays CC-BY-NC; the repo
    tag is misleading), GLOBE V2 (CC0).

@@ -1,16 +1,16 @@
 # High-Ambition 3 — 🚀 Child Voice Synthesis: Adaptation, Blending, & Fine-Tuning Options
 
-> **Sequence:** 3 of 5. Extends the casting/voicing range on top of the
-> [1 — Matcha-TTS actor](../Sonora/high-ambition-1-matcha-actor.md) and the
-> [2 — Dramatic Reader](../Sonora/high-ambition-2-dramatic-reader.md) multi-voice work. Then:
+> **Sequence:** 3 of 6. ([index — all six, and which repo each lives in](../../Sonora/github/notes/high-ambition-index.md)) Extends the casting/voicing range on top of the
+> [1 — Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) and the
+> [2 — Dramatic Reader](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) multi-voice work. Then:
 > [4 — Multilingual G2P](high-ambition-4-multilingual-g2p.md) ·
-> [5 — StyleTTS2-Lite](../Sonora/high-ambition-5-styletts2-lite.md). Options 1–2 work with the current engine
+> [5 — StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md). Options 1–2 work with the current engine
 > today; Options 3–4 need the trained base model.
 
 > [!NOTE]
 > **Base-model framing:** Option 1 (DSP `f0_bias`/formant) and Option 4 (fine-tune) are
 > base-agnostic. Options 2–3 are written in StyleTTS2 **style-vector** terms; under a
-> [Matcha base](../Sonora/high-ambition-1-matcha-actor.md) they map to blending/extracting in the
+> [Matcha base](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) they map to blending/extracting in the
 > **speaker-embedding** space instead — same `voice_loader` machinery, different vector semantics.
 
 This document outlines the proposed strategies, technical feasibility, and next steps for introducing high-quality child-like voices into the `Prosodia` TTS runtime.

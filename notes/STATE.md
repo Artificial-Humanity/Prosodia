@@ -3,7 +3,7 @@
 _Last updated: 2026-07-13._
 
 The committed, curated snapshot of where the project stands and what to do next. Behavioral
-rules and the stack/layout manifest live in [AGENTS.md](../../AGENTS.md).
+rules and the stack/layout manifest live in [AGENTS.md](../../AI-Lab-AMD/AGENTS.md).
 
 ---
 
@@ -44,8 +44,8 @@ The single live workstream and all deferred debt are tracked in [next-steps.md](
 - Director Narrative Memory (story graph, spoiler-safe narrator chat, pre-reading) — [director-narrative-memory.md](director-narrative-memory.md)
 - Voice Interruption & Discussion ("Solo Book Club" — voice barge-in to ask/discuss) — [voice-interruption-and-discussion.md](voice-interruption-and-discussion.md)
 - Patent disclosure — Director↔Actor expressive control (Eureka briefs, capture of record) — [patent-disclosure-expressive-control.md](patent-disclosure-expressive-control.md)
-- Actor Model & Training (selection + hardware + first-run) — [actor-model-and-training.md](../Sonora/actor-model-and-training.md)
-- High-ambition goals (in sequence) — [1 Matcha-TTS Actor](../Sonora/high-ambition-1-matcha-actor.md) · [2 Dramatic Reader](../Sonora/high-ambition-2-dramatic-reader.md) · [3 Child Voices](high-ambition-3-child-voices.md) · [4 Multilingual G2P](high-ambition-4-multilingual-g2p.md) · [5 StyleTTS2-Lite](../Sonora/high-ambition-5-styletts2-lite.md)
+- Actor Model & Training (selection + hardware + first-run) — [actor-model-and-training.md](../../Sonora/github/notes/actor-model-and-training.md)
+- High-ambition goals (in sequence) — [1 Matcha-TTS Actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) · [2 Dramatic Reader](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) · [3 Child Voices](high-ambition-3-child-voices.md) · [4 Multilingual G2P](high-ambition-4-multilingual-g2p.md) · [5 StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md)
 - Repository layout — [../../Prosodia/Docs/ARCHITECTURE.md](../../Prosodia/Docs/ARCHITECTURE.md)
 
 ## Environment footguns

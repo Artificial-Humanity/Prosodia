@@ -4,7 +4,7 @@ This document tracks technical changes, refactoring milestones, and build-system
 
 > **Maintenance:** This changelog is append-only within a release cycle — keep it current every
 > session and prune entries only when tagging a new release of the overall project (see
-> [AGENTS.md](../../AGENTS.md)). It was first maintained at `Documentation/Notes/changelog.md`,
+> [AGENTS.md](../../AI-Lab-AMD/AGENTS.md)). It was first maintained at `Documentation/Notes/changelog.md`,
 > then `Notes/CHANGELOG.md`; it now lives at `Notes/Prosodia/CHANGELOG.md`. `Notes/` was
 > formerly a Git submodule, then a standalone private repo; it is now a plain folder inside the
 > private `Artificial-Humanity` umbrella repo, keeping the internal engineering log out of the
@@ -28,7 +28,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   the eval harness against the §7 thresholds.
 - **VAT FiLM conditioning code shipped (Sonora `ad2baea`)** — milestone 3's model-code
   prerequisite, implemented to the same-day design decision
-  ([vat-conditioning-design.md](../Sonora/vat-conditioning-design.md)): zero-init FiLM per
+  ([vat-conditioning-design.md](../../Sonora/github/notes/vat-channels.md)): zero-init FiLM per
   encoder block + per CFM U-Net level, shared trunk, raw `[B,3,T]` input, cond dropout 0.15,
   `load_vat` filelist field; off by default. Verified: bit-identical warm start from Phase 0
   (vat 0/None/hot — an `initialize_weights()` kaiming clobber of the zero-init was caught and
@@ -64,7 +64,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   `SONORA_LICENSE_WALL=derisk` permits NC for §7 de-risk runs with a TAINTED banner; no "off"
   mode exists. Behavior test-verified (pass/block/banner/unknown-block).
 - **Exploit-before-train measurement executed and written up**
-  ([exploit-before-train-measurement.md](../Sonora/exploit-before-train-measurement.md)):
+  ([exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md)):
   north-star §6 experiment run on `ai-lab-0` against the Epoch-199 litert split graphs via a new
   pure-inference harness (`/data/toolchain/litert-conversion/exploit_measure.py`; 21 WAVs +
   `results.json` alongside). Verdict: **pace and loudness are free at inference** (per-token
@@ -81,7 +81,7 @@ This document tracks technical changes, refactoring milestones, and build-system
 
 ### Added
 - **Dev-topology item captured (Debt H)** —
-  [Ai-Lab-0/dev-topology-and-workstreams.md](../Ai-Lab-0/dev-topology-and-workstreams.md): the
+  [Ai-Lab-0/dev-topology-and-workstreams.md](../../AI-Lab-AMD/notes/dev-topology-and-workstreams.md): the
   owner wants workstream/machine separation of concerns in the near future (model work → ai-lab-0;
   Xcode + runtime audition → Mac; Rust → either) to enable simultaneous development instead of the
   current push/pull ping-pong. Note records this week's concrete costs (Debt-F rebase collision,
@@ -89,7 +89,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   an option sketch (AGENTS routing table, branch discipline, CI as meeting point — Linux cargo +
   macOS xcframework/app jobs — then possibly retiring committed xcframeworks). Linked as Deferred
   Technical Debt H in next-steps.
-- **Dataset landscape documented** ([dataset-landscape.md](../Sonora/dataset-landscape.md)):
+- **Dataset landscape documented** ([dataset-landscape.md](../../Sonora/github/notes/dataset-landscape.md)):
   verified-license training options by roadmap role. Cleared: LibriTTS-R, Parler annotated
   LibriTTS-R, cdminix/libritts-r-aligned, **Emilia-YODAS subset only** (corrects the earlier
   "Emilia relicensed CC-BY" reading — the original 101k-h subset remains CC-BY-NC), GLOBE V2 (CC0);
@@ -98,7 +98,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   pipeline* over permissive LibriTTS-R derivatives + Emilia-YODAS mining, dual-use with the HA-6
   Audience. Cross-linked from STATE §VAT, open-decision tightening #3, and HA-6.
 - **High-ambition 6 captured — the "Audience": conveyance-aware STT**
-  ([high-ambition-6-audience-conveyance-stt.md](../Sonora/high-ambition-6-audience-conveyance-stt.md)):
+  ([high-ambition-6-audience-conveyance-stt.md](../../Sonora/github/notes/high-ambition-6-audience-conveyance-stt.md)):
   the reverse of the actor lane — a small, on-device, *typed* listener emitting the existing control
   contract as annotations (V/A/T + per-token emphasis) so conversation carries conveyance both ways
   (hear → contract → think → contract → speak). Key arguments on record: the milestone-3 VAT corpus
