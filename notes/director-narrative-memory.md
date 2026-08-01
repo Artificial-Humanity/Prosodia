@@ -139,7 +139,7 @@ earlier.
   spoiler-safety rule generalizes to the reveal frontier (§4).
 - [architecture-and-development.md](architecture-and-development.md) — the `director` crate's current
   *rolling paragraph-history* is what this durable graph replaces/extends.
-- [high-ambition-2-dramatic-reader.md](../Sonora/high-ambition-2-dramatic-reader.md) — full-cast performance
+- [high-ambition-2-dramatic-reader.md](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) — full-cast performance
   consumes the Character nodes (identity, relationships) the graph maintains.
 - [architecture-north-star.md §2](architecture-north-star.md) — the Director + its knowledge is the
   ownable, durable core; this memory layer deepens that moat and is independent of the (swappable)

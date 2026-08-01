@@ -85,7 +85,7 @@ Subjective Valence/Arousal/Tension (VAD) outputs from the Director are resolved 
 ## 4. Audiobook Narration & Voice Acting Modes
 
 The engine supports two primary narrative performance modes (the full-cast ambition is detailed in
-[high-ambition-2-dramatic-reader.md](../Sonora/high-ambition-2-dramatic-reader.md)):
+[high-ambition-2-dramatic-reader.md](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md)):
 
 ### Mode A: Solo Narrator Mode (Timbral Coloring)
 A single narrator performs the entire narration but applies subtle changes to represent characters during dialogue quotes.

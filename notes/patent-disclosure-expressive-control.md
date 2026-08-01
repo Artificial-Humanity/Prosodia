@@ -5,17 +5,26 @@
 > spoiler-Q&A invention. This file preserves the material fed to and refined with **PatSnap Eureka**
 > (an AI patent-drafting tool), so the inputs aren't lost between Eureka round-trips.
 >
-> **Status (updated 2026-07-13): DEFENSIVELY PUBLISHED — no filing planned for this invention.**
-> The owner chose Path B (see [open-decision-licensing.md](open-decision-licensing.md)): the
-> mechanism, including the contemplated trained-to-obey conditioning and the casting gate, is now
-> public, enabling prior art at
-> `Prosodia/Docs/defensive-publication-expressive-control.md` (public repo, commit `946bcc2`).
-> This capture file remains the richer internal record. The Eureka material below is retained for
-> reference; the narrative-knowledge-graph / Q&A invention (separate track) remains private and
-> was NOT published.
+> **Status (updated 2026-08-01): NO PATENT TRACK REMAINS — both inventions, defensive posture,
+> fully Apache-2.0.** The owner confirmed 2026-08-01 that patenting is not being pursued at all:
+> the repo carries a **defensive statement** and everything ships open. The patent idea belonged
+> to an earlier **dual-licensing strategy (GPL-3.0 + commercial) that has since been abandoned** —
+> `LICENSE` is Apache-2.0 and there is no `LICENSE-COMMERCIAL.md`. Read this file as an
+> **invention capture of record**, not as an active filing track. Decision:
+> [open-decision-licensing.md](open-decision-licensing.md).
 >
-> Previous status: Eureka **disclosure-analysis** stage (not yet a claims-bearing application
-> draft). The repo-root `PATENT.md` holds Eureka's disclosure-analysis report for *this* invention.
+> Superseded status (2026-07-13): "defensively published — no filing planned for *this*
+> invention", which left the narrative-knowledge-graph / Q&A invention described as a separate
+> track that "remains private and was NOT published." **That distinction is gone** — there is no
+> second track, and nothing is being held back for filing.
+>
+> The defensive publication for the expressive-control mechanism is at
+> `Prosodia/Docs/defensive-publication-expressive-control.md` (public repo, commit `946bcc2`).
+> This capture file remains the richer internal record; the Eureka material below is retained for
+> reference only.
+>
+> ⚠️ Note: the repo-root `PATENT.md` referenced below **no longer exists**. References to it in
+> this file are historical.
 >
 > **Source of truth for the grounded specifics** (coefficients, grammar, binding layer) is the actual
 > code: `crates/stage/src/{prosody.rs, prosody_payload.rs, acoustic_matrix.rs}` and

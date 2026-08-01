@@ -11,7 +11,7 @@ the curated snapshot is [STATE.md](STATE.md).
 
 **Verify at the desktop, then start directability.** The actor model is **trained, exported,
 fidelity-verified, and human-auditioned** (Sonora baseline-ljspeech-22k, Epoch 199 — see
-[Sonora STATE](../Sonora/STATE.md)): the 2026-07-12 encoder-LayerNorm fix restored onnx2tf
+[Sonora STATE](../../Sonora/github/notes/STATE.md)): the 2026-07-12 encoder-LayerNorm fix restored onnx2tf
 export fidelity (deterministic ONNX↔TFLite cosine 1.0000, ASR WER 0.000), the artifact was
 verified **through the shipping Rust engine** on Linux, and a parallel LiteRT split-graph lane
 was materialized at parity. The immediate queue:
@@ -24,7 +24,7 @@ was materialized at parity. The immediate queue:
 2. ✅ **Exploit-before-train measurement DONE (2026-07-14):** pace + loudness are free at
    inference (surgical per-token `duration_scales`, dB-exact pre-vocoder mel gain — both WER-safe);
    pitch + phonation are not (no lever exists) and are what VAT training must deliver. Results:
-   [Sonora exploit-before-train-measurement.md](../Sonora/exploit-before-train-measurement.md).
+   [Sonora exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md).
 3. **Directability (milestone 3) — NEXT:** VAT-conditioning code + labeled corpus — the real next
    build, now scoped: weight the corpus toward valence/tension expression (phonation, pitch);
    pace/energy ride the inference hooks. The Rust multi-graph runtime (§B) is the parallel
@@ -47,8 +47,8 @@ Sonora notes.
 > **Two separate tracks — don't conflate them.** Getting the Tuner to make *any* sound only needs
 > *a* compatible actor model + voices; it does **not** require training our own model. Training our
 > own actor is the **high-ambition production goal** — the chosen first model is the
-> [Matcha-TTS actor](../Sonora/high-ambition-1-matcha-actor.md), with a custom
-> [StyleTTS2-Lite](../Sonora/high-ambition-5-styletts2-lite.md) as the later higher-ceiling re-platform. Those
+> [Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md), with a custom
+> [StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md) as the later higher-ceiling re-platform. Those
 > are the long-horizon goal, not the near-term playback blocker.
 
 **Decisions made (2026-06-14):**
@@ -69,7 +69,7 @@ Sonora notes.
 - [x] **Step 3: Minimal End-to-End through Tuner** — run with neutral synthesis to validate the Director → payload → FFI → audio-sink pipeline.
 - [x] **Contract-Lock Checklist (discovery-spike / runtime bridge)** — proves the *stock* model runs
   through the actor. The *training-time* contracts are a **distinct** list in
-  [high-ambition-1 §Contract-lock](../Sonora/high-ambition-1-matcha-actor.md); don't read these checks as those.
+  [high-ambition-1 §Contract-lock](../../Sonora/github/notes/high-ambition-1-matcha-actor.md); don't read these checks as those.
   Most are now locked (vocab + native sample rate via commit `7143617`, export/runtime via the spike);
   only the **training filelist + VAT-label derivation** remains open there:
   - [x] **G2P / Phoneme vocab mapping**: Lock `map_styletts2_to_matcha_ipa` in `pipeline.rs` (translates StyleTTS2 phonetic characters to standard espeak-IPA equivalents compatible with the `config.json` vocab mapping).
@@ -80,7 +80,7 @@ Sonora notes.
 #### 🚦 Pre-training gates — everything doable *before* training is simply the only thing left
 The plumbing, export route, and FFI contract are done; nothing technical blocks training. These are
 the *training-time* gates (distinct from the discovery-spike/runtime contracts above; mirrors
-[high-ambition-1 §Contract-lock](../Sonora/high-ambition-1-matcha-actor.md)), grouped by what each unblocks.
+[high-ambition-1 §Contract-lock](../../Sonora/github/notes/high-ambition-1-matcha-actor.md)), grouped by what each unblocks.
 
 **A. Gates the *plain* fine-tune (the immediate blocker — kept short on purpose):**
 - [x] **Lock the training vocab.** Decide the Matcha symbol inventory; bring `config.json` + the Rust
@@ -90,7 +90,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   2026-07-14 for milestone 3 (owner call): native 24 kHz, no resampling; vocoder = HiFi-GAN
   fine-tuned to 24 kHz/80-band (preserves warm start + mel contract + export lane; the
   fine-tune is on the critical path to the §7 verdict and starts early). Details:
-  [sample-rate-24khz-decision.md](../Sonora/sample-rate-24khz-decision.md).**
+  [sample-rate-24khz-decision.md](../../Sonora/github/notes/model-decisions.md).**
 - [x] **Pick + prep the dataset.** A small clean permissive set (a LibriTTS speaker / LJSpeech / Expresso):
   clean/trim, resample to the chosen rate, phonemize transcripts into the locked vocab, build the filelist. (Completed 2026-07-10)
 - [x] **Stand up training platform**:
@@ -159,7 +159,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   up front, which stays this runtime task's job (per-chunk streaming + proportional compute).
 - [x] **Exploit-before-train measurement — ✅ DONE (2026-07-14).** Run on `ai-lab-0` against the
   Epoch-199 split graphs (`/data/toolchain/litert-conversion/exploit_measure.py`; results note:
-  [Sonora exploit-before-train-measurement.md](../Sonora/exploit-before-train-measurement.md)).
+  [Sonora exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md)).
   **Pace and loudness fall out free at inference:** per-token `duration_scales` via host `logw`
   is surgical and WER-safe to ×2.0 (ρ = 1.0; phrase-local stretch with ≤1.4% context drift), and
   per-frame log-mel dB bias before the vocoder is dB-exact with zero context bleed (WER 0 at
@@ -191,14 +191,14 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   training filelist + label schema.
 - [x] **Draw the license wall in code — ✅ DONE (2026-07-14, Sonora `d5dd4fc`).**
   `configs/data_licenses.yaml` declares every dataset's verified license class (sources from
-  [dataset-landscape.md](../Sonora/dataset-landscape.md)); `matcha/data/license_wall.py`, hooked
+  [dataset-landscape.md](../../Sonora/github/notes/dataset-landscape.md)); `matcha/data/license_wall.py`, hooked
   into `TextMelDataModule.setup()`, refuses **undeclared** and **NC** data at training time.
   `SONORA_LICENSE_WALL=derisk` permits NC for §7 de-risk runs with a loud TAINTED banner;
   deliberately no "off" mode. All four behaviors test-verified (permissive pass, NC block,
   derisk banner, unknown block). Closes [north star §8.2](architecture-north-star.md).
 - [x] **Write the VAT-conditioning code — ✅ DONE (2026-07-14, Sonora `ad2baea`),** same day the
   design was decided (owner call; spec:
-  [vat-conditioning-design.md](../Sonora/vat-conditioning-design.md)): full FiLM blocks
+  [vat-conditioning-design.md](../../Sonora/github/notes/vat-channels.md)): full FiLM blocks
   (zero-init scale+shift) per encoder block + per CFM U-Net level fed by a shared `VATTrunk`
   from raw `[B,3,T]`; per-utterance labels broadcast; frame alignment rides the same attn
   matmul as `mu_y` (inherits the `out_size` cut); conditioning dropout p = 0.15; optional
@@ -261,7 +261,7 @@ breaks the mandate). The `onnx2tf` spike succeeded (validated on `model_e2e.onnx
 > REVERSED 2026-07-12: this was the documented reserve; it and the onnx2tf monolith have swapped
 > places.)* **Our Epoch-199 checkpoint is converted and verified** on this path (per-graph corr
 > 1.000000, e2e fp16 waveform corr ≥0.9996 vs torch, GPU-clean, ASR-verbatim, human-ear validated —
-> details in [Sonora STATE](../Sonora/STATE.md); artifacts pushed to HF at
+> details in [Sonora STATE](../../Sonora/github/notes/STATE.md); artifacts pushed to HF at
 > [`baseline-ljspeech-22k/litert-split`](https://huggingface.co/artificial-humanity/Sonora/tree/main/baseline-ljspeech-22k/litert-split);
 > conversion workspace + env recipe at `/data/toolchain/litert-conversion/`, built from the
 > [litert-samples](https://github.com/google-ai-edge/litert-samples) conversion harness). It is
@@ -433,7 +433,7 @@ These were the active checklist items as of the 2026-06-14 audit; all are now do
   runtime audition → Mac; Rust → either), branch discipline, and CI as the meeting point (Linux
   cargo test + macOS xcframework/app build — the piece that dissolves the tripwire round-trip).
   Full capture, this week's evidence, option sketch, and suggested first bites:
-  [Ai-Lab-0/dev-topology-and-workstreams.md](../Ai-Lab-0/dev-topology-and-workstreams.md).
+  [Ai-Lab-0/dev-topology-and-workstreams.md](../../AI-Lab-AMD/notes/dev-topology-and-workstreams.md).
   *Why deferred:* audition/directability is the critical path; nothing blocks today.
   *Done looks like:* AGENTS.md routing table + file-ownership convention; two CI jobs green on
   every push; rebase-collision round-trips stop appearing in the changelog. **Includes (same note): plan out

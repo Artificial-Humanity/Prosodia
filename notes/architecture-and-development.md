@@ -119,10 +119,24 @@ The Tuner application links the platform package locally (`../../platforms/apple
 
 ## 5. Licensing & Dependency Policy
 
-Project Prosodia is **dual-licensed under GPL-3.0 and a commercial license** (see `Prosodia/LICENSE` + `Prosodia/LICENSE-COMMERCIAL.md`; the README states the same). The project's *own* code is GPL on the open side — but the **commercial** side must be redistributable inside closed-source apps, so every third-party **dependency** and bundled asset must be permissive (no copyleft compiled in). That commercial-redistribution requirement — *not* an Apache project license — is what drives the strict dependency policy below. This is the same posture recorded in [architecture-north-star.md §8](architecture-north-star.md) (where it also governs which **datasets/checkpoints** may enter the production corpus).
+Project Prosodia is **Apache-2.0** (see `Prosodia/LICENSE`; the README states the same), per the
+decision closed 2026-07-23 in [open-decision-licensing.md](open-decision-licensing.md).
+
+> **Corrected 2026-08-01.** This section previously described a **GPL-3.0 + commercial dual
+> license** and cited `LICENSE-COMMERCIAL.md`. That posture was abandoned along with the patent
+> track; the file does not exist, and `LICENSE` is Apache-2.0. The *rationale* below changed —
+> the **conclusion did not.**
+
+Every third-party **dependency** and bundled asset must still be permissive, with no copyleft
+compiled in. Under the old posture that requirement came from commercial redistribution inside
+closed-source apps; under Apache-2.0 it comes from the project licence itself — a GPL dependency
+compiled into an Apache-2.0 work forces the combined result to GPL, which we will not ship. The
+App Store constraint is unchanged and independent of either. Same posture as
+[architecture-north-star.md §8](architecture-north-star.md), which also governs which
+**datasets/checkpoints** may enter the production corpus.
 
 *   **No Copyleft Compilation**: GPL/AGPL dependencies are strictly banned from compilation.
-*   **Dynamic Isolation for espeak-ng**: If copyleft G2P tools (like GPLv3 `espeak-ng`) are required, they must remain optional and dynamically weak-linked as an isolated binary plugin (`CLibEspeak`) that commercial builds simply do not package.
+*   **Dynamic Isolation for espeak-ng**: If copyleft G2P tools (like GPLv3 `espeak-ng`) are required, they must remain optional and dynamically weak-linked as an isolated binary plugin (`CLibEspeak`) that default builds simply do not package.
 
 ### Dependency Audit Grid
 | License Family | Compliance Level | Shipped App Impact |
