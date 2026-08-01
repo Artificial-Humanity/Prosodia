@@ -19,7 +19,9 @@ Package the compiled C version of `espeak-ng` as an optional, isolated FFI wrapp
 ## 🏛️ Context & Challenge
 Supporting multilingual speech synthesis requires a rule-based G2P engine capable of context-aware phonetic conversions. While `espeak-ng` is the industry standard for this task, it is licensed under **GPLv3**. 
 
-Directly static-linking GPLv3 code into a proprietary application is a violation of GPLv3 and Apple App Store distribution policies (since static linking combines the codebase into a single binary, forcing copyleft inheritance). To make Prosodia attractive to commercial developers, we must architect a strict licensing and technical boundary.
+Directly static-linking GPLv3 code is incompatible both with our own project licence and with Apple App Store distribution policies (static linking combines the codebase into a single binary, forcing copyleft inheritance).
+
+> **Rationale updated 2026-08-01 — conclusion unchanged.** This section previously justified the boundary by "making Prosodia attractive to commercial developers," which belonged to the abandoned GPL-3.0 + commercial dual-licensing strategy. **Prosodia is Apache-2.0** ([open-decision-licensing.md](open-decision-licensing.md)), and the boundary is now required by the project licence itself: GPLv3 code compiled into an Apache-2.0 work forces the combined result to GPL. The isolation design below is unaffected — if anything the bar is higher, since there is no longer a "GPL side" that could legitimately absorb it.
 
 ---
 
@@ -37,7 +39,7 @@ graph LR
 ```
 
 1.  **Trait-Oriented Abstraction**: Define a G2P trait interface (operating on `MToken` arrays carrying `tag` and `whitespace` parameters) in the permissively-licensed (`Apache-2.0`) core framework (`crates/actor`). The core speech engine depends only on this trait interface, not on `espeak-ng` directly.
-2.  **Isolated Crate (`espeak-ng-sys`)**: Package the compiled C code of `espeak-ng` in a separate, isolated Rust crate that commercial developers do not compile/link by default.
+2.  **Isolated Crate (`espeak-ng-sys`)**: Package the compiled C code of `espeak-ng` in a separate, isolated Rust crate that is not compiled or linked by default (there is no longer a "commercial build" variant — the isolation now serves the Apache-2.0 project licence).
 3.  **Dynamic Loading / Weak Linking**:
     *   For mobile platforms, compile the GPLv3 wrapper as a dynamic library (`.dylib` / `.so`).
     *   Load the dynamic library at runtime using `dlopen` and look up symbols via `dlsym`, or configure it as an optional FFI plug-in target.

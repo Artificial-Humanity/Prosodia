@@ -6,8 +6,10 @@
 > the narration by voice** to ask a question or *discuss* the material read so far. This note is the
 > **interaction/voice-input layer**; the **knowledge substrate** it draws on is
 > [director-narrative-memory.md](director-narrative-memory.md). Together they are the Solo Book Club
-> feature. This is also the capability the [PATENT.md](patent-disclosure-expressive-control.md) draft centers on (voice
-> interruption + spoiler-bounded Q&A).
+> feature. This capability (voice interruption + spoiler-bounded Q&A) was once a patent track; it is
+> now **defensively published, not filed** — see
+> [open-decision-licensing.md](open-decision-licensing.md) and
+> [patent-disclosure-expressive-control.md](patent-disclosure-expressive-control.md).
 >
 > **When this layer is approached, see also** [high-ambition-6 — the "Audience" (conveyance-aware STT)](../../Sonora/github/notes/high-ambition-6-audience-conveyance-stt.md): the voice-input side should perceive prosodic conveyance (emphasis, V/A/T) through the same control contract the Director dictates through — captured 2026-07-13.
 
@@ -73,9 +75,9 @@ exist; the **ear** does not.
 
 The original Solo Book Club intent is **voice** interruption — it is the differentiator and the
 accessibility win (hands-free, eyes-free). A **text** chat affordance is a reasonable secondary/fallback
-(type a question), and the knowledge/reasoning layer is identical either way. The
-[PATENT.md](patent-disclosure-expressive-control.md) independent claims are voice-centric, which matches this intent; the
-capability is not yet built, and this note is where it is planned.
+(type a question), and the knowledge/reasoning layer is identical either way. The abandoned
+patent draft's claims were voice-centric, which matches this intent; the capability is not yet
+built, and this note is where it is planned.
 
 ---
 
@@ -95,6 +97,14 @@ directly. A **future-content deflection** ("you'll find out — keep reading") i
 
 - **On-device ASR:** model choice, size, latency, and accuracy on mobile; permissive license (same bar
   as the rest of the stack); language coverage (ties to [high-ambition-4-multilingual-g2p.md](high-ambition-4-multilingual-g2p.md)).
+  → **Leading candidate as of 2026-08-01: the Baichuan-Audio tokenizer** (Whisper Large encoder +
+  8-layer RVQ @ 12.5 Hz, **Apache-2.0 weights**, ZH/EN). It is the one surveyed option that keeps
+  *semantic and acoustic* content in a single representation — i.e. it can hear the listener's
+  **tone**, not just their words, which is what makes the ear symmetric with the contract per
+  [high-ambition-6](../../Sonora/github/notes/high-ambition-6-audience-conveyance-stt.md).
+  **Take the tokenizer, not the 7B LLM backbone** — the end-to-end design would dissolve the
+  Director↔contract seam that §5's reveal-frontier gate depends on. Full analysis, licence flags and
+  the alternatives considered: [matcha-siblings-study.md](../../Sonora/github/notes/matcha-siblings-study.md).
 - **Barge-in over active TTS:** acoustic echo cancellation so the system doesn't hear itself; duck vs.
   hard-pause on detected speech.
 - **Activation UX & privacy:** push-to-talk vs. wake-word vs. always-listening. On-device ASR (no cloud)
@@ -116,7 +126,8 @@ Voice interruption sits **downstream** of: (a) a shipped **Actor** (TTS) — see
 for grounded, spoiler-safe answers. The **on-device ASR / barge-in** subsystem, however, can be
 prototyped independently and in parallel, since it's the one piece with no current foothold. Net: a
 later milestone, but the highest-novelty/identity piece of the product ("Solo Book Club") and the
-subject of the pending patent — so it belongs explicitly on the long-term roadmap, not in tribal memory.
+subject of the defensive publication — so it belongs explicitly on the long-term roadmap, not in tribal
+memory.
 
 ---
 
@@ -129,5 +140,6 @@ subject of the pending patent — so it belongs explicitly on the long-term road
   of the text), which is the *acoustic* analog of spoiler-safety.
 - [architecture-north-star.md](architecture-north-star.md) — the Director + its knowledge/interaction
   is the ownable core; an on-device ear deepens that and keeps the whole loop private and offline.
-- [PATENT.md](patent-disclosure-expressive-control.md) — the pending draft; its "voice interruption and Q&A module" and
-  spoiler-bounded answering correspond to this note and §1–§5.
+- [patent-disclosure-expressive-control.md](patent-disclosure-expressive-control.md) — the retained
+  invention capture (**no filing — defensively published**); its "voice interruption and Q&A module"
+  and spoiler-bounded answering correspond to this note and §1–§5.

@@ -217,11 +217,17 @@ so a borderline result can't be talked into a "yes."
    and the Director is the part you most want to keep for years. The `DirectorInference` trait helps,
    but the Gemma+LiteRT-LM coupling is the longevity risk that actually threatens the irreplaceable
    layer. Keep an exit path in mind (alternative on-device LLM runtimes) even while LiteRT-LM is fine.
-2. **License posture is load-bearing.** Dual-license GPL-3.0 + commercial means every dataset and
-   checkpoint must be clean for *commercial* redistribution. **Expresso is CC BY-NC — de-risk experiment
-   ONLY; it must never enter the production corpus.** Draw that wall in the data pipeline *in code, now*.
-3. **G2P licensing.** espeak-ng phonemizer is GPL — fine for the GPL side; verify a clean G2P path for
-   the commercial build. (espeak-ng is already out of the Apple build scope; keep it that way.)
+2. **License posture is load-bearing.** **Apache-2.0** (decided 2026-07-23, closing
+   [open-decision-licensing.md](open-decision-licensing.md); *corrected here 2026-08-01 — this
+   said "dual-license GPL-3.0 + commercial", a posture abandoned with the patent track*). Every
+   dataset and checkpoint must be clean for **unrestricted open redistribution**, which is a
+   *stricter* bar than the old commercial one, not a looser one — NC and research-only terms fail
+   it outright. **Expresso is CC BY-NC — de-risk experiment ONLY; it must never enter the
+   production corpus.** Draw that wall in the data pipeline *in code, now*.
+3. **G2P licensing.** espeak-ng phonemizer is GPL, which an Apache-2.0 project cannot compile in
+   at all — the old "fine for the GPL side" carve-out is gone with the dual licence. Verify a
+   clean G2P path for every build. (espeak-ng is already out of the Apple build scope; keep it
+   that way.)
    **Clean path identified (2026-07-11):** OpenPhonemizer's 275k espeak-IPA dictionary (Clear BSD) +
    DeepPhonemizer (MIT) OOV fallback, proven in-production by
    [litert-community/Matcha-TTS](https://huggingface.co/litert-community/Matcha-TTS) and 1:1-mappable
