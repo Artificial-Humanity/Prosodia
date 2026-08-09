@@ -81,6 +81,8 @@ case-insensitive macOS/Windows.
 ### 5. Code Review Execution Standards
 
 * **Scope: code work only.** Code reviews cover the same code changes that warrant changelog entries (see §4) — source, build config, and dependency manifests. Docs-only commits are out of scope and need no review.
+* **A review is a report, not a fix pass.** Assume the deliverable is the findings document alone: the reviewing agent takes on fixes only when the owner explicitly asks it to, never as a rider on the review itself.
+* **The review itself never warrants a changelog entry.** Review documents live in `notes/`, and writing, replacing, or deleting one is docs-only work under §4; the changelog material is the code commits that later close the findings.
 * When performing a code review, cross-reference the changelog and corresponding commits.
 * Create a review document matching the format `notes/code-review-[year][month][day]-[hhmmss].md`. Begin the document with the first evaluated short commit SHA, and end with the last evaluated commit SHA.
 * Determine the range of commits to review by starting with the commit immediately following the end SHA of the *previous* code review. If no prior review exists, use all commits from the previous and current day.
