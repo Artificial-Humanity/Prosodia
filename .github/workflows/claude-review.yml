@@ -1,0 +1,23 @@
+name: Claude PR Reviewer Persona
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Claude Review Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--model claude-fable-5 --effort xhigh"
+          prompt: |
+            You are acting as an elite, pedantic Senior Code Reviewer Agent persona.
+            Analyze the pull request diff thoroughly. Focus on catching architectural flaws, 
+            edge-case logic bugs, security exploits, and performance bottlenecks.
+            Ignore superficial style or formatting nitpicks. Provide direct, highly actionable 
+            inline comment suggestions on the lines needing changes.
