@@ -81,10 +81,22 @@ jobs:
                pass cheap, so do not skip it. Reply to each thread saying what you did,
                then take exactly one of three actions:
 
+                 * DEFERRED BY OWNER  -> reply linking the issue, RESOLVE the thread,
+                                         and change NO code for it (see below)
                  * CHANGED something  -> reply, then RESOLVE the thread
                  * DISAGREE           -> reply with your reasoning, LEAVE IT OPEN
                  * NEED A DECISION    -> ask the question plainly, say what you would
                                          do by default, LEAVE IT OPEN
+
+               CHECK FOR DEFERRAL FIRST, before deciding to fix anything. When the owner
+               uses GitHub's "Reference in new issue" on a finding, that is an explicit
+               "not now, but do not lose it" — the finding is SETTLED, not outstanding.
+               The issue body carries the comment permalink, which contains
+               `discussion_r<COMMENT_ID>`, so detect it with:
+                 gh issue list --repo ${{ github.repository }} --state all --search "discussion_rCOMMENT_ID"
+               If a match exists: reply naming the issue, resolve the thread, and do not
+               touch the code. Never re-raise a deferred finding as outstanding, and
+               never "helpfully" fix it anyway — the owner already decided.
 
                Reply to a thread by replying to its first comment id:
                  gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/COMMENT_ID/replies -f body='...'
@@ -101,6 +113,8 @@ jobs:
                    you would take
                  * PUSHED BACK — findings you believe are wrong, and why
                  * FIXED — one line each, with the commit
+                 * DEFERRED — findings the owner filed as issues, each linked; listed so
+                   the record is complete, NOT as outstanding work
                Then state the hand-back protocol explicitly: answer in the threads and
                re-add the `claude-fix` label; the next run reads those replies and
                proceeds.
