@@ -11,6 +11,35 @@ This document tracks technical changes, refactoring milestones, and build-system
 > public Prosodia repo.
 
 ---
+## [2026-08-10]
+
+### Fixed
+- **`.github/workflows/claude-review.yml` — the automated PR reviewer could not post** (`d7749c7`).
+  It ran to completion and delivered nothing. Three independent gaps, each a silent no-op on
+  its own, plus a wrong secret name:
+  - **No `permissions:` block.** This repo's default workflow token is read-only
+    (`default_workflow_permissions: "read"`), so the job analyzed the diff, billed the tokens,
+    and had no right to comment. Added `contents: read` / `pull-requests: write` /
+    `id-token: write`.
+  - **No `--allowedTools`.** Permissions grant the TOKEN the right; `--allowedTools` grants the
+    AGENT the tool. Without the inline-comment MCP tool and the `gh` allowlist there was no
+    mechanism to post at all.
+  - **The prompt never said to post to GitHub** — added `REPO` / `PR NUMBER` context and
+    explicit `gh pr comment` / `create_inline_comment` instructions.
+  - **The secret is the org-level `CLAUDE_OAUTH_TOKEN`**, not `CLAUDE_CODE_OAUTH_TOKEN`. The
+    action's *input* name stays `claude_code_oauth_token`, so the two deliberately disagree;
+    the file carries a comment on that line because it reads as a typo.
+- Dropped `--effort xhigh` — not a documented `claude_args` flag, an unrecognized flag fails the
+  run outright, and Claude Code already defaults to xhigh effort on capable models.
+- Replaced the severity filter. "Ignore superficial style or formatting nitpicks" is followed
+  *literally*: the model finds the bugs, then declines to report anything below the bar, so
+  precision looks excellent while real findings vanish. Now a concrete bar (anything that could
+  cause incorrect behavior, a test failure, a security weakness, or a misleading result) with
+  explicit severity, and an instruction not to filter past it.
+- Softened "security exploits" to "security vulnerabilities" (`claude-fable-5` runs classifiers
+  over cybersecurity content and can return `stop_reason: "refusal"`), added a `concurrency`
+  group so rapid pushes cancel superseded billed runs, and pinned checkout `@v6`.
+
 ## [2026-07-14]
 
 ### Added
