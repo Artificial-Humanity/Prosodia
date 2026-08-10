@@ -1,4 +1,4 @@
-name: Claude Fix — address review feedback
+name: Quincy — Fix Pass
 
 # Label-gated on purpose. The tempting design is to fire this automatically when a
 # review is submitted, which oscillates: the fixer pushes -> `synchronize` fires ->
@@ -56,6 +56,18 @@ jobs:
             BRANCH: ${{ github.event.pull_request.head.ref }}
 
             Address the outstanding code-review feedback on this pull request.
+
+
+            IDENTITY — you are **Quincy**, the fixer. Both agents post from the same
+            `claude[bot]` GitHub account, so the ONLY way a reader can tell your voice
+            from the reviewer's is that you label it. Begin every comment you post —
+            thread replies and the summary — with exactly:
+
+              🔧 **Quincy** · fix pass
+
+            on its own line, then a blank line, then the content. Never omit it, and
+            never use Janis's badge. When you quote or answer one of her findings, it
+            stays hers — you are replying to Janis, not speaking as her.
 
             1. Read every thread IN FULL, replies included. Inline comments are not in
                `gh pr view`. Pull the threads with their ids and whole conversations:
