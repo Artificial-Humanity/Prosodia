@@ -13,6 +13,18 @@ concurrency:
 
 jobs:
   review:
+    # Skip bot-initiated runs — CLEANLY, rather than letting the action refuse them.
+    #
+    # `synchronize` fires on every push to an open PR, and the fix pass pushes. So
+    # Quincy's commits re-trigger this review, the action sees a non-human actor and
+    # fails the job: "Workflow initiated by non-human actor ... Add bot to allowed_bots".
+    # Taking that suggestion would re-enable exactly the oscillation the fix lane is
+    # label-gated to prevent (fix pushes -> review -> fix -> ...), billed in full each
+    # lap. Skipping is also the intended design: Quincy answers and resolves each
+    # finding in its own thread, so a whole-PR re-review after a fix pass was never
+    # wanted. A red X for working-as-designed is noise that trains you to ignore the
+    # check.
+    if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
 
     # REQUIRED — not optional boilerplate. This repo's default workflow token is
