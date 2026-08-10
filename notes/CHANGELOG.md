@@ -13,6 +13,21 @@ This document tracks technical changes, refactoring milestones, and build-system
 ---
 ## [2026-08-10]
 
+### Added
+- **`.github/workflows/claude-fix.yml` — the review loop is closed** (`70f9a24`). The reviewer only
+  ever commented; nothing acted on those comments. Adding the `claude-fix` label to a PR now runs
+  a fix pass that reads the inline review comments (they are **not** in `gh pr view` — it fetches
+  `/pulls/N/comments`), commits fixes, replies with what it changed and what it deliberately did
+  not, and removes the label.
+  - **Label-gated on purpose.** Firing on `pull_request_review` submitted oscillates: fix pushes →
+    `synchronize` → reviewer posts → fix pushes → …, each lap billed at full model rates. The
+    vendor ships no loop guard and does not document which token it pushes with, so GitHub's own
+    recursion protection can't be relied on either. One label, one pass; re-label to repeat.
+  - Load-bearing details: `contents: write` (this job pushes, the reviewer only comments);
+    checkout `ref: head.ref` + `repository: head.repo.full_name` (the default checkout is a
+    detached merge commit, which cannot be pushed from); `fetch-depth: 0`; and
+    `cancel-in-progress: false`, since cancelling mid-pass can leave edits applied but uncommitted.
+
 ### Fixed
 - **`.github/workflows/claude-review.yml` — the automated PR reviewer could not post** (`d7749c7`).
   It ran to completion and delivered nothing. Three independent gaps, each a silent no-op on

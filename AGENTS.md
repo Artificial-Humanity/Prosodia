@@ -77,6 +77,18 @@ case-insensitive macOS/Windows.
     cannot see a commit that was never proposed.
 * **Branch naming**: `<type>/<short-slug>` matching the commit type — `fix/`, `feat/`,
   `docs/`, `chore/`.
+* **Work on the branch, commit and push liberally, open the PR only when the work is done**
+  (owner, 2026-08-10). Pushing to your own branch is free and is the entire point of having
+  one: commit early, commit often, push whenever, and let the branch hold work that is not
+  yet finished. What is deliberate is the *timing of the PR*, not the timing of the commits.
+  * **When completion is defined, completion opens the PR.** If a `/goal` has been set,
+    achieving that goal IS the completion point — open the PR then, without being asked again.
+  * **Otherwise the owner calls it.** With no goal set, work, push, and wait: the owner
+    acknowledges the completion point and the PR follows from that.
+  * **This is also what makes it cheap.** `.github/workflows/claude-review.yml` fires when a
+    PR is opened AND on every push to an open one, so a PR opened at the *start* of the work
+    bills a full model-rate review of half-finished code on every intermediate push. Opening
+    at completion buys exactly one review, of work that is actually ready to be read.
 * **Pull before push, every time.** Run `git pull --rebase` as the first step of any
   commit-and-push sequence on your branch, and rebase on `main` before opening the PR. If the
   tree holds the owner's uncommitted local edits, fetch and check ahead/behind instead of
@@ -87,7 +99,15 @@ case-insensitive macOS/Windows.
 * ⚠ **A rule in this file is not an enforcement mechanism.** The authority is the branch
   protection on `main`; this section only explains it. If a direct push to `main` ever
   *succeeds*, the protection is missing or was bypassed — report that rather than treating it
-  as permission.
+  as permission.* **Review feedback is closed with the `claude-fix` label, not by hand-waving.** The review
+  workflow only comments; `.github/workflows/claude-fix.yml` is what acts on those comments.
+  Add the `claude-fix` label to the PR and the fix agent reads the inline comments, commits
+  the fixes, replies, and removes the label. It is label-gated deliberately: firing it
+  automatically on every submitted review oscillates (fix pushes → `synchronize` → new review
+  → fix pushes), and the vendor ships no loop guard. One label, one pass; re-label to run it
+  again. A review comment is an argument, not an order — the fix agent is expected to push
+  back in a reply where a finding is wrong, rather than making a change it believes is wrong.
+
 
 ### 4. Changelog Maintenance Requirement
 
