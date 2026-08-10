@@ -57,20 +57,64 @@ jobs:
 
             Address the outstanding code-review feedback on this pull request.
 
-            1. Read the review feedback. Inline comments are not in `gh pr view` —
-               fetch them with:
-                 gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments
-               and read top-level discussion with `gh pr view --comments`.
+            1. Read every thread IN FULL, replies included. Inline comments are not in
+               `gh pr view`. Pull the threads with their ids and whole conversations:
+                 gh api graphql -f query='{repository(owner:"OWNER",name:"REPO"){pullRequest(number:N){reviewThreads(first:100){nodes{id isResolved isOutdated comments(first:50){nodes{id body path line author{login}}}}}}}}'
+               Also read top-level discussion with `gh pr view --comments`.
+
+               ⚠ **A human reply is authoritative and supersedes the reviewer.** If the
+               owner has answered a question, made a call, or overruled a finding, that
+               IS the decision — implement it and do not re-litigate it. Read to the
+               BOTTOM of each thread before acting; the first comment is often stale.
+               Skip threads already resolved, and treat `isOutdated` ones with care —
+               the code they point at has moved.
+
             2. Fix what is genuinely wrong. A review comment is an argument, not an
                order: if a finding is mistaken or the reviewer misread the code, say
                so in a reply and leave the code alone. Do not make a change you
                believe is wrong in order to close a comment.
+
             3. Commit each logical fix separately with a message explaining WHY the
                original was wrong, not merely what changed. Push to the PR branch.
-            4. Reply on the PR summarizing what you changed, what you deliberately
-               did not change and why, and anything you could not resolve.
-            5. Remove the trigger label when finished, so the pass can be re-armed:
+
+            4. Close the loop on EVERY thread — this is the part that makes the next
+               pass cheap, so do not skip it. Reply to each thread saying what you did,
+               then take exactly one of three actions:
+
+                 * CHANGED something  -> reply, then RESOLVE the thread
+                 * DISAGREE           -> reply with your reasoning, LEAVE IT OPEN
+                 * NEED A DECISION    -> ask the question plainly, say what you would
+                                         do by default, LEAVE IT OPEN
+
+               Reply to a thread by replying to its first comment id:
+                 gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/COMMENT_ID/replies -f body='...'
+               Resolve a thread by its THREAD id (REST cannot do this — GraphQL only):
+                 gh api graphql -f query='mutation{resolveReviewThread(input:{threadId:"THREAD_ID"}){thread{isResolved}}}'
+
+               ⚠ **NEVER resolve a thread you argued against or asked a question in.**
+               An open thread must mean exactly one thing: a human still needs to look
+               at this. Resolving your own objection destroys the only signal the owner
+               has, and it is worse than not resolving anything at all.
+
+            5. Post ONE summary comment, leading with what is blocked:
+                 * BLOCKED ON YOUR DECISION — questions you asked, each with the default
+                   you would take
+                 * PUSHED BACK — findings you believe are wrong, and why
+                 * FIXED — one line each, with the commit
+               Then state the hand-back protocol explicitly: answer in the threads and
+               re-add the `claude-fix` label; the next run reads those replies and
+               proceeds.
+
+            6. Remove the trigger label when finished, so the pass can be re-armed:
                  gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-fix
+
+
+            The label is the turn token. You do one pass, then hand back: anything you
+            could not settle alone stays an OPEN thread with a question in it, the owner
+            answers there, and re-adding `claude-fix` starts your next pass — which
+            begins by reading those answers (step 1). This is why replies must be
+            written into the threads rather than only into the summary: the summary is
+            for the human, the threads are what the next pass reads.
 
             Scope discipline: fix the findings, and stop. Do not refactor
             surrounding code, add features, or tidy unrelated files — an unrequested
