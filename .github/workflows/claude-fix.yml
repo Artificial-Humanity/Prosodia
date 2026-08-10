@@ -1,0 +1,81 @@
+name: Claude Fix — address review feedback
+
+# Label-gated on purpose. The tempting design is to fire this automatically when a
+# review is submitted, which oscillates: the fixer pushes -> `synchronize` fires ->
+# the reviewer posts -> the fixer pushes -> ... each lap billed at full model rates.
+# The action ships no loop guard and does not document which token it pushes with,
+# so the bound here is human: one label, one fix pass. Re-label to run it again.
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: claude-fix-${{ github.event.pull_request.number }}
+  # NOT cancel-in-progress: a cancelled run can leave edits applied but uncommitted,
+  # or committed but unpushed. Let a fix pass finish.
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: github.event.label.name == 'claude-fix'
+    runs-on: ubuntu-latest
+
+    # `contents: write` is the difference from the review workflow — this job pushes
+    # commits to the PR branch, where the reviewer only comments.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v6
+        with:
+          # Check out the PR's head branch itself, not the detached merge commit —
+          # you cannot push a commit back from a detached HEAD.
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          # Full history: the fix pass commits, and a depth-1 clone cannot rebase or
+          # amend if it needs to.
+          fetch-depth: 0
+
+      - name: Run Claude Fix Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Input name is fixed by the action; the SECRET is the org-level
+          # CLAUDE_OAUTH_TOKEN. Don't rename the left side to match the right.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          claude_args: >-
+            --model claude-fable-5
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(gh api:*)"
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BRANCH: ${{ github.event.pull_request.head.ref }}
+
+            Address the outstanding code-review feedback on this pull request.
+
+            1. Read the review feedback. Inline comments are not in `gh pr view` —
+               fetch them with:
+                 gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments
+               and read top-level discussion with `gh pr view --comments`.
+            2. Fix what is genuinely wrong. A review comment is an argument, not an
+               order: if a finding is mistaken or the reviewer misread the code, say
+               so in a reply and leave the code alone. Do not make a change you
+               believe is wrong in order to close a comment.
+            3. Commit each logical fix separately with a message explaining WHY the
+               original was wrong, not merely what changed. Push to the PR branch.
+            4. Reply on the PR summarizing what you changed, what you deliberately
+               did not change and why, and anything you could not resolve.
+            5. Remove the trigger label when finished, so the pass can be re-armed:
+                 gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-fix
+
+            Scope discipline: fix the findings, and stop. Do not refactor
+            surrounding code, add features, or tidy unrelated files — an unrequested
+            change is a new thing to review, which is how a fix pass becomes a
+            second review cycle.
+
+            If there is no actionable review feedback on this PR, remove the label,
+            say so in a comment, and make no commits.
