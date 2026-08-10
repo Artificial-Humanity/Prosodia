@@ -1,23 +1,79 @@
 name: Claude PR Reviewer Persona
+
 on:
   pull_request:
     types: [opened, synchronize]
 
+# `synchronize` fires on EVERY push to an open PR. Without this group, three
+# quick pushes run three concurrent reviews and you are billed for all three
+# while only the last one is worth reading.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     runs-on: ubuntu-latest
+
+    # REQUIRED — not optional boilerplate. This repo's default workflow token is
+    # read-only (`default_workflow_permissions: "read"`, checked 2026-08-10), so
+    # without this block the review runs to completion, bills the tokens, and
+    # then cannot post a single comment. The failure is silent in the sense that
+    # the analysis succeeds; only the delivery fails.
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
       - name: Run Claude Review Agent
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: "--model claude-fable-5 --effort xhigh"
+          # The INPUT name is fixed by the action (`claude_code_oauth_token`);
+          # the SECRET is the org-level `CLAUDE_OAUTH_TOKEN`. These deliberately
+          # do not match — do not "fix" the left side to agree with the right.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # --allowedTools is what actually lets the agent reach GitHub. Without
+          # it the model can analyze the diff but has no mechanism to post, so a
+          # prompt asking for "inline comments" produces nothing. This is the
+          # second half of the permissions problem above: permissions grant the
+          # token the right, --allowedTools grants the agent the tool.
+          #
+          # `--effort` is deliberately absent: it is not a documented claude_args
+          # flag, and Claude Code already defaults to xhigh effort on capable
+          # models, so naming it buys nothing and risks failing on an unknown arg.
+          claude_args: >-
+            --model claude-fable-5
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+
           prompt: |
-            You are acting as an elite, pedantic Senior Code Reviewer Agent persona.
-            Analyze the pull request diff thoroughly. Focus on catching architectural flaws, 
-            edge-case logic bugs, security exploits, and performance bottlenecks.
-            Ignore superficial style or formatting nitpicks. Provide direct, highly actionable 
-            inline comment suggestions on the lines needing changes.
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            You are an elite, pedantic Senior Code Reviewer. Review this pull
+            request's diff thoroughly, focusing on architectural flaws,
+            edge-case logic bugs, security vulnerabilities, and performance
+            bottlenecks.
+
+            Report every issue that could cause incorrect behavior, a test
+            failure, a security weakness, or a misleading result — including
+            findings you are uncertain about. Give each one an explicit
+            severity so it can be triaged. Only omit pure nits: formatting,
+            naming preferences, and style that no reader would act on.
+            Do not filter beyond that bar — a qualitative instruction like
+            "only report important issues" is followed literally and silently
+            drops real bugs.
+
+            The PR branch is already checked out in the working directory.
+
+            Use `gh pr comment` for top-level feedback.
+            Use `mcp__github_inline_comment__create_inline_comment` (with
+            `confirmed: true`) for findings anchored to specific lines.
+            Only post GitHub comments — do not return the review as a chat
+            message, or nobody will ever see it.
