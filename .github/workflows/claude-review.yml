@@ -1,8 +1,29 @@
 name: Janis — PR Review
 
+# ⚠ STOOD DOWN 2026-08-10 (owner) — NOT DELETED, and not broken.
+#
+# The Janis/Quincy review lane is being piloted in **Sonora only**, which is the most
+# active repo at this phase and therefore where the process earns or loses its keep. It
+# demonstrably improves code quality — it has caught real defects that reading alone
+# missed — but it also adds real friction, and running it across four repos multiplies
+# that before we know the shape we actually want.
+#
+# HOW IT IS OFF: the automatic triggers are removed, leaving `workflow_dispatch` so the
+# lane can still be run by hand from the Actions tab. Nothing is deleted, no secret
+# changed, no app uninstalled. To re-arm, restore the trigger block below and delete this
+# banner — one edit, no archaeology.
+#
+# ⚠ THE PR-ONLY RULE IS UNAFFECTED. Branch protection on `main` and the AGENTS.md commit
+# policy are a SEPARATE decision and both still stand here. This switch turns off the
+# BOTS, not the review.
+#
+# Original triggers, kept verbatim so re-arming is a copy:
+#   on:
+#     pull_request:
+#       types: [opened, synchronize]
+
 on:
-  pull_request:
-    types: [opened, synchronize]
+  workflow_dispatch:
 
 # `synchronize` fires on EVERY push to an open PR. Without this group, three
 # quick pushes run three concurrent reviews and you are billed for all three
