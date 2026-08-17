@@ -72,9 +72,11 @@ case-insensitive macOS/Windows.
   * **The Mac and `ai-lab-0` (and their agent sessions) commit concurrently.** Direct pushes to
     a shared `main` are how two sessions silently interleave half-finished work; a branch is a
     place for work to be incomplete without being everyone's problem.
-  * **Nothing reviews a direct push.** `.github/workflows/claude-review.yml` triggers on
+  * **Nothing reviews a direct push.** `.github/workflows/claude-review.yml` triggered on
     `pull_request`, so work that skips the PR skips the review entirely — the automation
-    cannot see a commit that was never proposed.
+    cannot see a commit that was never proposed. ⚠ Since the lane was **stood down here**
+    (#6, 2026-08-10) the automatic trigger is gone and nothing reviews a PR either unless
+    someone dispatches it by hand; the reason to open one is unchanged.
 * **Branch naming**: `<type>/<short-slug>` matching the commit type — `fix/`, `feat/`,
   `docs/`, `chore/`.
 * **Work on the branch, commit and push liberally, open the PR only when the work is done**
@@ -85,10 +87,13 @@ case-insensitive macOS/Windows.
     achieving that goal IS the completion point — open the PR then, without being asked again.
   * **Otherwise the owner calls it.** With no goal set, work, push, and wait: the owner
     acknowledges the completion point and the PR follows from that.
-  * **This is also what makes it cheap.** `.github/workflows/claude-review.yml` fires when a
-    PR is opened AND on every push to an open one, so a PR opened at the *start* of the work
-    bills a full model-rate review of half-finished code on every intermediate push. Opening
+  * **This is also what made it cheap.** `.github/workflows/claude-review.yml` fired when a
+    PR was opened AND on every push to an open one, so a PR opened at the *start* of the work
+    billed a full model-rate review of half-finished code on every intermediate push. Opening
     at completion buys exactly one review, of work that is actually ready to be read.
+    ⚠ **Past tense since #6 (2026-08-10):** the lane is stood down in this repo and piloted in
+    Sonora only. The triggers are commented out verbatim, leaving `workflow_dispatch`, so
+    re-arming is a copy-paste and the billing argument above returns with it.
 * **Pull before push, every time.** Run `git pull --rebase` as the first step of any
   commit-and-push sequence on your branch, and rebase on `main` before opening the PR. If the
   tree holds the owner's uncommitted local edits, fetch and check ahead/behind instead of
@@ -99,7 +104,9 @@ case-insensitive macOS/Windows.
 * ⚠ **A rule in this file is not an enforcement mechanism.** The authority is the branch
   protection on `main`; this section only explains it. If a direct push to `main` ever
   *succeeds*, the protection is missing or was bypassed — report that rather than treating it
-  as permission.* **Review feedback is closed with the `claude-fix` label, not by hand-waving.** The review
+  as permission.* **Review feedback is closed with the `claude-fix` label, not by hand-waving** — when the
+  lane is armed. ⚠ It is **stood down in this repo** since #6; the mechanism below describes
+  what a manual dispatch still does, and what re-arming restores. The review
   workflow only comments; `.github/workflows/claude-fix.yml` is what acts on those comments.
   Add the `claude-fix` label to the PR and the fix agent reads the inline comments, commits
   the fixes, replies, and removes the label. It is label-gated deliberately: firing it
@@ -130,6 +137,11 @@ case-insensitive macOS/Windows.
   owner explicitly asks it to, never as a rider on the review itself.
 * **Findings live on the PR, not in a file.** The review runs through
   `.github/workflows/claude-review.yml` and is closed with the `claude-fix` label (§3).
+  ⚠ **That lane is STOOD DOWN in this repo** (#6, 2026-08-10) — piloted in Sonora only, and
+  runnable here by `workflow_dispatch` from the Actions tab. So a review happens when someone
+  asks for one. Retiring the review *documents* does not depend on the lane: the argument
+  against them is that they were three unchecked restatements of one fact, which holds
+  whether the bots run or not.
 * ⚠ **The timestamped `notes/code-review-*.md` documents are RETIRED** (2026-08-17), and the
   last one was deleted with this change. The format required each review to delete its
   predecessor and repoint a `notes/STATE.md` pointer at itself — three hand-maintained
