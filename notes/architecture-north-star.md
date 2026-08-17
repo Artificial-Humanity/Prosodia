@@ -4,9 +4,8 @@
 > branch, experiment, or detour raises "wait, what are we doing again?" — this is the document that
 > answers it. Live decision forks are marked **→ FORK**. Related notes:
 > [architecture-and-development.md](architecture-and-development.md) ·
-> [actor-model-and-training.md](../../Sonora/github/notes/actor-model-and-training.md) ·
+> [model-decisions.md](../../Sonora/github/docs/model-decisions.md) ·
 > [high-ambition-1-matcha-actor.md](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) ·
-> [high-ambition-5-styletts2-lite.md](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md) ·
 > [next-steps.md](next-steps.md)
 
 ---

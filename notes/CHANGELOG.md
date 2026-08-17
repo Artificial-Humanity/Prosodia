@@ -72,7 +72,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   the eval harness against the §7 thresholds.
 - **VAT FiLM conditioning code shipped (Sonora `ad2baea`)** — milestone 3's model-code
   prerequisite, implemented to the same-day design decision
-  ([vat-conditioning-design.md](../../Sonora/github/notes/vat-channels.md)): zero-init FiLM per
+  ([vat-conditioning-design.md](../../Sonora/github/docs/vat-channels.md)): zero-init FiLM per
   encoder block + per CFM U-Net level, shared trunk, raw `[B,3,T]` input, cond dropout 0.15,
   `load_vat` filelist field; off by default. Verified: bit-identical warm start from Phase 0
   (vat 0/None/hot — an `initialize_weights()` kaiming clobber of the zero-init was caught and
@@ -108,7 +108,7 @@ This document tracks technical changes, refactoring milestones, and build-system
   `SONORA_LICENSE_WALL=derisk` permits NC for §7 de-risk runs with a TAINTED banner; no "off"
   mode exists. Behavior test-verified (pass/block/banner/unknown-block).
 - **Exploit-before-train measurement executed and written up**
-  ([exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md)):
+  (Sonora `notes/archive/exploit-before-train-measurement.md`, deleted 2026-08-02 in `8bbf343` — git history is the archive):
   north-star §6 experiment run on `ai-lab-0` against the Epoch-199 litert split graphs via a new
   pure-inference harness (`/data/toolchain/litert-conversion/exploit_measure.py`; 21 WAVs +
   `results.json` alongside). Verdict: **pace and loudness are free at inference** (per-token

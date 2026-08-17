@@ -24,7 +24,7 @@ was materialized at parity. The immediate queue:
 2. ✅ **Exploit-before-train measurement DONE (2026-07-14):** pace + loudness are free at
    inference (surgical per-token `duration_scales`, dB-exact pre-vocoder mel gain — both WER-safe);
    pitch + phonation are not (no lever exists) and are what VAT training must deliver. Results:
-   [Sonora exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md).
+   Sonora `notes/archive/exploit-before-train-measurement.md`, deleted 2026-08-02 in `8bbf343` — git history is the archive.
 3. **Directability (milestone 3) — NEXT:** VAT-conditioning code + labeled corpus — the real next
    build, now scoped: weight the corpus toward valence/tension expression (phonation, pitch);
    pace/energy ride the inference hooks. The Rust multi-graph runtime (§B) is the parallel
@@ -47,8 +47,8 @@ Sonora notes.
 > **Two separate tracks — don't conflate them.** Getting the Tuner to make *any* sound only needs
 > *a* compatible actor model + voices; it does **not** require training our own model. Training our
 > own actor is the **high-ambition production goal** — the chosen first model is the
-> [Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md), with a custom
-> [StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md) as the later higher-ceiling re-platform. Those
+> [Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md). _(The StyleTTS2-Lite
+> re-platform once planned as the later higher-ceiling option was **retired 2026-07-29** — [decision](../../Sonora/github/docs/model-decisions.md).)_ Those
 > are the long-horizon goal, not the near-term playback blocker.
 
 **Decisions made (2026-06-14):**
@@ -90,7 +90,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   2026-07-14 for milestone 3 (owner call): native 24 kHz, no resampling; vocoder = HiFi-GAN
   fine-tuned to 24 kHz/80-band (preserves warm start + mel contract + export lane; the
   fine-tune is on the critical path to the §7 verdict and starts early). Details:
-  [sample-rate-24khz-decision.md](../../Sonora/github/notes/model-decisions.md).**
+  [sample-rate-24khz-decision.md](../../Sonora/github/docs/model-decisions.md).**
 - [x] **Pick + prep the dataset.** A small clean permissive set (a LibriTTS speaker / LJSpeech / Expresso):
   clean/trim, resample to the chosen rate, phonemize transcripts into the locked vocab, build the filelist. (Completed 2026-07-10)
 - [x] **Stand up training platform**:
@@ -159,7 +159,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   up front, which stays this runtime task's job (per-chunk streaming + proportional compute).
 - [x] **Exploit-before-train measurement — ✅ DONE (2026-07-14).** Run on `ai-lab-0` against the
   Epoch-199 split graphs (`/data/toolchain/litert-conversion/exploit_measure.py`; results note:
-  [Sonora exploit-before-train-measurement.md](../../Sonora/github/notes/archive/exploit-before-train-measurement.md)).
+  Sonora `notes/archive/exploit-before-train-measurement.md`, deleted 2026-08-02 in `8bbf343` — git history is the archive).
   **Pace and loudness fall out free at inference:** per-token `duration_scales` via host `logw`
   is surgical and WER-safe to ×2.0 (ρ = 1.0; phrase-local stretch with ≤1.4% context drift), and
   per-frame log-mel dB bias before the vocoder is dB-exact with zero context bleed (WER 0 at
@@ -198,7 +198,7 @@ the *training-time* gates (distinct from the discovery-spike/runtime contracts a
   derisk banner, unknown block). Closes [north star §8.2](architecture-north-star.md).
 - [x] **Write the VAT-conditioning code — ✅ DONE (2026-07-14, Sonora `ad2baea`),** same day the
   design was decided (owner call; spec:
-  [vat-conditioning-design.md](../../Sonora/github/notes/vat-channels.md)): full FiLM blocks
+  [vat-conditioning-design.md](../../Sonora/github/docs/vat-channels.md)): full FiLM blocks
   (zero-init scale+shift) per encoder block + per CFM U-Net level fed by a shared `VATTrunk`
   from raw `[B,3,T]`; per-utterance labels broadcast; frame alignment rides the same attn
   matmul as `mu_y` (inherits the `out_size` cut); conditioning dropout p = 0.15; optional

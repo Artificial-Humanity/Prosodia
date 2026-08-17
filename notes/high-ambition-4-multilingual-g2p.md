@@ -2,8 +2,7 @@
 
 > **Sequence:** 4 of 6 ([index — all six, and which repo each lives in](../../Sonora/github/notes/high-ambition-index.md)) — broadens beyond English once the English production quality of the
 > [1 — Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) through
-> [3 — Child Voices](high-ambition-3-child-voices.md) is solid; precedes the optional
-> [5 — StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md) re-platform. **Base-independent** — this is
+> [3 — Child Voices](high-ambition-3-child-voices.md) is solid. _(Goal 5, the StyleTTS2-Lite re-platform this once preceded, was **retired 2026-07-29** — [decision](../../Sonora/github/docs/model-decisions.md).)_ **Base-independent** — this is
 > a G2P/front-end concern, unaffected by the acoustic-model choice. The cross-compilation + bridge
 > wrapper tasks here are already largely **done**; remaining work is integration/opt-in packaging.
 

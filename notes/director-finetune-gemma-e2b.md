@@ -2,7 +2,7 @@
 
 Owner call 2026-07-20: fine-tuning Gemma 4 E2B as Prosodia's on-device director has real
 value and goes on the roadmap. This note records the reasoning and the trigger conditions so
-the item can be picked up cold. Public-facing milestone entry: `Prosodia/Docs/ROADMAP.md`.
+the item can be picked up cold. Public-facing milestone entry: `Prosodia/docs/ROADMAP.md`.
 
 ## Why
 

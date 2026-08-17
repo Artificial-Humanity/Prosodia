@@ -19,7 +19,7 @@
 > second track, and nothing is being held back for filing.
 >
 > The defensive publication for the expressive-control mechanism is at
-> `Prosodia/Docs/defensive-publication-expressive-control.md` (public repo, commit `946bcc2`).
+> `Prosodia/docs/defensive-publication-expressive-control.md` (public repo, commit `946bcc2`).
 > This capture file remains the richer internal record; the Eureka material below is retained for
 > reference only.
 >

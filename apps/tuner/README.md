@@ -103,5 +103,5 @@ On harness build, a build phase copies the committed `ProsodiaTuner/SamplePassag
 ---
 
 ## 📄 License
-Apache License 2.0. See [CONTRIBUTING.md](../../Docs/CONTRIBUTING.md) for details.
+Apache License 2.0. See [CONTRIBUTING.md](../../docs/CONTRIBUTING.md) for details.
 

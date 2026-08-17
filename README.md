@@ -59,7 +59,7 @@ cargo build --release
 Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 The Director→Actor expressive-control design is the subject of a
-[defensive publication](Docs/defensive-publication-expressive-control.md) (2026-07-13): a dated,
+[defensive publication](docs/defensive-publication-expressive-control.md) (2026-07-13): a dated,
 enabling technical disclosure placing the mechanism — including contemplated variants — in the
 public record as prior art, free for anyone to implement.
 

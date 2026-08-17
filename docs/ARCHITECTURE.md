@@ -14,7 +14,7 @@ live in this repo's `notes/`.
 prosodia/ (Project Prosodia — one of the flat Artificial-Humanity repos)
 ├── Cargo.toml                   # Root Manifest defining workspace members and shared profiles
 ├── Cargo.lock                   # Pinned dependency versions
-├── Docs/                        # PUBLIC canon documentation
+├── docs/                        # PUBLIC canon documentation
 │   ├── ARCHITECTURE.md          # This file — repository layout & structure
 │   ├── CONTRIBUTING.md          # Unified contribution and CLA guidelines
 │   └── ROADMAP.md               # Public forward-looking roadmap

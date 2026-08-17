@@ -21,7 +21,7 @@ must-do items.
 ## Global Repository Layout
 
 For the comprehensive layout, directory structures, and file mappings of this repo, refer to
-[Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md). Agents and developers should consult that file
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Agents and developers should consult that file
 as the single source of truth for repo topology.
 
 ### Integration Dependencies
@@ -112,7 +112,7 @@ case-insensitive macOS/Windows.
 ### 4. Changelog Maintenance Requirement
 
 * The project changelog lives at [notes/CHANGELOG.md](notes/CHANGELOG.md). Append a detailed chronological entry describing all technical modifications, refactoring milestones, and build-system changes **after committing** the corresponding work.
-* **Scope: code work only.** Changelog entries are required for source, build-config, and dependency-manifest changes (`crates/`, `bindings/`, `platforms/`, `apps/`, `Cargo.toml`/`Cargo.lock`, build scripts). They are **not** required for docs-only commits (`Docs/`, `*.md`, comments-only changes).
+* **Scope: code work only.** Changelog entries are required for source, build-config, and dependency-manifest changes (`crates/`, `bindings/`, `platforms/`, `apps/`, `Cargo.toml`/`Cargo.lock`, build scripts). They are **not** required for docs-only commits (`docs/`, `*.md`, comments-only changes).
 * Every entry must be accompanied by the short 7-character commit SHA associated with the work.
 * **The changelog is append-only across a release cycle.** Do not prune, rewrite, or remove historical entries. Entries are pruned/rolled over **only** when we tag and release a new version of the overall project — at which point the released entries are collected under that version's heading and the working section is reset for the next cycle.
 * New entries go at the top under the current date, following the existing `Added` / `Changed` / `Fixed` / `Removed` structure.

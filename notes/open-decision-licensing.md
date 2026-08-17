@@ -41,7 +41,7 @@ ever becomes the priority; note GPLv3 effectively blocks iOS/App Store embedding
 
 ## Tightenings — status
 
-1. ✅ **CLA** — already in place: public `Docs/CONTRIBUTING.md` §1 grants McFarlin Technologies, LLC
+1. ✅ **CLA** — already in place: public `docs/CONTRIBUTING.md` §1 grants McFarlin Technologies, LLC
    an irrevocable copyright license incl. sublicensing "under any license terms chosen by the
    Company" plus a patent grant and original-work representation. Dual-licensing survives outside
    contributors. (Verified 2026-07-13; nothing to add.)
@@ -89,7 +89,7 @@ rather than leaking anything worth protecting.
   specifics retain full optionality — until they ship in the public repo or registry.
 
 **The fork — DECIDED: Path B, executed 2026-07-13.**
-[Defensive publication](../../Prosodia/Docs/defensive-publication-expressive-control.md) committed
+[Defensive publication](../../Prosodia/docs/defensive-publication-expressive-control.md) committed
 to the public Prosodia repo (`946bcc2`), linked from the public README: enabling disclosure of the
 full expressive-control mechanism including the prophetic milestone-3 trained-to-obey conditioning
 and the spoiler-aware casting gate, mechanisms labeled [implemented] vs [contemplated], document

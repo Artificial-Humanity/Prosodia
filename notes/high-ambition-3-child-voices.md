@@ -4,7 +4,7 @@
 > [1 — Matcha-TTS actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) and the
 > [2 — Dramatic Reader](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) multi-voice work. Then:
 > [4 — Multilingual G2P](high-ambition-4-multilingual-g2p.md) ·
-> [5 — StyleTTS2-Lite](../../Sonora/github/notes/archive/high-ambition-5-styletts2-lite.md). Options 1–2 work with the current engine
+> 5 — StyleTTS2-Lite (**retired 2026-07-29**, [decision](../../Sonora/github/docs/model-decisions.md)). Options 1–2 work with the current engine
 > today; Options 3–4 need the trained base model.
 
 > [!NOTE]
