@@ -135,7 +135,7 @@ Subjective reviews are submitted through the `ProsodiaTuner` audition feedback s
 
 ## 2. Active Audition Trends & Tuning Resolutions
 
-Based on feedback logs compiled through June 10, 2026, the following calibrations have been applied to the default engine configurations. (These default values are now centralized in the Rust core — `crates/stage/src/acoustic_matrix.rs` and `audio_shaping.rs`, aligned 2026-06-15; see [CHANGELOG.md](CHANGELOG.md).)
+Based on feedback logs compiled through June 10, 2026, the following calibrations have been applied to the default engine configurations. (These default values are now centralized in the Rust core — `crates/stage/src/acoustic_matrix.rs` and `audio_shaping.rs`, aligned 2026-06-15 — see the commit log.)
 
 ### Trend 1: Expressiveness Limits
 *   *Observation*: Lower expressiveness levels (defaults near `1.5`) suffered flat, unexpressive delivery. Elevated VAD ranges (3.0+) performed better.

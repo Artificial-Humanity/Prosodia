@@ -1,7 +1,7 @@
 # AGENTS — Project Prosodia
 
 This is the entry point for any agent or developer working on Project Prosodia (on-device
-speech & logic). This is an independent GitHub repo. Internal engineering notes — changelog,
+speech & logic). This is an independent GitHub repo. Internal engineering notes —
 current state, open decisions — live in [notes/](notes/). Before starting work, read
 [notes/STATE.md](notes/STATE.md) for the current state of the project and the most immediate
 must-do items.
@@ -41,7 +41,7 @@ as the single source of truth for repo topology.
 Names must be predictable so links resolve on case-sensitive systems (Linux/CI) as well as
 case-insensitive macOS/Windows.
 
-* **Canonical root marker files → `UPPERCASE`** (`SCREAMING_SNAKE_CASE` if multi-word): `README.md`, `LICENSE`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, `AGENTS.md`. Keep this set small and curated.
+* **Canonical root marker files → `UPPERCASE`** (`SCREAMING_SNAKE_CASE` if multi-word): `README.md`, `LICENSE`, `CONTRIBUTING.md`, `ROADMAP.md`, `AGENTS.md`. Keep this set small and curated.
 * **Top-level anchor docs → `UPPERCASE`, single word preferred:** `ARCHITECTURE.md`, `STATE.md`.
 * **All other docs & notes → `lowercase-kebab-case.md`:** e.g. `open-decisions.md`, `code-review-findings.md`. This is the rule for everything in `notes/`.
 * **Source code → the language's own convention:** Rust `snake_case.rs`, Swift `PascalCase.swift`, Kotlin `PascalCase.kt`.
@@ -109,24 +109,32 @@ case-insensitive macOS/Windows.
   back in a reply where a finding is wrong, rather than making a change it believes is wrong.
 
 
-### 4. Changelog Maintenance Requirement
+### 4. Change history
 
-* The project changelog lives at [notes/CHANGELOG.md](notes/CHANGELOG.md). Append a detailed chronological entry describing all technical modifications, refactoring milestones, and build-system changes **after committing** the corresponding work.
-* **Scope: code work only.** Changelog entries are required for source, build-config, and dependency-manifest changes (`crates/`, `bindings/`, `platforms/`, `apps/`, `Cargo.toml`/`Cargo.lock`, build scripts). They are **not** required for docs-only commits (`docs/`, `*.md`, comments-only changes).
-* Every entry must be accompanied by the short 7-character commit SHA associated with the work.
-* **The changelog is append-only across a release cycle.** Do not prune, rewrite, or remove historical entries. Entries are pruned/rolled over **only** when we tag and release a new version of the overall project — at which point the released entries are collected under that version's heading and the working section is reset for the next cycle.
-* New entries go at the top under the current date, following the existing `Added` / `Changed` / `Fixed` / `Removed` structure.
+* **The commit message is the record. Git history is the archive.** There is no changelog
+  file; `notes/CHANGELOG.md` was deleted 2026-08-17, following Sonora, which retired the same
+  convention on 2026-08-11.
+* ⚠ **Why it went, rather than "it was tedious".** A changelog is a second, hand-maintained
+  copy of what git already knows, and a copy that nothing compares against the original drifts
+  by construction — every entry was a claim about a commit that no check could falsify. The
+  same reasoning retired the timestamped review documents in §5.
+* So write the commit message as the entry: what changed, why, and what was measured. That is
+  the artifact a reader will actually have.
 
 ### 5. Code Review Execution Standards
 
-* **Scope: code work only.** Code reviews cover the same code changes that warrant changelog entries (see §4) — source, build config, and dependency manifests. Docs-only commits are out of scope and need no review.
-* **A review is a report, not a fix pass.** Assume the deliverable is the findings document alone: the reviewing agent takes on fixes only when the owner explicitly asks it to, never as a rider on the review itself.
-* **The review itself never warrants a changelog entry.** Review documents live in `notes/`, and writing, replacing, or deleting one is docs-only work under §4; the changelog material is the code commits that later close the findings.
-* When performing a code review, cross-reference the changelog and corresponding commits.
-* Create a review document matching the format `notes/code-review-[year][month][day]-[hhmmss].md`. Begin the document with the first evaluated short commit SHA, and end with the last evaluated commit SHA.
-* Determine the range of commits to review by starting with the commit immediately following the end SHA of the *previous* code review. If no prior review exists, use all commits from the previous and current day.
-* Once the new code review document has been written, delete the previous one to keep only the latest review active.
-* Repoint the **Latest code review** pointer in [notes/STATE.md](notes/STATE.md) to the new document (only the link target changes; the surrounding line is phrased generically) so a session can find the current review without globbing the folder.
+* **Scope: code work only** — source, build config, and dependency manifests
+  (`crates/`, `bindings/`, `platforms/`, `apps/`, `Cargo.toml`/`Cargo.lock`, build scripts).
+  Docs-only commits are out of scope and need no review.
+* **A review is a report, not a fix pass.** The reviewing agent takes on fixes only when the
+  owner explicitly asks it to, never as a rider on the review itself.
+* **Findings live on the PR, not in a file.** The review runs through
+  `.github/workflows/claude-review.yml` and is closed with the `claude-fix` label (§3).
+* ⚠ **The timestamped `notes/code-review-*.md` documents are RETIRED** (2026-08-17), and the
+  last one was deleted with this change. The format required each review to delete its
+  predecessor and repoint a `notes/STATE.md` pointer at itself — three hand-maintained
+  statements of one fact, none of them checked. A finding that its cycle could not settle
+  belongs in an issue, where it stays open until somebody closes it.
 
 ---
 

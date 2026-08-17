@@ -35,9 +35,9 @@ The single live workstream and all deferred debt are tracked in [next-steps.md](
 
 ## Pointers
 
-- Change history — [CHANGELOG.md](CHANGELOG.md)
+- Change history — the commit log. There is no changelog file (AGENTS.md §4).
 - **What's next & technical debt** — [next-steps.md](next-steps.md)
-- Latest code review — [code-review-20260709-233816.md](code-review-20260709-233816.md) (records the evaluated range; the next review resumes at its end SHA per AGENTS.md §5)
+- Code review — findings live on the pull request, not in a file (AGENTS.md §5).
 - Engineering & Architecture Notes — [architecture-and-development.md](architecture-and-development.md)
 - Out-of-bounds references (external/parent paths catalog) — [out-of-bounds-references.md](out-of-bounds-references.md)
 - Voicing, Synthesis & Tuning — [voicing-synthesis-and-tuning.md](voicing-synthesis-and-tuning.md)

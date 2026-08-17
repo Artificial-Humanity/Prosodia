@@ -2,7 +2,7 @@
 
 The single entrypoint for picking up work. Active workstream first, then completed items (for
 record), then deferred technical debt. Each debt entry states *what*, *why deferred*, and *what
-"done" looks like* so it can be picked up cold. Change history lives in [CHANGELOG.md](CHANGELOG.md);
+"done" looks like* so it can be picked up cold. Change history lives in the commit log;
 the curated snapshot is [STATE.md](STATE.md).
 
 ---
