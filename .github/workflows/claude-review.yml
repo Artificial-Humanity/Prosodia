@@ -78,13 +78,13 @@ jobs:
           # second half of the permissions problem above: permissions grant the
           # token the right, --allowedTools grants the agent the tool.
           #
-          # Model and effort (owner, 2026-09-02): Fable 5.1 at high. `claude_args`
+          # Model and effort (owner, 2026-09-02; effort lowered 2026-09-03): Fable 5.1 at medium. `claude_args`
           # is passed straight to the Claude Code CLI, whose `--effort` ladder is
           # low | medium | high | xhigh | max; it is not listed in the action's own
           # docs, so if a run ever fails on an unknown flag, this line is the suspect.
           claude_args: >-
             --model claude-fable-5-1
-            --effort high
+            --effort medium
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
 
           prompt: |
