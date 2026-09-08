@@ -17,7 +17,8 @@ prosodia/ (Project Prosodia — one of the flat Artificial-Humanity repos)
 ├── docs/                        # PUBLIC canon documentation
 │   ├── ARCHITECTURE.md          # This file — repository layout & structure
 │   ├── CONTRIBUTING.md          # Unified contribution and CLA guidelines
-│   └── ROADMAP.md               # Public forward-looking roadmap
+│   ├── ROADMAP.md               # Public forward-looking roadmap
+│   └── STATE.md                 # Curated snapshot: where the project stands, what is next
 ├── LICENSE                      # Apache License 2.0 (Apache-2.0)
 ├── README.md                    # Master architectural framework documentation
 ├── build_android.sh             # Android NDK build helper

@@ -2,8 +2,8 @@
 
 This is the entry point for any agent or developer working on Project Prosodia (on-device
 speech & logic). This is an independent GitHub repo. Internal engineering notes —
-current state, open decisions — live in [notes/](notes/). Before starting work, read
-[notes/STATE.md](notes/STATE.md) for the current state of the project and the most immediate
+open decisions, working detail — live in [notes/](notes/). Before starting work, read
+[docs/STATE.md](docs/STATE.md) for the current state of the project and the most immediate
 must-do items.
 
 ---
