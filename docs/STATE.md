@@ -3,7 +3,7 @@
 _Last updated: 2026-07-13._
 
 The committed, curated snapshot of where the project stands and what to do next. Behavioral
-rules and the stack/layout manifest live in [AGENTS.md](../../AI-Lab-AMD/AGENTS.md).
+rules and the stack/layout manifest live in [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -23,7 +23,7 @@ rules and the stack/layout manifest live in [AGENTS.md](../../AI-Lab-AMD/AGENTS.
 - **Senior developer audit findings resolved (2026-06-14).** All issues from the overnight pass (default lookahead limit back-compatibility, flaky lookahead tests, synchronous LLM FFI wrapper execution, doc drifts, and Xcode scheme renaming) have been fully addressed and verified.
 - **Swift→Rust core port complete.** The legacy Swift G2P (`Misaki`) and `ActorEspeak` targets are deleted; G2P, tokenization, sentence segmentation, prosody markup parsing, and actor orchestration now live in the Rust core (`crates/actor/{g2p,lexicon,pipeline}.rs`, `crates/stage/{segmenter,markup_parser}.rs`). espeak-ng (GPL) is fully out of the Apple build scope.
 - **Config & sample-rate centralization (2026-06-15).** Sample rate is exposed across the FFI via `get_sample_rate()` and consumed by the Swift/Kotlin platform layers; acoustic-matrix and phrase-pause calibration defaults aligned in the Rust core. The dead `hexgrad/StyleTTS2-Lite` `VoiceDownloader` URL was repointed to `artificial-humanity/StyleTTS2-Lite`.
-- **Lexicon & desktop scaffolding (2026-06-16).** G2P lexicons are now compiled to binary at build time (zero-copy `include_bytes!` maps, no runtime JSON parse). Linux (ALSA/PulseAudio) and Windows (WASAPI Exclusive) audio-sink scaffolding landed under `platforms/`; the project roadmap moved to `docs/ROADMAP.md`. _Caveat:_ the desktop sinks have no build wiring/FFI bridge yet — see [next-steps.md](next-steps.md) (Tech Debt C).
+- **Lexicon & desktop scaffolding (2026-06-16).** G2P lexicons are now compiled to binary at build time (zero-copy `include_bytes!` maps, no runtime JSON parse). Linux (ALSA/PulseAudio) and Windows (WASAPI Exclusive) audio-sink scaffolding landed under `platforms/`; the project roadmap moved to `docs/ROADMAP.md`. _Caveat:_ the desktop sinks have no build wiring/FFI bridge yet — see [next-steps.md](../notes/next-steps.md) (Tech Debt C).
 - **Matcha-TTS vocabulary lock & sample rate integration complete (2026-06-18).** Locked vocabulary contract (exactly 178 symbols), added dynamic native sample rate configurations, resolved the latest code review findings regarding console log flooding (LN4 warning deduplication), and verified all tests pass.
 - **Matcha-TTS & TFLite bindings code review resolved (2026-06-17).** Resolved all issues in the stock Matcha-TTS integration and TFLite C-API bindings (exact dtype querying, overflow limit checks, dynamic input indexing, unified IPA remapping, warning on unknown phonemes, and caching of is_matcha/limit properties to prevent redundant locks).
 - **Matcha-TTS Discovery Spike & FFI Contract Lock complete (2026-06-17).** Verified the custom `onnx2tf` conversion pipeline on `model_e2e.onnx` successfully. Exposed `is_matcha` across the UniFFI bridge, aligned the Swift platform backend protocols/wrappers, and validated that the macOS `ProsodiaTuner` app harness builds cleanly.
@@ -31,22 +31,25 @@ rules and the stack/layout manifest live in [AGENTS.md](../../AI-Lab-AMD/AGENTS.
 
 ## Next Steps
 
-The single live workstream and all deferred debt are tracked in [next-steps.md](next-steps.md) — start there to answer "what do we work on next?" (short answer: **desktop verification pair — Debt-F build check + Tuner audition — then the exploit-before-train measurement and VAT directability**).
+The single live workstream and all deferred debt are tracked in [next-steps.md](../notes/next-steps.md) — start there to answer "what do we work on next?" (short answer: **desktop verification pair — Debt-F build check + Tuner audition — then the exploit-before-train measurement and VAT directability**).
 
 ## Pointers
 
+_`../notes/` is the private working-notes folder (a symlink to the umbrella `Notes/` repo).
+Those links resolve inside the lab and not in a clone of this public repository._
+
 - Change history — the commit log. There is no changelog file (AGENTS.md §4).
-- **What's next & technical debt** — [next-steps.md](next-steps.md)
+- **What's next & technical debt** — [next-steps.md](../notes/next-steps.md)
 - Code review — findings live on the pull request, not in a file (AGENTS.md §5).
-- Engineering & Architecture Notes — [architecture-and-development.md](architecture-and-development.md)
-- Out-of-bounds references (external/parent paths catalog) — [out-of-bounds-references.md](out-of-bounds-references.md)
-- Voicing, Synthesis & Tuning — [voicing-synthesis-and-tuning.md](voicing-synthesis-and-tuning.md)
-- Director Narrative Memory (story graph, spoiler-safe narrator chat, pre-reading) — [director-narrative-memory.md](director-narrative-memory.md)
-- Voice Interruption & Discussion ("Solo Book Club" — voice barge-in to ask/discuss) — [voice-interruption-and-discussion.md](voice-interruption-and-discussion.md)
-- Patent disclosure — Director↔Actor expressive control (Eureka briefs, capture of record) — [patent-disclosure-expressive-control.md](patent-disclosure-expressive-control.md)
+- Engineering & Architecture Notes — [architecture-and-development.md](../notes/architecture-and-development.md)
+- Out-of-bounds references (external/parent paths catalog) — [out-of-bounds-references.md](../notes/out-of-bounds-references.md)
+- Voicing, Synthesis & Tuning — [voicing-synthesis-and-tuning.md](../notes/voicing-synthesis-and-tuning.md)
+- Director Narrative Memory (story graph, spoiler-safe narrator chat, pre-reading) — [director-narrative-memory.md](../notes/director-narrative-memory.md)
+- Voice Interruption & Discussion ("Solo Book Club" — voice barge-in to ask/discuss) — [voice-interruption-and-discussion.md](../notes/voice-interruption-and-discussion.md)
+- Patent disclosure — Director↔Actor expressive control (Eureka briefs, capture of record) — [patent-disclosure-expressive-control.md](../notes/patent-disclosure-expressive-control.md)
 - Actor model selection, size and shape — [model-decisions.md](../../Sonora/github/docs/model-decisions.md) · launch, hardware and first-run — [training-operations.md](../../Sonora/github/notes/training-operations.md) _(Sonora folded `actor-model-and-training.md` into these two, 2026-08-02)_
-- High-ambition goals (in sequence) — [1 Matcha-TTS Actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) · [2 Dramatic Reader](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) · [3 Child Voices](high-ambition-3-child-voices.md) · [4 Multilingual G2P](high-ambition-4-multilingual-g2p.md). _(Goal 5, the StyleTTS2-Lite re-platform, was **retired 2026-07-29** — [decision](../../Sonora/github/docs/model-decisions.md).)_
-- Repository layout — [../../Prosodia/docs/ARCHITECTURE.md](../../Prosodia/docs/ARCHITECTURE.md)
+- High-ambition goals (in sequence) — [1 Matcha-TTS Actor](../../Sonora/github/notes/high-ambition-1-matcha-actor.md) · [2 Dramatic Reader](../../Sonora/github/notes/high-ambition-2-dramatic-reader.md) · [3 Child Voices](../notes/high-ambition-3-child-voices.md) · [4 Multilingual G2P](../notes/high-ambition-4-multilingual-g2p.md). _(Goal 5, the StyleTTS2-Lite re-platform, was **retired 2026-07-29** — [decision](../../Sonora/github/docs/model-decisions.md).)_
+- Repository layout — [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Environment footguns
 
