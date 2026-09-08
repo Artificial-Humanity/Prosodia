@@ -109,3 +109,11 @@ local.properties
 # `rm -rf`s this dir and copies fresh .so from target/ on every build, so the
 # committed copies only cause churn + Git LFS pointer mismatches.
 platforms/android/src/main/jniLibs/
+
+# Working notes — moved to the umbrella `Notes/` repo, which is private (2026-09-08).
+# `notes` here is a symlink to ../Notes/Prosodia and must stay untracked: this repo is
+# public, and committing the link would republish nothing but would put a path back in
+# the tree that only resolves inside the lab. `docs/` is the public-facing folder.
+# No trailing slash — the target is a symlink, and git reads `notes/` as "directory
+# only", which a symlink is not, so `notes/` would silently fail to ignore it.
+/notes
