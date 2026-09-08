@@ -2,8 +2,9 @@
 
 > Placeholder — the public, forward-looking direction for Project Prosodia.
 >
-> Near-term execution detail and the current must-do list live in [STATE.md](STATE.md);
-> this roadmap captures the longer-horizon milestones and releases as they firm up.
+> Near-term execution detail and the current must-do list live in the private
+> `notes/STATE.md`; this roadmap captures the longer-horizon milestones and releases
+> as they firm up.
 
 ## Planned
 
