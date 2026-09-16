@@ -13,9 +13,9 @@ name: Janis — PR Review
 # changed, no app uninstalled. To re-arm, restore the trigger block below and delete this
 # banner — one edit, no archaeology.
 #
-# ⚠ THE PR-ONLY RULE IS UNAFFECTED. Branch protection on `main` and the AGENTS.md commit
-# policy are a SEPARATE decision and both still stand here. This switch turns off the
-# BOTS, not the review.
+# ⚠ THE PR-ONLY RULE IS GONE (owner, 2026-09-16), SEPARATELY FROM THIS SWITCH. AGENTS.md
+# no longer requires a PR to land on `main` — see WORKFLOW.md's branch/review/merge cycle.
+# This switch only ever turned off the BOTS; it never controlled whether a PR was required.
 #
 # Original triggers, kept verbatim so re-arming is a copy:
 #   on:

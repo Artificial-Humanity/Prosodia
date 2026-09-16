@@ -91,13 +91,14 @@ case-insensitive macOS/Windows.
   Docs-only commits are out of scope and need no review.
 * **A review is a report, not a fix pass.** The reviewing agent takes on fixes only when the
   owner explicitly asks it to, never as a rider on the review itself.
-* **Findings live on the PR, not in a file.** The review runs through
-  `.github/workflows/claude-review.yml` and is closed with the `claude-fix` label (§3).
-  ⚠ **That lane is STOOD DOWN in this repo** (#6, 2026-08-10) — piloted in Sonora only, and
-  runnable here by `workflow_dispatch` from the Actions tab. So a review happens when someone
-  asks for one. Retiring the review *documents* does not depend on the lane: the argument
-  against them is that they were three unchecked restatements of one fact, which holds
-  whether the bots run or not.
+* **Findings live in the review itself, not in a file.** The review cycle is
+  [WORKFLOW.md](WORKFLOW.md)'s `superpowers:requesting-code-review` /
+  `superpowers:receiving-code-review` pair (owner, 2026-09-16) — not the
+  `.github/workflows/claude-review.yml` / `claude-fix` label mechanism this bullet used to
+  describe. That lane is **still stood down in this repo** (#6, 2026-08-10) and runnable only
+  by hand via `workflow_dispatch`; it is not how a review runs by default any more. Retiring
+  the review *documents* does not depend on the lane: the argument against them is that they
+  were three unchecked restatements of one fact, which holds whether the bots run or not.
 * ⚠ **The timestamped `notes/code-review-*.md` documents are RETIRED** (2026-08-17), and the
   last one was deleted with this change. The format required each review to delete its
   predecessor and repoint a `notes/STATE.md` pointer at itself — three hand-maintained

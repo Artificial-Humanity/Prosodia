@@ -28,6 +28,6 @@ review cycle above replaces it rather than sitting alongside it.
 ## Pull before push, every time
 
 The Mac and `ai-lab-0` (and their agent sessions) work the same repo concurrently: run
-`git pull --rebase` as the first step of any commit-and-push sequence on your branch. If the
-tree holds the owner's uncommitted local edits, fetch and check ahead/behind instead of forcing
-a rebase.
+`git pull --rebase` as the first step of any commit-and-push sequence on your branch, and
+rebase on `main` again immediately before merging or pushing directly. If the tree holds the
+owner's uncommitted local edits, fetch and check ahead/behind instead of forcing a rebase.
