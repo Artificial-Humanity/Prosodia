@@ -1,33 +1,31 @@
 # Workflow — Prosodia
 
-**This file holds how work gets done in this repo: branching, review, and landing on `main`.**
-[AGENTS.md](AGENTS.md) §3 points here. Your identity and remit are [PERSONA.md](PERSONA.md).
-
----
+Follow [AGENTS.md](AGENTS.md) for repository rules and [PERSONA.md](PERSONA.md)
+for the developer role and commit identity.
 
 ## Branch, review, merge
 
-**Standing across every project repo in this workspace** (owner, 2026-09-16):
+1. Branch off local `main`. All work happens on a branch named `<type>/<short-slug>`,
+   matching the commit type: `fix/`, `feat/`, `docs/` or `chore/`.
+2. When code work is complete, use `superpowers:requesting-code-review` to dispatch
+   a review. Documentation-only commits need no review.
+3. Use `superpowers:receiving-code-review` to evaluate findings. Address them,
+   then commit the fixes.
+4. Merge to `main` after the applicable review cycle. A direct push to `main` is
+   allowed; a pull request is not required.
 
-1. **Branch off `main`.** All work happens on a branch.
-2. **When the work is complete, call for a review.** Use the `superpowers:requesting-code-review`
-   skill to dispatch it.
-3. **Receive the review with the `superpowers:receiving-code-review` skill.** Address what it
-   finds, then commit the fixes.
-4. **Merge to `main`.** Once this review cycle has been followed, a direct push to `main` is
-   allowed — a pull request is not required.
+## Review scope and conduct
 
-⚠ **This supersedes the old PR-only rule and the `claude-review.yml` / `claude-fix.yml` lane**
-(owner, 2026-09-16). That lane was already stood down in this repo (#6, 2026-08-10); the
-review cycle above replaces it rather than sitting alongside it.
+* Review source, build configuration and dependency manifests: `crates/`, `bindings/`,
+  `platforms/`, `apps/`, `Cargo.toml`, `Cargo.lock` and build scripts.
+* A reviewer reports findings. The reviewing agent makes fixes only when the owner
+  explicitly requests them.
+* Keep findings in the review itself. File findings that the cycle cannot resolve
+  as issues; do not create separate review documents.
 
-## Branch naming
+## Synchronization
 
-`<type>/<short-slug>` matching the commit type — `fix/`, `feat/`, `docs/`, `chore/`.
-
-## Pull before push, every time
-
-The Mac and `ai-lab-0` (and their agent sessions) work the same repo concurrently: run
-`git pull --rebase` as the first step of any commit-and-push sequence on your branch, and
-rebase on `main` again immediately before merging or pushing directly. If the tree holds the
-owner's uncommitted local edits, fetch and check ahead/behind instead of forcing a rebase.
+* Run `git pull --rebase` as the first step of a commit-and-push sequence on your
+  branch. Rebase on `main` again immediately before merging or pushing directly.
+* If the tree contains the owner's uncommitted edits, fetch and check ahead/behind
+  instead of forcing a rebase.
