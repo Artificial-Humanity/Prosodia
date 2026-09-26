@@ -5,7 +5,7 @@ Welcome to the **Rehearsal Studio**!
 `ProsodiaTuner` is the auditioning sandbox, mixing board, and parameter tuner for **Project Prosodia**. This is where we call our **Director** (LLM) and **Actor** (TTS) onto the stage, adjust Valence-Arousal-Tension (VAD) sliders, A/B test models, and tweak our acoustic matrix to ensure the show is spectacular.
 
 > [!NOTE]
-> The production app target (`ProsodiaTuner`) has been removed from this repository to serve as a clean slate later. This repository is now strictly dedicated to the parameter tuning harness and testing workbench (`ProsodiaTuner`).
+> The former production app target was removed to leave a clean slate for later. The one remaining target and scheme, `ProsodiaTuner`, is the parameter-tuning harness and testing workbench.
 
 ---
 
@@ -14,8 +14,7 @@ Welcome to the **Rehearsal Studio**!
 The project contains the following components:
 
 - `ProsodiaTuner` app: The tuning tool and auditioning environment.
-- `ProsodiaTuner.xcodeproj`: The Xcode configuration project.
-- `ProsodiaTunerTests`: Unit tests for validating the harness.
+- `ProsodiaTuner.xcodeproj`: The Xcode configuration project (no test target; the engine's tests are the Rust crates' `cargo test`).
 
 The app links the consolidated `platforms/apple` Swift package (`../../platforms/apple`), which exposes the `Stage` (Stage Manager), `Actor`, and `Director` engine modules.
 
@@ -55,7 +54,7 @@ For real speech in the harness on macOS, models are resolved via `prosodia_model
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
 │   ├── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
-│   └── gemma-4-26B-A4B-it-qat-q4_0-gguf/  # Gemma 4 26B-A4B MoE (128 experts/8 active, 256K ctx), QAT q4_0 GGUF, Apache-2.0 — OFFLINE server-side Director for Sonora book_ingest labeling (served via the ollama OpenAI API, :11434); NOT an on-device/Tuner model
+│   └── gemma-4-26B-A4B-it-qat-q4_0-gguf/  # Gemma 4 26B-A4B MoE (128 experts/8 active, 256K ctx), QAT q4_0 GGUF, Apache-2.0 — was the OFFLINE server-side Director for Sonora book_ingest labeling (ollama, :11434), since superseded there by a larger Gemma 4; NOT an on-device/Tuner model
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 ├── shivammehta25/
@@ -71,20 +70,23 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 
 > [!TIP]
 > **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
-> (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`) — the `actor-split` role in
-> `prosodia_models.json` points at the registry's `litert-split/` set. To audition it, swap the
-> `actor` role's path to that directory: host-side Euler ODE, real per-token durations from `logw`
-> (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
+> (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`): host-side Euler ODE, real per-token
+> durations from `logw` (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
+> ⚠ The `actor-split` role in `prosodia_models.json` still points at the retired
+> `Registry/Sonora/v1-ljspeech/litert-split` path; the set now lives at
+> `Sonora/huggingface/baseline-ljspeech-22k/litert-split/`. Point the `actor` role there to
+> audition it. The runtime handles that single-speaker 22.05 kHz set only; the newer multi-speaker
+> 24 kHz exports need runtime work first.
 
 > [!NOTE]
-> **Model paths now resolve through `prosodia_models.json`** (repo root — role-based config,
-> Debt F, commit `577a598`): the apps look up `actor`, `voices`, and `director-*` roles instead of
-> hard-coding filenames, so the `Google/` Gemma location is handled by config. ⚠️ Authored
-> remotely without `xcodebuild` — verify both app targets build (`apps/tuner/build.sh`) before
-> deleting any root-level compatibility copies. `config.json` and `sonora.tflite` remain
-> at the `/data/models` root because the Rust engine reads the config adjacent to the model file.
+> **Model paths resolve through `prosodia_models.json`** (repo root — role-based config, commit
+> `2425594`, desktop build-checked 2026-07-13): the apps look up `actor`, `voices`, and `director-*`
+> roles instead of hard-coding filenames, so the `Google/` Gemma location is handled by config.
+> `ProsodiaModels.swift` still carries a built-in fallback with model paths for when the config file
+> is not found. `config.json` and `sonora.tflite` remain at the `/data/models` root because the Rust
+> engine reads the config adjacent to the model file.
 
-The speak functionality also checks for the fine-tuning checkpoint file in our harness at `IIEleven11/StyleTTS2FineTune/StyleTTS2/Models/LibriTTS/epochs_2nd.pth`. Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
+Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 
 ---
 

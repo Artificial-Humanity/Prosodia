@@ -37,7 +37,7 @@ Since this extension is in active development, load it as an unpacked extension:
 2. Toggle **Developer mode** **ON** in the top-right corner.
 3. Click the **Load unpacked** button in the top-left corner.
 4. Select the project directory:
-    📁 `~/Projects/Prosodia/ProsodiaTunerExtension`
+    📁 `Prosodia/apps/tuner-extension` (in your checkout)
 
 ---
 

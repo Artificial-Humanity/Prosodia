@@ -16,7 +16,9 @@ native platform clients. Before starting work, read [PERSONA.md](PERSONA.md),
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) is the source of truth for repo topology.
 
-* `bindings/ffi` generates Swift, Kotlin and C# wrappers.
+* UniFFI is exported per crate (`uniffi::setup_scaffolding!()` in each FFI-facing
+  `crates/*/src/lib.rs`). `build_frameworks.sh` and `build_android.sh` generate the Swift
+  and Kotlin wrappers; the Windows C# code calls the exported C symbols directly.
 * `apps/tuner` consumes the Apple package through `.package(path: "../../platforms/apple")`.
 * `apps/tuner-extension` provides Chrome Manifest V3 companion controls.
 * `apps/apple-reader` (SwiftUI) and `apps/android-reader` (Jetpack Compose) connect

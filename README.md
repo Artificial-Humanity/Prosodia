@@ -8,7 +8,7 @@ Welcome to **Prosodia**! 🎭✨
 
 Prosodia is an on-device, directable neural audiobook engine. Instead of a robotic text-to-speech voice reading books like they're reciting tax codes, Prosodia acts as a digital rehearsal studio. It analyzes the text, determines the emotional subtext, blends custom voice casting profiles, and narrates audiobooks with performance-grade human expression.
 
-Everything runs locally on-device via Google LiteRT (formerly TensorFlow Lite) and Apple Metal/Accelerate. No cloud APIs, no network latency, and absolutely zero chance of our AI models escaping to buy items on your credit card.
+Everything runs locally on-device via Google LiteRT (formerly TensorFlow Lite). No cloud APIs, no network latency, and absolutely zero chance of our AI models escaping to buy items on your credit card.
 
 ---
 
@@ -17,7 +17,7 @@ Everything runs locally on-device via Google LiteRT (formerly TensorFlow Lite) a
 Our monorepo organizes the workspace into simple layers:
 
 ### 1. Crates (The Safe, Local Neural Core)
-*   [**`core`**](crates/core): The vocabulary index, BPE tokenizer, and shared traits. The bedrock of our dependency graph.
+*   [**`core`**](crates/core): The vocabulary index and BPE tokenizer. The bedrock of our dependency graph.
 *   [**`folioparser`**](crates/folioparser): Parses EPUB XML structures, extracts plain text, and prevents us from getting lost in OPF manifests.
 *   [**`director`**](crates/director): The Emotional Director. Driven by Gemma 4 (LiteRT-LM), it reads book passages and provides performance notes—such as Valence, Arousal, Tension (VAD), and casting assignments.
 *   [**`actor`**](crates/actor): The Voice Talent. Driven by [**Sonora**](https://github.com/Artificial-Humanity/Sonora) (LiteRT), our directable TTS model built on the Matcha-TTS architecture, it takes the performance notes and synthesizes raw floating-point PCM audio matrices.
@@ -25,12 +25,12 @@ Our monorepo organizes the workspace into simple layers:
 
 ### 2. Platforms (Hardware Bridges)
 *   [**`apple`**](platforms/apple): A Swift Package combining the FFI target bridges and custom `AVAudioEngine` PCM loops.
-*   [**`android`**](platforms/android): Kotlin/NDK bridge streaming to C++ Oboe / AAudio queues.
+*   [**`android`**](platforms/android): Kotlin/NDK bridge streaming PCM through `AudioTrack`.
 *   [**`linux`**](platforms/linux): Desktop background runner mapped to ALSA / PulseAudio.
 *   [**`windows`**](platforms/windows): C#/.NET library driving WASAPI exclusive-mode low-latency streaming.
 
 ### 3. Downstream Apps
-*   [**`apple-reader`**](apps/apple-reader): The SwiftUI local-first eBook reader for iOS/macOS.
+*   [**`apple-reader`**](apps/apple-reader): The SwiftUI local-first eBook reader (macOS today; iOS is the target).
 *   [**`android-reader`**](apps/android-reader): The Jetpack Compose counterpart — early scaffold, not yet at feature parity.
 *   [**`tuner`**](apps/tuner): The Rehearsal Studio mixing board. Tweak VAD sliders, swap casting parameters, A/B test models, and listen to the dramatic results.
 *   [**`tuner-extension`**](apps/tuner-extension): Chrome Manifest V3 extension companion.
@@ -49,8 +49,8 @@ cargo build --release
 
 ### Run the Rehearsal workbench
 1. Make sure you have models populated in the shared `../models` library (`/data/models`; see `prosodia_models.json`).
-2. Open `apps/tuner/ProsodiaTuner.xcodeproj` in Xcode.
-3. Select the `Tuner` scheme, hit **Run**, and start playing with the VAD sliders! 🎛️
+2. Build the Rust frameworks and the app: `apps/tuner/build.sh` (Apple silicon only).
+3. Open `apps/tuner/ProsodiaTuner.xcodeproj` in Xcode, select the `ProsodiaTuner` scheme, hit **Run**, and start playing with the VAD sliders! 🎛️
 
 ---
 

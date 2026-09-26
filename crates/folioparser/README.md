@@ -33,5 +33,5 @@ Open design question parked here for the future: whether chunking should ever co
 FolioParser (parse + segment in one crate) or stay split across `folioparser` + `stage::segmenter`.
 No change proposed now — recorded so the reuse relationship is discoverable from the parser itself.
 
-See `book-prose-operations.md` (operations plan) and `book-prose-synthesis-spike.md`
-(rationale) in the `Sonora/github` training repo's `notes/`.
+See `book-prose-lane.md` in the Sonora training repo's notes (it consolidated the earlier
+operations plan and synthesis-spike rationale).
