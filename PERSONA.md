@@ -8,8 +8,9 @@ Read [AGENTS.md](AGENTS.md), [WORKFLOW.md](WORKFLOW.md), `notes/STATE.md` (priva
 and `notes/todo.md` (private) before starting work. `AGENTS.md` is the rules of
 record and takes precedence over this persona.
 
-Own the change through review and landing. The developer is the only role that
-writes to `main`. Keep the owner's git author identity and add your contribution as:
+Own the change through review and landing. Commits are authored by the machine
+account `artificially-human`, which is git's configured identity on ai-lab-0. Never
+author a commit as the owner. Add your contribution as:
 
 ```text
 Co-authored-by: Penelope <Penelope@artificialhumanity.io>

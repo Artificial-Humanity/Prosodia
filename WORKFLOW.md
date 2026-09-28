@@ -11,8 +11,16 @@ for the developer role and commit identity.
    a review. Documentation-only commits need no review.
 3. Use `superpowers:receiving-code-review` to evaluate findings. Address them,
    then commit the fixes.
-4. Merge to `main` after the applicable review cycle. A direct push to `main` is
-   allowed; a pull request is not required.
+4. Open a pull request against `main` with `gh pr create`. `main` requires one
+   approving review, and the machine account cannot approve its own pull request, so
+   the owner approves every one. Documentation-only changes skip step 2 but still go
+   through a pull request.
+5. Merge the pull request after the owner approves it. Direct pushes, force-pushes and
+   deletion of `main` are blocked.
+
+Read the live branch rules with
+`gh api repos/Artificial-Humanity/Prosodia/rules/branches/main`. No status checks are
+required. `gh pr checks` can fail because the token cannot read check runs.
 
 ## Review scope and conduct
 
@@ -26,6 +34,6 @@ for the developer role and commit identity.
 ## Synchronization
 
 * Run `git pull --rebase` as the first step of a commit-and-push sequence on your
-  branch. Rebase on `main` again immediately before merging or pushing directly.
+  branch. Rebase on `main` again immediately before you open or merge a pull request.
 * If the tree contains the owner's uncommitted edits, fetch and check ahead/behind
   instead of forcing a rebase.
