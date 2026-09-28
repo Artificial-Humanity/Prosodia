@@ -1,0 +1,36 @@
+# Put every PR in the admins' queue when it becomes open for review: opened as ready (not a
+# draft), marked ready from draft, or reopened. Each admin is requested as a reviewer and assigned.
+#
+# ADMINS lists users, not the `admins` team: the workflow token cannot see org teams, so a team
+# review request fails ("Could not resolve to a node"). Keep ADMINS in step with that team.
+#
+# pull_request_target runs this file from the base branch with a write token, also for PRs from
+# forks. That is safe only because nothing here checks out or runs the PR's code — keep it so.
+name: Request admin review
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  request:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request review from, and assign, the admins
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          ADMINS: lmcfarlin
+        run: |
+          for u in $ADMINS; do
+            gh api --method POST "repos/$GITHUB_REPOSITORY/pulls/$PR/requested_reviewers" \
+              -f "reviewers[]=$u" --jq '"review requested: \([.requested_reviewers[].login])"' \
+              || echo "::warning::could not request review from $u (a PR's author cannot review it)"
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/assignees" \
+              -f "assignees[]=$u" --jq '"assigned: \([.assignees[].login])"'
+          done

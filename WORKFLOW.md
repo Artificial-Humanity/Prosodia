@@ -13,8 +13,9 @@ for the developer role and commit identity.
    then commit the fixes.
 4. Open a pull request against `main` with `gh pr create`. `main` requires one
    approving review, and the machine account cannot approve its own pull request, so
-   the owner approves every one. Documentation-only changes skip step 2 but still go
-   through a pull request.
+   the owner approves every one. `.github/workflows/request-admin-review.yml` requests
+   the owner's review and assigns the owner when a pull request opens as ready for
+   review. Documentation-only changes skip step 2 but still go through a pull request.
 5. Merge the pull request after the owner approves it. Direct pushes, force-pushes and
    deletion of `main` are blocked.
 
