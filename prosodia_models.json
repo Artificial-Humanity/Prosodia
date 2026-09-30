@@ -3,7 +3,7 @@
   "roles": {
     "actor": {
       "path": "sonora.tflite",
-      "display": "Sonora Actor (v1-ljspeech)"
+      "display": "Sonora Actor (baseline-ljspeech-22k)"
     },
     "voices": {
       "path": ".",
@@ -18,8 +18,8 @@
       "display": "Gemma 4 E4B"
     },
     "actor-split": {
-      "path": "../../Registry/Sonora/v1-ljspeech/litert-split",
-      "display": "Sonora Actor (v1 litert-split, Plan A multi-graph)"
+      "path": "../Sonora/huggingface/baseline-ljspeech-22k/litert-split",
+      "display": "Sonora Actor (baseline-ljspeech-22k litert-split, Plan A multi-graph)"
     }
   },
   "directorRoleOrder": [
