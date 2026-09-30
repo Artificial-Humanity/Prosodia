@@ -63,7 +63,6 @@ prosodia/ (Project Prosodia — one of the flat Artificial-Humanity repos)
 │   │   ├── Package.swift        # Swift Package Manager (SPM) structural manifest coordinating all targets
 │   │   ├── FFIHeaders/          # FFI Headers and modulemaps used for compiling the binary targets
 │   │   ├── *FFI.xcframework     # Built Rust frameworks (actor, director, folioparser, stage)
-│   │   ├── Vendor/              # Vendored espeak-ng source (GPL; unreferenced by Package.swift)
 │   │   └── Sources/
 │   │       ├── Kit/             # Consolidated Swift API wrapping FFI generated code & FolioParser
 │   │       ├── Audio/           # Hand-coded native AVAudioEngine PCM loop streams
