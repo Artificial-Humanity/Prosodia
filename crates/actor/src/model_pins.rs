@@ -104,10 +104,11 @@ fn pin_dir(role_path: &Path) -> PathBuf {
 }
 
 /// Files the actor engines read from a role's directory. For a split model
-/// directory that is every `matcha_{textenc,decoder,vocoder}*.tflite` graph
-/// (`find_graph` takes the first match in directory order, so all candidates
-/// count) plus `emb.bin` and `config.json`; for an e2e model it is the model
-/// file plus the adjacent `config.json`.
+/// directory that is every `{matcha,sonora}_{textenc,decoder,vocoder}*.tflite`
+/// graph (`find_graph` takes the first match in directory order, so all
+/// candidates count) plus `emb.bin`, `config.json` and, when present,
+/// `spk_emb.bin`; for an e2e model it is the model file plus the adjacent
+/// `config.json`.
 fn loaded_files(role_path: &Path) -> Vec<String> {
     if !is_directory_role(role_path) {
         let model = role_path.file_name().unwrap().to_string_lossy().to_string();
@@ -117,10 +118,12 @@ fn loaded_files(role_path: &Path) -> Vec<String> {
     if let Ok(entries) = std::fs::read_dir(role_path) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            let is_graph = ["matcha_textenc", "matcha_decoder", "matcha_vocoder"]
-                .iter()
-                .any(|p| name.starts_with(p));
-            if is_graph && name.ends_with(".tflite") {
+            let is_graph = ["matcha_", "sonora_"].iter().any(|family| {
+                ["textenc", "decoder", "vocoder"]
+                    .iter()
+                    .any(|role| name.starts_with(&format!("{family}{role}")))
+            });
+            if (is_graph && name.ends_with(".tflite")) || name == "spk_emb.bin" {
                 files.push(name);
             }
         }

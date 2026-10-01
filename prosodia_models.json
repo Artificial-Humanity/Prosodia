@@ -36,6 +36,18 @@
         "matcha_textenc_fp16.tflite": "7de885fa8efff7bf682b7b833585099858d203df613874dff7d5f6a3b8ad7ea3",
         "matcha_vocoder_fp16.tflite": "39b6593e2fd0d81c644b7c510883608e351be01fbf5bb4c890f721da46901234"
       }
+    },
+    "actor-split-24k": {
+      "path": "../Sonora/huggingface/derisk-energy-24k/litert-split",
+      "display": "Sonora Actor (derisk-energy-24k litert-split, 247 speakers, 24 kHz)",
+      "sha256": {
+        "config.json": "df6b01526b71978bfc1765b2e6c603326c26db4d415bd112aecb73634d456107",
+        "emb.bin": "d5ceea9dbdcd3f11db5452f5607ebd640b732b875408353442a52c6ad5b6c24f",
+        "sonora_decoder_fp16.tflite": "80682e37d1acb312afd00418242748fe22e5eb6ef6bee7eae853f4e2c18c46f1",
+        "sonora_textenc_fp16.tflite": "0d0078ccf0f53fa9ce5b5868bca1132b27f8239ba546b06317838f1bf21224fb",
+        "sonora_vocoder24k_fp16.tflite": "3fd5c6caf920e7efdf2d260da10e874cf42ceb393f7be2a8504410f0d2917568",
+        "spk_emb.bin": "e002f88370c8bd37780980c59775548fd79469ea3f58a27e9ae17b6878fdf03f"
+      }
     }
   },
   "directorRoleOrder": [

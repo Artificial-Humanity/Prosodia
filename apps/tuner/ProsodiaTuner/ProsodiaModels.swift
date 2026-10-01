@@ -36,6 +36,7 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
         roles: [
             "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (baseline-ljspeech-22k)"),
             "actor-split": ModelRoleEntry(path: "../Sonora/huggingface/baseline-ljspeech-22k/litert-split", display: "Sonora Actor (baseline-ljspeech-22k litert-split, Plan A multi-graph)"),
+            "actor-split-24k": ModelRoleEntry(path: "../Sonora/huggingface/derisk-energy-24k/litert-split", display: "Sonora Actor (derisk-energy-24k litert-split, 247 speakers, 24 kHz)"),
             "voices": ModelRoleEntry(path: ".", display: "Voice packs directory"),
             "director-light": ModelRoleEntry(path: "Google/gemma-4-E2B-it.litertlm", display: "Gemma 4 E2B"),
             "director-heavy": ModelRoleEntry(path: "Google/gemma-4-E4B-it.litertlm", display: "Gemma 4 E4B"),
