@@ -245,6 +245,9 @@ impl LiteRtActorEngine {
                 None,
                 MATCHA_CFM_TEMPERATURE,
                 None,
+                // Speaker 0, neutral VAT: speaker selection and the payload's
+                // VAT reach the split runtime in a later change.
+                crate::split_engine::Conditioning::NEUTRAL,
             )
             .map_err(|msg| SpeechEngineError::Inference { msg })?;
         // Same output contract as the monolithic Matcha path: resample the
@@ -1262,6 +1265,31 @@ mod tests {
         assert!(!out.audio.is_empty());
         assert!(peak > 0.001, "silent output (peak {peak})");
         assert_eq!(out.pred_dur.len(), ids.len(), "real per-token durations");
+    }
+
+    /// The multi-speaker 24 kHz split export through `LiteRtActorEngine`:
+    /// native-rate output passes through without resampling, so the sample
+    /// count stays a whole number of 256-sample hops.
+    #[test]
+    fn test_split_dispatch_24k_conditioned_model() {
+        let dir = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
+        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
+            println!("Skipping: split model dir {dir} not found");
+            return;
+        }
+        let engine = LiteRtActorEngine::new(dir.to_string());
+        assert!(engine.is_matcha());
+        assert_eq!(engine.get_token_limit(), 256);
+        let ids = vec![0, 12, 0, 15, 0, 18, 0, 5, 0, 9, 0];
+        let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
+        let out = engine
+            .forward(ids.clone(), style, 1.0, None, None, None)
+            .expect("24 kHz split dispatch forward");
+        let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        println!("24k split dispatch: {} samples, peak {peak:.4}", out.audio.len());
+        assert!(!out.audio.is_empty() && peak > 0.001, "silent output (peak {peak})");
+        assert_eq!(out.audio.len() % 256, 0, "24 kHz output was resampled");
+        assert_eq!(out.pred_dur.len(), ids.len());
     }
 
     #[test]
