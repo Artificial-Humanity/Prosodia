@@ -29,6 +29,8 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
 
     /// Mirrors the committed `prosodia_models.json`, so a missing config file
     /// degrades to the standard shared-workspace layout instead of a dead app.
+    /// The file's `registry` revision and per-role `sha256` pins are not decoded
+    /// or mirrored here; the Rust tests in `crates/actor/src/model_pins.rs` check them.
     public static let fallback = ProsodiaModels(
         modelsBase: "../models",
         roles: [

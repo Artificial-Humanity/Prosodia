@@ -75,7 +75,15 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > The `actor-split` role in `prosodia_models.json` has the path
 > `"../Sonora/huggingface/baseline-ljspeech-22k/litert-split"` (relative to `modelsBase`, so it
 > resolves to the workspace's `Sonora/huggingface/` checkout). To audition it, set the `actor`
-> role's path to that exact value. The runtime handles that single-speaker 22.05 kHz set only; the
+> role's path to that exact value.
+
+> [!IMPORTANT]
+> **Model pins.** `prosodia_models.json` records the registry checkout's git revision
+> (`registry.revision`) and a sha256 for every file the `actor` and `actor-split` roles load. The
+> Rust tests in `crates/actor/src/model_pins.rs` check both, and a changed model file fails them.
+> To move a role to another artifact, check with Sonora's resident first, then update the path,
+> the revision and the hashes together. Run with `PROSODIA_REQUIRE_PINNED_MODELS=1` to make a
+> missing pinned file fail the tests, not skip them. The runtime handles that single-speaker 22.05 kHz set only; the
 > newer multi-speaker 24 kHz exports need runtime work first.
 
 > [!NOTE]
