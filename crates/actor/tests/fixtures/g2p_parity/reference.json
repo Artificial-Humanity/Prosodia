@@ -249,7 +249,7 @@
       "text": "O'Brien and d'Artagnan rode with Ma'evan.",
       "ipa": "ˈɑːbɹiən ænd dˈɑːɹɾæɡnən ɹˈoʊd wɪð mˈiːvən.",
       "contraction": false,
-      "neural": false
+      "neural": true
     },
     {
       "text": "Mr. Smith and Dr. Jones walked to St. Paul's with Col. Reed.",

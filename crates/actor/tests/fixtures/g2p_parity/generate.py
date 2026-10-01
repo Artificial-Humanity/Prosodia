@@ -50,7 +50,19 @@ def main():
         sys.exit(f"Sonora's front end has uncommitted changes; the fixture would not be reproducible:\n{dirty}")
 
     host = op_g2p.OpenPhonemizerG2P(use_neural_oov=True, homographs=False)
-    assets = Path(op_g2p._default_assets())
+    assets = Path(host.assets_dir)
+    # Count every call into the neural OOV graph. `stats["neural_hits"]` misses the
+    # calls made while resolving apostrophe words (possessives, clitics, the
+    # bare-letters fallback for names such as O'Brien), which go through
+    # `_plain_word` -> `_neural_word` without incrementing it.
+    neural_calls = [0]
+    neural_word = host._neural_word
+
+    def counted_neural_word(word):
+        neural_calls[0] += 1
+        return neural_word(word)
+
+    host._neural_word = counted_neural_word
     raw_tables = op_g2p.contraction_tables()
     # G7 writes this exact string as g2p_contractions.json; its hash identifies the tables.
     tables_json = json.dumps(raw_tables, ensure_ascii=False, indent=2, sort_keys=True)
@@ -59,7 +71,7 @@ def main():
     fixed = set(device_g2p.PARITY_PROBES)
     probes = []
     for text in device_g2p.probe_sentences(tables):
-        neural_before = host.stats["neural_hits"]
+        neural_before = neural_calls[0]
         ipa = host.phonemize(text)
         probes.append({
             "text": text,
@@ -70,7 +82,7 @@ def main():
             "contraction": text not in fixed,
             # The host reached its neural OOV graph: a mismatch here compares two OOV
             # models, not two lexicons.
-            "neural": host.stats["neural_hits"] > neural_before,
+            "neural": neural_calls[0] > neural_before,
         })
 
     out = {
