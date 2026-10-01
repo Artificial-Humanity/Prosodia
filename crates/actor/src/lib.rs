@@ -15,3 +15,6 @@ pub mod split_engine;
 #[cfg(test)]
 mod model_pins;
 
+#[cfg(test)]
+mod g2p_parity;
+
