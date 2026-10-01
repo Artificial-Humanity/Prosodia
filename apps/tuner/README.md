@@ -72,11 +72,11 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
 > (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`): host-side Euler ODE, real per-token
 > durations from `logw` (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
-> ⚠ The `actor-split` role in `prosodia_models.json` still points at the retired
-> `Registry/Sonora/v1-ljspeech/litert-split` path; the set now lives at
-> `Sonora/huggingface/baseline-ljspeech-22k/litert-split/`. Point the `actor` role there to
-> audition it. The runtime handles that single-speaker 22.05 kHz set only; the newer multi-speaker
-> 24 kHz exports need runtime work first.
+> The `actor-split` role in `prosodia_models.json` has the path
+> `"../Sonora/huggingface/baseline-ljspeech-22k/litert-split"` (relative to `modelsBase`, so it
+> resolves to the workspace's `Sonora/huggingface/` checkout). To audition it, set the `actor`
+> role's path to that exact value. The runtime handles that single-speaker 22.05 kHz set only; the
+> newer multi-speaker 24 kHz exports need runtime work first.
 
 > [!NOTE]
 > **Model paths resolve through `prosodia_models.json`** (repo root — role-based config, commit

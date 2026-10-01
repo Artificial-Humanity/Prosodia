@@ -1235,10 +1235,10 @@ mod tests {
 
     /// End-to-end dispatch through LiteRtActorEngine with a split-model
     /// DIRECTORY path: detection, token limit, forward, 24 kHz resample.
-    /// Skips when the registry clone is absent.
+    /// Skips when the `Sonora/huggingface` registry checkout is absent.
     #[test]
     fn test_split_dispatch_through_engine() {
-        let dir = "../../../Registry/Sonora/v1-ljspeech/litert-split";
+        let dir = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
         if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
             println!("Skipping: split model dir not found");
             return;

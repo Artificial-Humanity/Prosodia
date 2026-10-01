@@ -43,7 +43,7 @@ pub struct SplitConfig {
     pub mel_std: f32,
     pub hop: usize,
     pub sample_rate: u32,
-    /// Baseline length scale baked into the recipe (0.95 for v1-ljspeech).
+    /// Baseline length scale baked into the recipe (0.95 for baseline-ljspeech-22k).
     pub length_scale: f32,
     #[serde(rename = "n_timesteps_default", default = "default_timesteps")]
     pub n_timesteps: usize,
@@ -534,7 +534,7 @@ impl GaussianRng {
 mod tests {
     use super::*;
 
-    const MODEL_DIR: &str = "../../../Registry/Sonora/v1-ljspeech/litert-split";
+    const MODEL_DIR: &str = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
     const FIXTURE_DIR: &str = "../../target/split_ref";
 
     /// Parity against the Python reference implementation of the

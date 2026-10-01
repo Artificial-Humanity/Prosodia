@@ -32,8 +32,8 @@ public struct ProsodiaModels: Codable, Equatable, Sendable {
     public static let fallback = ProsodiaModels(
         modelsBase: "../models",
         roles: [
-            "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (v1-ljspeech)"),
-            "actor-split": ModelRoleEntry(path: "../../Registry/Sonora/v1-ljspeech/litert-split", display: "Sonora Actor (v1 litert-split, Plan A multi-graph)"),
+            "actor": ModelRoleEntry(path: "sonora.tflite", display: "Sonora Actor (baseline-ljspeech-22k)"),
+            "actor-split": ModelRoleEntry(path: "../Sonora/huggingface/baseline-ljspeech-22k/litert-split", display: "Sonora Actor (baseline-ljspeech-22k litert-split, Plan A multi-graph)"),
             "voices": ModelRoleEntry(path: ".", display: "Voice packs directory"),
             "director-light": ModelRoleEntry(path: "Google/gemma-4-E2B-it.litertlm", display: "Gemma 4 E2B"),
             "director-heavy": ModelRoleEntry(path: "Google/gemma-4-E4B-it.litertlm", display: "Gemma 4 E4B"),
@@ -92,17 +92,21 @@ public final class ProsodiaModelsManager: Sendable {
         self.config = config
         self.configFileURL = loadedFrom
 
+        // `.standardized` removes `..` lexically. `.standardizedFileURL` would first
+        // resolve symlinks in any path containing `..`, so with `models` symlinked
+        // to a mount, a role path like `../Sonora/...` would escape to the mount's
+        // parent instead of the workspace.
         let baseString = config.modelsBase as NSString
         if baseString.isAbsolutePath {
-            self.modelsBase = URL(fileURLWithPath: config.modelsBase).standardizedFileURL
+            self.modelsBase = URL(fileURLWithPath: config.modelsBase).standardized
         } else if let anchor = loadedFrom?.deletingLastPathComponent() {
-            self.modelsBase = anchor.appendingPathComponent(config.modelsBase).standardizedFileURL
+            self.modelsBase = anchor.appendingPathComponent(config.modelsBase).standardized
         } else {
             // Fallback-config case: no file to anchor to; assume the umbrella
             // workspace layout under the user's home.
             self.modelsBase = home
                 .appendingPathComponent("Projects/Artificial-Humanity/models")
-                .standardizedFileURL
+                .standardized
         }
     }
 
@@ -112,8 +116,8 @@ public final class ProsodiaModelsManager: Sendable {
         guard let entry = config.roles[role] else { return nil }
         if entry.path == "." { return modelsBase }
         let path = entry.path as NSString
-        if path.isAbsolutePath { return URL(fileURLWithPath: entry.path).standardizedFileURL }
-        return modelsBase.appendingPathComponent(entry.path).standardizedFileURL
+        if path.isAbsolutePath { return URL(fileURLWithPath: entry.path).standardized }
+        return modelsBase.appendingPathComponent(entry.path).standardized
     }
 
     /// Human-readable name for a role (falls back to the role key).
