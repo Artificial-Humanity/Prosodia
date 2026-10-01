@@ -12,3 +12,6 @@ pub mod lexicon;
 pub mod tflite;
 pub mod split_engine;
 
+#[cfg(test)]
+mod model_pins;
+

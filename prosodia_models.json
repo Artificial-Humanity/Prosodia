@@ -1,9 +1,18 @@
 {
   "modelsBase": "../models",
+  "registry": {
+    "repo": "artificial-humanity/Sonora",
+    "checkout": "../Sonora/huggingface",
+    "revision": "149acc10e8040dfc5e855de0ec70d2edeea63dd6"
+  },
   "roles": {
     "actor": {
       "path": "sonora.tflite",
-      "display": "Sonora Actor (baseline-ljspeech-22k)"
+      "display": "Sonora Actor (baseline-ljspeech-22k)",
+      "sha256": {
+        "sonora.tflite": "b4b3903011ea9b5c24650ba081ef889570f6751bcf0c1585c295b83a7dda98f0",
+        "config.json": "4de84db870a25779c7b284cc97bc92aff9d31cc022c4410d386c4550a8d00e67"
+      }
     },
     "voices": {
       "path": ".",
@@ -19,7 +28,14 @@
     },
     "actor-split": {
       "path": "../Sonora/huggingface/baseline-ljspeech-22k/litert-split",
-      "display": "Sonora Actor (baseline-ljspeech-22k litert-split, Plan A multi-graph)"
+      "display": "Sonora Actor (baseline-ljspeech-22k litert-split, Plan A multi-graph)",
+      "sha256": {
+        "config.json": "490e8570c66ea89e5fd99e41a8e5ac1253f1ba125e8a88b494ef1564c845ca50",
+        "emb.bin": "a66495ff8e7e0b30f536061fc2e32daa63b611bfc20eb99d9bd33781d152a69c",
+        "matcha_decoder_fp16.tflite": "1dc354c765fe931201f269cdfbcff6727c464a43c29bad10dd1e0933a0810a7f",
+        "matcha_textenc_fp16.tflite": "7de885fa8efff7bf682b7b833585099858d203df613874dff7d5f6a3b8ad7ea3",
+        "matcha_vocoder_fp16.tflite": "39b6593e2fd0d81c644b7c510883608e351be01fbf5bb4c890f721da46901234"
+      }
     }
   },
   "directorRoleOrder": [

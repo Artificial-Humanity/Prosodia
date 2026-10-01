@@ -78,6 +78,18 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > role's path to that exact value. The runtime handles that single-speaker 22.05 kHz set only; the
 > newer multi-speaker 24 kHz exports need runtime work first.
 
+> [!IMPORTANT]
+> **Model pins.** `prosodia_models.json` records the registry checkout's git revision
+> (`registry.revision`) and a sha256 for every file the `actor` and `actor-split` roles load. The
+> Rust tests in `crates/actor/src/model_pins.rs` check both, and a changed model file fails them.
+> To move a role to another artifact, check with Sonora's resident first, then update the path,
+> the revision and the hashes together. A role whose directory is absent is skipped; run with
+> `PROSODIA_REQUIRE_PINNED_MODELS=1` to make that a failure too. The `actor` files at the
+> `/data/models` root are copies from outside the registry: `sonora.tflite` is
+> `baseline-ljspeech-22k/checkpoint_epoch=199_e2e_float32.tflite` and `config.json` is
+> `baseline-ljspeech-22k/config.json`, so the registry revision does not cover them; only their
+> hashes do.
+
 > [!NOTE]
 > **Model paths resolve through `prosodia_models.json`** (repo root — role-based config, commit
 > `2425594`, desktop build-checked 2026-07-13): the apps look up `actor`, `voices`, and `director-*`
