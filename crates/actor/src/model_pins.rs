@@ -158,7 +158,7 @@ fn pinned_roles_pin_exactly_the_files_the_engines_load() {
     let cfg = load_config();
     let roles = pinned_roles(&cfg);
     let names: Vec<&str> = roles.iter().map(|(n, _, _)| n.as_str()).collect();
-    for required in ["actor", "actor-split"] {
+    for required in ["actor", "actor-split", "actor-split-24k"] {
         assert!(names.contains(&required), "role {required} has no sha256 pins");
     }
     for (name, role_path, pins) in &roles {

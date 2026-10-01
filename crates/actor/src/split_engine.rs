@@ -66,6 +66,14 @@ pub struct SplitConfig {
     /// against the graphs.
     #[serde(default)]
     pub vat_dim: Option<usize>,
+    /// Present on direction-contract-v2 exports, which this runtime does not
+    /// support yet (see `SplitGraphEngine::new`).
+    #[serde(default)]
+    contract_version: Option<u32>,
+    #[serde(default)]
+    control: Option<serde_json::Value>,
+    #[serde(default)]
+    g2p: Option<serde_json::Value>,
 }
 
 /// Per-utterance conditioning for a split forward.
@@ -73,9 +81,14 @@ pub struct SplitConfig {
 pub struct Conditioning<'a> {
     /// Row of `spk_emb.bin`. Must be 0 for a single-speaker model.
     pub speaker: usize,
-    /// One value per VAT channel, each in [-1, 1], applied to every token.
-    /// `None` is all zeros — the trained neutral (conditioning dropout).
-    /// Must be `None` for a model without a `vat` input.
+    /// One value per VAT channel (valence, arousal/energy, tension), applied to
+    /// every token. Values outside [-1, 1] are refused. `None` is all zeros —
+    /// the trained neutral (conditioning dropout). Must be `None` for a model
+    /// without a `vat` input.
+    ///
+    /// Which channels a checkpoint was trained on is model-specific and not
+    /// recorded in its export: `derisk-energy-24k` trained only channel 1
+    /// (energy), so nonzero valence or tension is untrained input for it.
     pub vat: Option<&'a [f32]>,
 }
 
@@ -360,6 +373,17 @@ impl SplitGraphEngine {
             .map_err(|e| format!("cannot read split config.json: {e}"))?;
         let cfg: SplitConfig = serde_json::from_str(&cfg_str)
             .map_err(|e| format!("cannot parse split config.json: {e}"))?;
+        // Contract v2 makes VAT channels 3.. a one-hot delivery block that must
+        // not be interpolated, and declares the G2P front end the graphs expect.
+        // Loading one here would treat those channels as continuous and ignore
+        // the front end, so refuse it until v2 support is written deliberately.
+        if cfg.contract_version.is_some_and(|v| v >= 2) || cfg.control.is_some() || cfg.g2p.is_some() {
+            return Err(format!(
+                "{} is a direction-contract-v2 export (contract_version/control/g2p in config.json), \
+                 which this runtime does not support yet",
+                dir.display()
+            ));
+        }
 
         let emb = read_f32_le(&dir.join("emb.bin"))?;
         if emb.len() != cfg.n_vocab * cfg.n_channels {
@@ -393,6 +417,13 @@ impl SplitGraphEngine {
                     [1, v, t] if *v > 0 && *t as usize == cfg.max_text => *v as usize,
                     other => return Err(format!("textenc input 3 (vat) has shape {other:?}")),
                 };
+                // Contract v1 is three continuous channels (V, A, T). Any other
+                // width is a layout this runtime cannot interpret.
+                if vat_dim != 3 {
+                    return Err(format!(
+                        "vat is {vat_dim} channels wide; this runtime supports the 3-channel V/A/T layout only"
+                    ));
+                }
                 if decoder.input_dims(4) != [1, spk_dim as i32]
                     || decoder.input_dims(5) != [1, vat_dim as i32, cfg.max_mel as i32]
                 {
@@ -781,12 +812,15 @@ mod tests {
 
     const MODEL_DIR: &str = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
     const DERISK_DIR: &str = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
-    const FIXTURE_DIR: &str = "../../target/split_ref";
+    const FIXTURES: &str = "tests/fixtures/split_parity";
 
     /// Loads a split engine, or `None` (with a message) when the registry
     /// checkout is absent on this machine.
     fn load(dir: &str) -> Option<SplitGraphEngine> {
         if !is_split_model_dir(Path::new(dir)) {
+            if std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() == Ok("1") {
+                panic!("PROSODIA_REQUIRE_PINNED_MODELS=1 but split model dir {dir} not found");
+            }
             println!("Skipping: split model dir {dir} not found");
             return None;
         }
@@ -899,7 +933,8 @@ mod tests {
         };
         let (lo, mid, hi) = (rms_db(&render(-1.0)), rms_db(&render(0.0)), rms_db(&render(1.0)));
         println!("derisk energy sweep: e=-1 {lo:.2} dB, e=0 {mid:.2} dB, e=+1 {hi:.2} dB");
-        assert!(mid - lo > 1.0 && hi - mid > 1.0, "energy not monotonic: {lo:.2} / {mid:.2} / {hi:.2} dB");
+        assert!(lo < mid && mid < hi, "energy not monotonic: {lo:.2} / {mid:.2} / {hi:.2} dB");
+        assert!(hi - lo > 3.0, "energy span only {:.2} dB across [-1, 1]", hi - lo);
     }
 
     #[test]
@@ -932,94 +967,122 @@ mod tests {
         assert!(cosine < 0.95, "speaker vector had no effect (cosine {cosine:.4})");
     }
 
-    /// Parity against the Python reference implementation of the
-    /// litert-samples host pipeline (same graphs, same fixed noise). Skips
-    /// when the registry clone or the generated fixtures are absent.
-    #[test]
-    fn test_split_parity_vs_reference() {
-        let dir = Path::new(MODEL_DIR);
-        let meta_path = format!("{FIXTURE_DIR}/meta.json");
-        if !is_split_model_dir(dir) || !Path::new(&meta_path).exists() {
-            println!("Skipping: split model dir or fixtures missing");
-            return;
-        }
-        let meta: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(meta_path).unwrap()).unwrap();
-        let ids: Vec<i32> = meta["ids"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|v| v.as_i64().unwrap() as i32)
-            .collect();
-        let y_ref = meta["y_lengths"].as_i64().unwrap() as usize;
-
-        let read_f32 = |p: String| -> Vec<f32> {
-            std::fs::read(p)
-                .unwrap()
-                .chunks_exact(4)
-                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-                .collect()
-        };
-        let z = read_f32(format!("{FIXTURE_DIR}/z.bin"));
-        let wav_ref = read_f32(format!("{FIXTURE_DIR}/wav_ref.bin"));
-
-        let engine = SplitGraphEngine::new(dir).expect("split engine init");
-        // The fixture z is pre-scaled (×temperature) and masked by the
-        // reference; pass it through unmodified.
-        let out = engine
-            .forward(&ids, 1.0, None, None, 1.0, Some(&z), Conditioning::NEUTRAL)
-            .expect("split forward");
-
-        assert_eq!(
-            out.audio.len(),
-            y_ref * engine.cfg.hop,
-            "frame count mismatch: rust {} frames vs python {y_ref}",
-            out.audio.len() / engine.cfg.hop
-        );
-        let n = out.audio.len().min(wav_ref.len());
+    fn cosine(a: &[f32], b: &[f32]) -> f64 {
+        let n = a.len().min(b.len());
         let (mut dot, mut na, mut nb) = (0.0f64, 0.0f64, 0.0f64);
         for i in 0..n {
-            let (a, b) = (out.audio[i] as f64, wav_ref[i] as f64);
-            dot += a * b;
-            na += a * a;
-            nb += b * b;
+            let (x, y) = (a[i] as f64, b[i] as f64);
+            dot += x * y;
+            na += x * x;
+            nb += y * y;
         }
-        let cosine = dot / (na.sqrt() * nb.sqrt()).max(1e-12);
-        println!(
-            "split parity: frames={} samples={} cosine={:.6}",
-            y_ref, n, cosine
-        );
-        assert!(cosine > 0.999, "cosine {cosine} below parity threshold");
+        dot / (na.sqrt() * nb.sqrt()).max(1e-12)
+    }
 
-        // Per-token duration dictation sanity: doubling every token's scale
-        // should roughly double the realized frame count.
-        let ds = vec![2.0f32; ids.len()];
-        let out2 = engine
-            .forward(&ids, 1.0, Some(&ds), None, 1.0, Some(&z), Conditioning::NEUTRAL)
-            .expect("split forward with duration scales");
-        let frames1 = out.audio.len() / engine.cfg.hop;
-        let frames2 = out2.audio.len() / engine.cfg.hop;
-        println!("duration dictation: {frames1} -> {frames2} frames at 2x");
-        assert!(
-            (frames2 as f32) > (frames1 as f32) * 1.8,
-            "duration_scales had insufficient effect: {frames1} -> {frames2}"
-        );
+    /// Renders every case in `FIXTURES/<name>/meta.json` and compares it with
+    /// the independent NumPy reference (`FIXTURES/generate.py`): identical
+    /// frame count, cosine > 0.999. The noise is regenerated from the
+    /// fixture's seed, so a case differs from the reference only in the host
+    /// pipeline under test.
+    fn assert_parity_with_reference(dir: &str, name: &str) -> Option<(SplitGraphEngine, Vec<i32>, Vec<f32>)> {
+        let engine = load(dir)?;
+        let meta: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(format!("{FIXTURES}/{name}/meta.json")).expect("fixture meta.json"),
+        )
+        .unwrap();
+        let ids: Vec<i32> = meta["ids"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+        let temperature = meta["temperature"].as_f64().unwrap() as f32;
+        let mut rng = GaussianRng::from_seed(meta["seed"].as_u64().unwrap());
+        let z: Vec<f32> = (0..engine.cfg.n_feats * engine.cfg.max_mel)
+            .map(|_| rng.next_gaussian() * temperature)
+            .collect();
+        let cases = meta["cases"].as_array().unwrap();
+        assert!(!cases.is_empty(), "fixture {name} has no cases");
+        for case in cases {
+            let speaker = case["speaker"].as_u64().unwrap() as usize;
+            let vat: Option<Vec<f32>> = case["vat"]
+                .as_array()
+                .map(|a| a.iter().map(|v| v.as_f64().unwrap() as f32).collect());
+            let reference: Vec<f32> = std::fs::read(format!("{FIXTURES}/{name}/{}", case["pcm"].as_str().unwrap()))
+                .unwrap()
+                .chunks_exact(2)
+                .map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32767.0)
+                .collect();
+            let out = engine
+                .forward(&ids, 1.0, None, None, temperature, Some(&z), Conditioning { speaker, vat: vat.as_deref() })
+                .expect("split forward");
+            let frames = case["y_lengths"].as_u64().unwrap() as usize;
+            assert_eq!(
+                out.audio.len(),
+                frames * engine.cfg.hop,
+                "{name} speaker {speaker}: frame count differs from the reference"
+            );
+            let c = cosine(&out.audio, &reference);
+            println!("{name} parity: speaker {speaker} vat {vat:?}: {frames} frames, cosine {c:.6}");
+            assert!(c > 0.999, "{name} speaker {speaker} vat {vat:?}: cosine {c:.6} vs the reference");
+        }
+        Some((engine, ids, z))
+    }
 
-        // Energy hook: a flat −6 dB mel envelope must move output RMS by
-        // ≈ −6 dB (the vocoder is linear in log-mel gain; measured 0.1 dB
-        // tolerance, we allow 0.5 here for fp16 graphs).
-        let env = vec![-6.0f32; engine.cfg.max_mel];
-        let out3 = engine
-            .forward(&ids, 1.0, None, Some(&env), 1.0, Some(&z), Conditioning::NEUTRAL)
-            .expect("split forward with mel gain");
-        let rms = |a: &[f32]| {
-            (a.iter().map(|&s| (s as f64) * (s as f64)).sum::<f64>() / a.len() as f64).sqrt()
+    #[test]
+    fn derisk_matches_the_reference_pipeline() {
+        assert_parity_with_reference(DERISK_DIR, "derisk-energy-24k");
+    }
+
+    /// Baseline parity, then the host hooks on the same render: per-token
+    /// duration dictation and the per-frame mel-gain (energy) envelope.
+    #[test]
+    fn baseline_matches_the_reference_pipeline() {
+        let Some((engine, ids, z)) = assert_parity_with_reference(MODEL_DIR, "baseline-ljspeech-22k") else {
+            return;
         };
-        let delta_db = 20.0 * (rms(&out3.audio) / rms(&out.audio)).log10();
+        let render = |ds: Option<&[f32]>, env: Option<&[f32]>| {
+            engine
+                .forward(&ids, 1.0, ds, env, 0.667, Some(&z), Conditioning::NEUTRAL)
+                .expect("split forward")
+                .audio
+        };
+        let base = render(None, None);
+
+        // Doubling every token's scale should roughly double the frame count.
+        let ds = vec![2.0f32; ids.len()];
+        let (frames1, frames2) = (base.len() / engine.cfg.hop, render(Some(&ds), None).len() / engine.cfg.hop);
+        println!("duration dictation: {frames1} -> {frames2} frames at 2x");
+        assert!((frames2 as f32) > (frames1 as f32) * 1.8, "duration_scales: {frames1} -> {frames2}");
+
+        // A flat −6 dB mel envelope moves output RMS by ≈ −6 dB (the vocoder
+        // is linear in log-mel gain; 0.5 dB tolerance for fp16 graphs).
+        let env = vec![-6.0f32; engine.cfg.max_mel];
+        let delta_db = rms_db(&render(None, Some(&env))) - rms_db(&base);
         println!("mel-gain hook: requested -6.0 dB, measured {delta_db:.2} dB");
-        assert!(
-            (delta_db + 6.0).abs() < 0.5,
-            "mel-gain inaccurate: requested -6 dB, measured {delta_db:.2} dB"
-        );
+        assert!((delta_db + 6.0).abs() < 0.5, "mel-gain: requested -6 dB, measured {delta_db:.2} dB");
+    }
+
+    /// A contract-v2 export (one-hot delivery channels, a declared G2P front
+    /// end) must be refused at load, not run as if its channels were v1's.
+    #[test]
+    #[cfg(unix)]
+    fn refuses_contract_v2_configs() {
+        if load(MODEL_DIR).is_none() {
+            return;
+        }
+        let src = Path::new(MODEL_DIR);
+        for (i, marker) in [r#""contract_version": 2"#, r#""control": {}"#, r#""g2p": {}"#].iter().enumerate() {
+            let dir = std::env::temp_dir().join(format!("prosodia-v2-refusal-{}-{i}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            for entry in std::fs::read_dir(src).unwrap().flatten() {
+                let name = entry.file_name();
+                if name != "config.json" {
+                    let _ = std::os::unix::fs::symlink(entry.path().canonicalize().unwrap(), dir.join(&name));
+                }
+            }
+            let cfg = std::fs::read_to_string(src.join("config.json")).unwrap();
+            let cfg = cfg.trim_end().trim_end_matches('}').to_string() + &format!(", {marker}}}");
+            std::fs::write(dir.join("config.json"), cfg).unwrap();
+            let err = SplitGraphEngine::new(&dir).err();
+            std::fs::remove_dir_all(&dir).unwrap();
+            let err = err.unwrap_or_else(|| panic!("a config with {marker} must be refused"));
+            assert!(err.contains("contract-v2"), "{err}");
+        }
     }
 }
