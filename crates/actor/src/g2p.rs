@@ -630,10 +630,15 @@ impl ProsodiaSpeech {
             }
         }
 
-        if self.version.as_deref() != Some("2.0") {
+        // The Kokoro v1 symbol set wrote the flap as `T` and the glottal stop as
+        // `t`. Only an explicit "1.0" asks for it: the default feeds the Matcha
+        // model, whose vocabulary has `ɾ` and `ʔ` and whose training data never
+        // contains the letter `T` (issue #17). `?` is punctuation in every
+        // version and is never rewritten.
+        if self.version.as_deref() == Some("1.0") {
             for token in &mut resolved_tokens {
                 if let Some(ref mut ph) = token.phonemes {
-                    *ph = ph.replace('?', "t").replace('ʔ', "t").replace('ɾ', "T");
+                    *ph = ph.replace('ʔ', "t").replace('ɾ', "T");
                 }
             }
         }
@@ -662,6 +667,36 @@ mod tests {
     use super::*;
     use crate::normalization::{preprocess, FeatureSpanKind, NumberToWords};
     use crate::tagger::tokenize_and_tag;
+
+    fn phonemes(g2p: &ProsodiaSpeech, text: &str) -> String {
+        g2p.process(text.to_string())
+            .into_iter()
+            .map(|t| t.phonemes.unwrap_or_default() + &t.whitespace)
+            .collect()
+    }
+
+    /// The default G2P feeds the Matcha model, whose vocabulary has `?`, `ʔ`
+    /// and `ɾ` and whose training data never contains the letter `T` (issue
+    /// #17): none of them may be rewritten.
+    #[test]
+    fn default_g2p_keeps_question_marks_glottal_stops_and_flaps() {
+        let g2p = ProsodiaSpeech::new();
+        let out = phonemes(&g2p, "What? The button doesn't matter.");
+        assert!(out.contains('?'), "question mark rewritten: {out}");
+        assert!(out.contains('ʔ'), "glottal stop rewritten: {out}");
+        assert!(out.contains('ɾ'), "flap rewritten: {out}");
+        assert!(!out.contains('T'), "flap emitted as the letter T: {out}");
+        assert!(!out.contains("wˌʌtt"), "`?` became `t`: {out}");
+    }
+
+    /// The legacy Kokoro v1 symbol set is still available on request.
+    #[test]
+    fn version_1_0_applies_the_legacy_flap_and_glottal_symbols() {
+        let g2p = ProsodiaSpeech::new_with_options(false, "❓".to_string(), Some("1.0".to_string()));
+        let out = phonemes(&g2p, "What? The button doesn't matter.");
+        assert!(out.contains('?'), "`?` is punctuation in every version: {out}");
+        assert!(out.contains('T') && !out.contains('ɾ') && !out.contains('ʔ'), "{out}");
+    }
 
     #[test]
     fn test_markdown_preprocessing() {
