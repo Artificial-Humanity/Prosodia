@@ -1207,6 +1207,21 @@ mod tests {
         );
         assert!(!output.audio.is_empty(), "Expected non-empty output audio");
         assert!(peak > 0.001, "Output audio is silent (peak {})", peak);
+        assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected one duration per phoneme id");
+    }
+
+    /// The split-model directory `dir`, or `None` with a message when this
+    /// machine has no Sonora registry checkout beside the repo.
+    /// `PROSODIA_REQUIRE_PINNED_MODELS=1` turns the skip into a failure.
+    fn split_dir(dir: &'static str) -> Option<&'static str> {
+        if crate::split_engine::is_split_model_dir(Path::new(dir)) {
+            return Some(dir);
+        }
+        if std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() == Ok("1") {
+            panic!("PROSODIA_REQUIRE_PINNED_MODELS=1 but split model dir {dir} not found");
+        }
+        println!("Skipping: split model dir {dir} not found");
+        None
     }
 
     /// End-to-end dispatch through LiteRtActorEngine with a split-model
@@ -1214,11 +1229,7 @@ mod tests {
     /// Skips when the `Sonora/huggingface` registry checkout is absent.
     #[test]
     fn test_split_dispatch_through_engine() {
-        let dir = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
-        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
-            println!("Skipping: split model dir not found");
-            return;
-        }
+        let Some(dir) = split_dir("../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split") else { return };
         let engine = LiteRtActorEngine::new(dir.to_string());
         assert!(engine.is_matcha(), "split dir must report matcha");
         assert_eq!(engine.get_token_limit(), 256, "split token limit = MAX_TEXT");
@@ -1245,11 +1256,7 @@ mod tests {
     /// count stays a whole number of 256-sample hops.
     #[test]
     fn test_split_dispatch_24k_conditioned_model() {
-        let dir = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
-        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
-            println!("Skipping: split model dir {dir} not found");
-            return;
-        }
+        let Some(dir) = split_dir("../../../Sonora/huggingface/derisk-energy-24k/litert-split") else { return };
         let engine = LiteRtActorEngine::new(dir.to_string());
         assert!(engine.is_matcha());
         assert_eq!(engine.get_token_limit(), 256);
