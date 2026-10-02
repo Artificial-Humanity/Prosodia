@@ -17,12 +17,22 @@ use std::sync::{Arc, Mutex};
 
 pub struct DeviceG2p {
     assets: G2pAssets,
-    neural: Option<NeuralG2p>,
+    /// `None` when `use_neural_oov` is false. The TFLite interpreter inside
+    /// `NeuralG2p::word` mutates unsynchronized state across `set_input` ->
+    /// `invoke` -> `read_output`, and `DeviceG2pProcessor` makes this struct
+    /// shareable across threads via `Arc`, so every call is serialized
+    /// through this lock.
+    neural: Option<Mutex<NeuralG2p>>,
     /// Words nothing resolved; they pass through as letters. Read this —
     /// letters are inside the vocabulary, so nothing else reports them.
     pub oov_words: Mutex<BTreeSet<String>>,
     /// Apostrophe words that took the bare-letters guess (mostly names).
     pub apostrophe_fallback_words: Mutex<BTreeSet<String>>,
+    /// Words the neural graph raised an error on. Distinct from `oov_words`
+    /// — that set means "nothing matched"; this one means "the graph itself
+    /// failed", which is read-this evidence of a broken asset or runtime
+    /// rather than an ordinary miss.
+    pub neural_failures: Mutex<BTreeSet<String>>,
 }
 
 impl DeviceG2p {
@@ -30,14 +40,31 @@ impl DeviceG2p {
     pub fn load(dir: &Path, use_neural_oov: bool) -> Result<Self, String> {
         Ok(Self {
             assets: G2pAssets::load(dir)?,
-            neural: if use_neural_oov { Some(NeuralG2p::load(dir)?) } else { None },
+            neural: if use_neural_oov { Some(Mutex::new(NeuralG2p::load(dir)?)) } else { None },
             oov_words: Mutex::new(BTreeSet::new()),
             apostrophe_fallback_words: Mutex::new(BTreeSet::new()),
+            neural_failures: Mutex::new(BTreeSet::new()),
         })
     }
 
+    /// Never panics: `process()` has no error channel, and a panic here
+    /// would poison the pipeline's lock on this struct for every caller
+    /// after it. A graph error is logged and recorded in
+    /// `neural_failures`, then treated as a miss.
     fn neural_word(&self, word: &str) -> Option<String> {
-        self.neural.as_ref().and_then(|n| n.word(word).ok()).filter(|ipa| !ipa.is_empty())
+        let neural = self.neural.as_ref()?;
+        // Bound to a `let` so the guard drops here, not across the match —
+        // a match scrutinee's temporaries can otherwise outlive their arms.
+        let result = neural.lock().unwrap().word(word);
+        match result {
+            Ok(ipa) if !ipa.is_empty() => Some(ipa),
+            Ok(_) => None,
+            Err(e) => {
+                eprintln!("device G2P: neural OOV failed for {word:?}: {e}");
+                self.neural_failures.lock().unwrap().insert(word.to_string());
+                None
+            }
+        }
     }
 
     /// Dictionary, then neural, for a word with no apostrophes.
@@ -142,18 +169,25 @@ impl DeviceG2p {
 }
 
 /// The device G2P as the pipeline's processor. Each token carries its IPA;
-/// the space Sonora puts before a word is the previous token's whitespace.
+/// the space Sonora puts before a word is the previous token's whitespace —
+/// except before the FIRST word, which `phonemize` never precedes with a
+/// space even when punctuation comes first (`"Hello,"` has no space after
+/// the opening quote).
 pub struct DeviceG2pProcessor(pub Arc<DeviceG2p>);
 
 impl ProsodiaG2PProcessor for DeviceG2pProcessor {
     fn process(&self, text: String) -> Vec<MToken> {
         let pairs = self.0.phonemize_tokens(&text);
         let mut out: Vec<MToken> = Vec::with_capacity(pairs.len());
+        let mut first = true;
         for (token, ipa) in pairs {
             if is_word(&token) {
-                if let Some(prev) = out.last_mut() {
-                    prev.whitespace = " ".to_string();
+                if !first {
+                    if let Some(prev) = out.last_mut() {
+                        prev.whitespace = " ".to_string();
+                    }
                 }
+                first = false;
             }
             out.push(MToken { text: token, tag: String::new(), whitespace: String::new(), phonemes: Some(ipa) });
         }
@@ -209,6 +243,22 @@ mod tests {
         let Some(g2p) = load() else { return };
         for text in ["", "   ", "…!?"] {
             assert!(g2p.phonemize(text).chars().all(|c| !c.is_alphabetic()), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn processor_symbols_equal_phonemize() {
+        let Some(g2p) = load() else { return };
+        let g2p = Arc::new(g2p);
+        let processor = DeviceG2pProcessor(g2p.clone());
+        for text in ["\"Hello,\" he said.", "¿verdad? Yes.", "The quick brown fox jumps over the lazy dog."] {
+            let want = g2p.phonemize(text);
+            let got: String = processor
+                .process(text.to_string())
+                .into_iter()
+                .map(|t| format!("{}{}", t.phonemes.unwrap_or_default(), t.whitespace))
+                .collect();
+            assert_eq!(got.trim(), want, "{text:?}");
         }
     }
 
