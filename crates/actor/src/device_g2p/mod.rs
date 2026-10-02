@@ -1,6 +1,13 @@
 //! Sonora's device text front end (`scripts/litert_export/device_g2p.py`),
 //! ported: the executable spec Sonora's export gate G7 checks against the
 //! training front end, phoneme string for phoneme string.
+//!
+//! One deliberate divergence: numbers. Sonora's spec drops digits (its
+//! tokenizer deletes them; the training corpus dropped digit-bearing clips),
+//! but a book reader must speak them, so `numbers` spells out currency,
+//! percentages, ordinals, decades and plain numbers before tokenizing. G7
+//! equality therefore holds for digit-free text, which is all the G7 probe
+//! corpus contains; text with digits reads differently from the spec by design.
 
 pub mod assets;
 pub mod fold;

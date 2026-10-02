@@ -10,6 +10,12 @@
 //! reports the split runtime's token limit (256); at the e2e engine's 50 most
 //! probes would be split into separately synthesized chunks.
 //!
+//! Two front ends are measured on that path. `prosodia_g2p_parity_with_the_training_front_end`
+//! measures the Misaki-based `ProsodiaSpeech` G2P against per-group floors
+//! (below). `device_g2p_parity_on_the_app_path` measures the device G2P port
+//! (`crate::device_g2p`), whose floor is all 86 probes exact: it is the
+//! training front end's spec, so any mismatch is a regression.
+//!
 //! Four contraction probes (`i'd`, `i'll`, `i'm`, `i've`) use the table's
 //! lowercase keys; Prosodia's lexicon is case-sensitive and resolves `I'm` in
 //! real text, so their low scores are partly an artifact of the probe.

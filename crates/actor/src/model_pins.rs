@@ -108,9 +108,10 @@ fn pin_dir(role_path: &Path) -> PathBuf {
 
 /// Files the actor engines read from a role's directory. The `g2p` role is
 /// decided by name, before any path-based logic: the device G2P's directory
-/// also holds `matcha_*` split-graph files, `emb.bin` and `config.json`
-/// (shared with `actor-split`), none of which the G2P loads, so deciding by
-/// path would sweep those in too. For other roles: a split model directory
+/// also holds `matcha_*` split-graph files, `emb.bin` and `config.json` (a
+/// split model's file names, as in `actor-split`'s directory, though not
+/// that directory), none of which the G2P loads, so deciding by path would
+/// sweep those in too. For other roles: a split model directory
 /// is every `{matcha,sonora}_{textenc,decoder,vocoder}*.tflite` graph
 /// (`find_graph` takes the first match in directory order, so all candidates
 /// count) plus `emb.bin`, `config.json` and, when present, `spk_emb.bin`;
