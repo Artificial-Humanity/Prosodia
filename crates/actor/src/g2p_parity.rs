@@ -44,7 +44,7 @@ const SPLIT_TOKEN_LIMIT: i32 = 256;
 /// the mean per-probe symbol similarity (1 − edit distance ÷ longer length).
 /// Raise them when parity improves; never lower one without a reason in the
 /// commit.
-const FLOORS: [(&str, usize, f64); 3] = [("lexicon", 0, 0.870), ("neural", 0, 0.471), ("contraction", 0, 0.908)];
+const FLOORS: [(&str, usize, f64); 3] = [("lexicon", 0, 0.872), ("neural", 0, 0.476), ("contraction", 0, 0.908)];
 
 /// Keeps only the symbols the tokenizer turns into ids, as `tokenize` does.
 fn in_vocab(s: &str, vocab: &HashSet<char>) -> Vec<char> {
