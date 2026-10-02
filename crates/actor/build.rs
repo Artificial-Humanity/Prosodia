@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::collections::HashMap;
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -206,6 +206,53 @@ fn compile_lexicons() {
     println!("cargo:rerun-if-changed=resources/gb_silver.json");
 }
 
+/// Links the TensorFlow Lite C library on Linux.
+///
+/// `TFLITE_LIB_DIR` names the directory holding `libtensorflowlite_c.so`.
+/// Without it, the lab's toolchain directory and the usual system library
+/// directories are searched. When none has the library, the build warns and
+/// leaves the symbols unresolved, as before.
+///
+/// The rpath is a link argument, so it reaches only this crate's own
+/// artifacts (`libactor.so`, its test binaries). A binary in another crate
+/// that calls into TFLite needs its own rpath or `LD_LIBRARY_PATH`.
+fn link_linux_tflite() {
+    const LIB: &str = "libtensorflowlite_c.so";
+    println!("cargo:rerun-if-env-changed=TFLITE_LIB_DIR");
+    let candidates: Vec<PathBuf> = match env::var("TFLITE_LIB_DIR") {
+        Ok(dir) => vec![PathBuf::from(dir)],
+        Err(_) => {
+            let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+            vec![
+                PathBuf::from("/data/toolchain"),
+                PathBuf::from("/usr/local/lib"),
+                PathBuf::from("/usr/lib"),
+                PathBuf::from(format!("/usr/lib/{arch}-linux-gnu")),
+            ]
+        }
+    };
+    match candidates.iter().find(|dir| dir.join(LIB).is_file()) {
+        Some(dir) => {
+            // Re-run if the library is replaced or removed.
+            println!("cargo:rerun-if-changed={}", dir.join(LIB).display());
+            println!("cargo:rustc-link-search=native={}", dir.display());
+            println!("cargo:rustc-link-lib=dylib=tensorflowlite_c");
+            println!("cargo:rustc-link-arg=-Wl,-rpath,{}", dir.display());
+        }
+        None => {
+            // A missing path counts as changed, so this re-runs on every build
+            // until the library is installed, and the next build links it.
+            for dir in &candidates {
+                println!("cargo:rerun-if-changed={}", dir.join(LIB).display());
+            }
+            println!(
+                "cargo:warning={LIB} not found in {:?}; set TFLITE_LIB_DIR to link it",
+                candidates
+            );
+        }
+    }
+}
+
 fn main() {
     compile_lexicons();
 
@@ -226,6 +273,8 @@ fn main() {
         }
     } else if target_os == "android" {
         println!("cargo:rustc-link-arg=-Wl,-z,undefs");
+    } else if target_os == "linux" {
+        link_linux_tflite();
     }
 
     println!("cargo:rerun-if-changed=build.rs");
