@@ -19,3 +19,5 @@ mod model_pins;
 #[cfg(test)]
 mod g2p_parity;
 
+#[cfg(test)]
+mod ffi_checksums;

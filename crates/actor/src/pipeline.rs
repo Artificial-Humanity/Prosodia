@@ -163,8 +163,11 @@ impl ProsodiaActorPipeline {
         *g2p = processor;
     }
 
-    /// Retained for the FFI surface (Swift/Kotlin bindings); the pipeline no longer
-    /// maps — G2P processors emit Matcha IPA. Removal belongs with Phase B's app work.
+    // Retained for the FFI surface (Swift/Kotlin bindings); the pipeline no longer
+    // maps — G2P processors emit Matcha IPA. Removal belongs with Phase B's app work.
+    // A plain comment, not `///`: uniffi 0.27 checksums doc comments, and the
+    // committed bindings check this method's checksum at startup
+    // (see ffi_checksums.rs).
     pub fn should_map_ipa(&self, is_matcha: bool) -> bool {
         is_matcha && self.is_matcha_ipa
     }
