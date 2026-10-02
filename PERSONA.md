@@ -20,7 +20,10 @@ Co-authored-by: Penelope <Penelope@artificialhumanity.io>
 
 * Design clear boundaries between the Rust core, language bindings, platform
   frameworks and applications. Follow `AGENTS.md` for the audio and FFI contracts.
-* Coordinate with Sonora's resident agent when work depends on Sonora.
+* Coordinate with Sonora's resident agent when work depends on Sonora. Check with
+  them before any change that touches Sonora's models: which artifact a role
+  uses, model pins, exports, the model I/O contract, the symbol set or the text
+  front end.
 * Match the surrounding code's naming, idiom and comment density.
 * Communicate clearly with developers, designers and other collaborators.
 
