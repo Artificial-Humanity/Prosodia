@@ -18,12 +18,18 @@ static FRACTION: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d+)\s*/\s*(\d+)").unw
 static NUMERO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bNo\.\s?(\d)").unwrap());
 // Ordinals: a digit run immediately followed by st/nd/rd/th must consume
 // the suffix with it, or NUMBER below spells only the digits and leaves
-// the suffix stranded ("2nd" -> "two nd").
-static ORDINAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(\d[\d,]*)(?:st|nd|rd|th)\b").unwrap());
+// the suffix stranded ("2nd" -> "two nd"). The leading `(\d\.)?` guards
+// against matching the fractional half of a decimal ("3.5s", "0.2th"):
+// the `regex` crate has no lookbehind, so the only way to see "preceded
+// by <digit>." is to let the match start there and capture it. When that
+// group is present the closure hands the whole match back unchanged, so
+// the plain NUMBER pass reads the decimal whole instead ("3.5" -> "three
+// point five"), leaving the stray suffix letter(s) as their own token.
+static ORDINAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(\d\.)?\b(\d[\d,]*)(?:st|nd|rd|th)\b").unwrap());
 // Decade/plural digits: a digit run immediately followed by a bare "s"
 // must also consume the suffix with it, for the same reason ("1990s" ->
-// "nineteen ninety s" otherwise).
-static DECADE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(\d[\d,]*)s\b").unwrap());
+// "nineteen ninety s" otherwise). Same decimal guard as ORDINAL.
+static DECADE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d\.)?\b(\d[\d,]*)s\b").unwrap());
 static NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(AMOUNT).unwrap());
 
 /// `whole[.frac]` in words; years for bare four-digit 1100–2099.
@@ -76,9 +82,12 @@ fn pluralize_last(words: &str) -> String {
 }
 
 fn pluralize_word(word: &str) -> String {
-    match word.strip_suffix('y') {
-        Some(stem) => format!("{stem}ies"),
-        None => format!("{word}s"),
+    if let Some(stem) = word.strip_suffix('y') {
+        format!("{stem}ies")
+    } else if word.ends_with(['x', 's']) || word.ends_with("sh") || word.ends_with("ch") {
+        format!("{word}es")
+    } else {
+        format!("{word}s")
     }
 }
 
@@ -126,8 +135,14 @@ pub fn expand_digits(folded: &str) -> String {
         (a, b) => format!(" {} over {} ", amount(a, None, false), amount(b, None, false)),
     });
     let t = NUMERO.replace_all(&t, " number $1");
-    let t = ORDINAL.replace_all(&t, |c: &Captures| format!(" {} ", ordinal_words(&c[1])));
-    let t = DECADE.replace_all(&t, |c: &Captures| format!(" {} ", decade_words(&c[1])));
+    let t = ORDINAL.replace_all(&t, |c: &Captures| match c.get(1) {
+        Some(_) => c[0].to_string(), // the fractional half of a decimal: leave it for NUMBER
+        None => format!(" {} ", ordinal_words(&c[2])),
+    });
+    let t = DECADE.replace_all(&t, |c: &Captures| match c.get(1) {
+        Some(_) => c[0].to_string(), // the fractional half of a decimal: leave it for NUMBER
+        None => format!(" {} ", decade_words(&c[2])),
+    });
     NUMBER
         .replace_all(&t, |c: &Captures| {
             let (whole, trailing) = split_trailing_comma(&c[1]);
@@ -187,5 +202,19 @@ mod tests {
         assert_eq!(spoken("No. 7"), "number seven");
         assert_eq!(spoken("№3"), "number three");
         assert_eq!(spoken("said no. 7 cats"), "said no. seven cats");
+    }
+
+    #[test]
+    fn decade_and_ordinal_never_eat_a_decimal_fraction() {
+        assert_eq!(spoken("it took 3.5s"), "it took three point five s");
+        assert!(spoken("0.2th").contains("zero point two"), "{}", spoken("0.2th"));
+        // Unaffected by the decimal guard:
+        assert_eq!(spoken("the 1990s were"), "the nineteen nineties were");
+        assert_eq!(spoken("the 2nd edition"), "the second edition");
+    }
+
+    #[test]
+    fn decade_plural_sibilants_take_es_not_a_bare_s() {
+        assert_eq!(spoken("4s and 6s"), "fours and sixes");
     }
 }
