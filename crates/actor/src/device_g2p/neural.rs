@@ -45,15 +45,33 @@ fn parse_meta(meta: &serde_json::Value) -> Result<Meta, String> {
         special.insert(s.to_string());
     }
     let num = |key: &str| meta[key].as_f64().ok_or(format!("g2p_meta.json: {key} missing"));
+    let repeats = num("char_repeats")? as usize;
+    if repeats == 0 {
+        return Err("g2p_meta.json: char_repeats is 0; each character must repeat at least once \
+                     or every word decodes to nothing"
+            .to_string());
+    }
+    let max_t = num("MAXT")? as usize;
+    if max_t < 2 {
+        return Err(format!(
+            "g2p_meta.json: MAXT is {max_t}; must be at least 2 (the start and end ids each need a slot)"
+        ));
+    }
+    let n_phonemes = num("n_phonemes")? as usize;
+    if n_phonemes == 0 {
+        return Err("g2p_meta.json: n_phonemes is 0; the graph output has one row per phoneme, \
+                     so a decode step would index an empty row"
+            .to_string());
+    }
     Ok(Meta {
         char_to_id,
         id_to_phoneme,
-        repeats: num("char_repeats")? as usize,
+        repeats,
         start: num("start")? as f32,
         end: num("end")? as f32,
-        max_t: num("MAXT")? as usize,
+        max_t,
         special,
-        n_phonemes: num("n_phonemes")? as usize,
+        n_phonemes,
     })
 }
 
@@ -188,5 +206,29 @@ mod tests {
         meta["idx2ph"] = serde_json::json!({"1": 5});
         let err = parse_meta(&meta).unwrap_err();
         assert!(err.contains("idx2ph"), "{err}");
+    }
+
+    #[test]
+    fn zero_n_phonemes_is_refused() {
+        let mut meta = minimal_meta();
+        meta["n_phonemes"] = serde_json::json!(0);
+        let err = parse_meta(&meta).unwrap_err();
+        assert!(err.contains("n_phonemes"), "{err}");
+    }
+
+    #[test]
+    fn maxt_under_two_is_refused() {
+        let mut meta = minimal_meta();
+        meta["MAXT"] = serde_json::json!(1);
+        let err = parse_meta(&meta).unwrap_err();
+        assert!(err.contains("MAXT"), "{err}");
+    }
+
+    #[test]
+    fn zero_char_repeats_is_refused() {
+        let mut meta = minimal_meta();
+        meta["char_repeats"] = serde_json::json!(0);
+        let err = parse_meta(&meta).unwrap_err();
+        assert!(err.contains("char_repeats"), "{err}");
     }
 }
