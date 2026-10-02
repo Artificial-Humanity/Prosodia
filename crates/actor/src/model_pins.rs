@@ -8,6 +8,9 @@
 //! Paths resolve **lexically**, as `ProsodiaModelsManager` does in the apps:
 //! `modelsBase` is relative to the config file's directory, role paths are
 //! relative to `modelsBase`, and `..` is removed without following symlinks.
+//! `PROSODIA_MODELS_DIR`, when set, stands in for `modelsBase` for roles that
+//! live inside it (paths not starting with `..`) — on ai-lab-0 the library
+//! is `/data/models` and the workspace has no `models/` link.
 //!
 //! A role whose directory is absent on this machine is skipped with a message;
 //! inside a directory that exists, a missing or stale pin fails. When the
@@ -133,13 +136,22 @@ fn loaded_files(role_path: &Path) -> Vec<String> {
 }
 
 /// Roles that carry `sha256` pins, with their lexically resolved paths.
+/// A role's resolved path: inside the model library (`PROSODIA_MODELS_DIR`
+/// when set, else `modelsBase`), or outside it through a leading `..`.
+fn role_path(cfg: &LoadedConfig, path: &str) -> PathBuf {
+    match std::env::var("PROSODIA_MODELS_DIR") {
+        Ok(dir) if !path.starts_with("..") => lexical_normalize(&Path::new(&dir).join(path)),
+        _ => lexical_normalize(&cfg.models_base.join(path)),
+    }
+}
+
 fn pinned_roles(cfg: &LoadedConfig) -> Vec<(String, PathBuf, serde_json::Map<String, serde_json::Value>)> {
     let roles = cfg.json["roles"].as_object().expect("roles missing");
     roles
         .iter()
         .filter_map(|(name, role)| {
             let pins = role["sha256"].as_object()?.clone();
-            let path = lexical_normalize(&cfg.models_base.join(role["path"].as_str().unwrap()));
+            let path = role_path(cfg, role["path"].as_str().unwrap());
             Some((name.clone(), path, pins))
         })
         .collect()
