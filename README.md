@@ -47,6 +47,8 @@ Compile all Rust crates and check that the core neural logic compiles successful
 cargo build --release
 ```
 
+On Linux the actor crate links the TensorFlow Lite C library (`libtensorflowlite_c.so`). Set `TFLITE_LIB_DIR` to the directory that holds it, unless it is in a standard library directory.
+
 ### Run the Rehearsal workbench
 1. Make sure you have models populated in the shared `../models` library (`/data/models`; see `prosodia_models.json`).
 2. Build the Rust frameworks and the app: `apps/tuner/build.sh` (Apple silicon only).
