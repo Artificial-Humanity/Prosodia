@@ -26,17 +26,25 @@ static NUMERO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bNo\.\s?(\d)").unwrap())
 // the plain NUMBER pass reads the decimal whole instead ("3.5" -> "three
 // point five"), leaving the stray suffix letter(s) as their own token.
 static ORDINAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(\d\.)?\b(\d[\d,]*)(?:st|nd|rd|th)\b").unwrap());
-// Decade/plural digits: a digit run immediately followed by a bare "s"
+// Decade/plural digits: a digit run immediately followed by "s" or "'s"
 // must also consume the suffix with it, for the same reason ("1990s" ->
-// "nineteen ninety s" otherwise). Same decimal guard as ORDINAL.
-static DECADE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d\.)?\b(\d[\d,]*)s\b").unwrap());
+// "nineteen ninety s", "1920's" -> "nineteen twenty 's" otherwise). Runs
+// after the fold, so a curly apostrophe is already ASCII. Same decimal
+// guard as ORDINAL.
+static DECADE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d\.)?\b(\d[\d,]*)'?s\b").unwrap());
 static NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(AMOUNT).unwrap());
 
-/// `whole[.frac]` in words; years for bare four-digit 1100–2099.
+/// A bare four-digit 1100–2099 reads as a year. A thousands comma means the
+/// writer meant a quantity ("1,999 men"), so a comma'd run never does.
+fn is_year(whole: &str) -> bool {
+    whole.len() == 4 && whole.bytes().all(|b| b.is_ascii_digit())
+        && whole.parse::<i64>().is_ok_and(|v| (1100..=2099).contains(&v))
+}
+
+/// `whole[.frac]` in words; years per `is_year` when `as_year`.
 fn amount(whole: &str, frac: Option<&str>, as_year: bool) -> String {
     let digits = whole.replace(',', "");
-    let year = as_year && frac.is_none() && digits.len() == 4
-        && digits.parse::<i64>().is_ok_and(|v| (1100..=2099).contains(&v));
+    let year = as_year && frac.is_none() && is_year(whole);
     let mut words = if year { NumberToWords::year_str(&digits) } else { NumberToWords::cardinal_str(&digits) }
         .unwrap_or_else(|| digits.clone());
     if let Some(frac) = frac {
@@ -72,8 +80,9 @@ fn ordinal_words(whole: &str) -> String {
 
 /// Pluralizes the last whitespace-delimited word only, so a hyphenated
 /// head (`twenty-one`) stays intact and only its own tail is touched: a
-/// final `y` becomes `ies` (`ninety` -> `nineties`), everything else just
-/// takes a trailing `s` (`hundred` -> `hundreds`).
+/// final `y` becomes `ies` (`ninety` -> `nineties`), a final sibilant
+/// (`x`, `s`, `sh`, `ch`) takes `es` (`six` -> `sixes`), and everything
+/// else takes `s` (`hundred` -> `hundreds`).
 fn pluralize_last(words: &str) -> String {
     match words.rsplit_once(' ') {
         Some((head, last)) => format!("{head} {}", pluralize_word(last)),
@@ -91,11 +100,11 @@ fn pluralize_word(word: &str) -> String {
     }
 }
 
-/// `whole` as a decade/plural: year words for a bare four-digit
-/// 1100-2099, cardinal otherwise, with the last word pluralized.
+/// `whole` as a decade/plural: year words per `is_year` ("1990s"),
+/// cardinal otherwise ("1,900s"), with the last word pluralized.
 fn decade_words(whole: &str) -> String {
     let digits = whole.replace(',', "");
-    let year = digits.len() == 4 && digits.parse::<i64>().is_ok_and(|v| (1100..=2099).contains(&v));
+    let year = is_year(whole);
     let words = if year { NumberToWords::year_str(&digits) } else { NumberToWords::cardinal_str(&digits) }
         .unwrap_or_else(|| digits.clone());
     pluralize_last(&words)
@@ -211,6 +220,26 @@ mod tests {
         // Unaffected by the decimal guard:
         assert_eq!(spoken("the 1990s were"), "the nineteen nineties were");
         assert_eq!(spoken("the 2nd edition"), "the second edition");
+    }
+
+    #[test]
+    fn a_thousands_comma_never_reads_as_a_year() {
+        assert_eq!(spoken("1,250 pages"), "one thousand two hundred fifty pages");
+        assert_eq!(spoken("1,999 men"), "one thousand nine hundred ninety-nine men");
+        assert_eq!(spoken("the 1,900s"), "the one thousand nine hundreds");
+        // Without the comma the year rule still applies:
+        assert_eq!(spoken("In 1999 men"), "In nineteen ninety-nine men");
+        assert_eq!(spoken("the 1990s"), "the nineteen nineties");
+    }
+
+    #[test]
+    fn decade_plurals_with_an_apostrophe_are_plurals_too() {
+        assert_eq!(spoken("the 1920's"), "the nineteen twenties");
+        assert_eq!(spoken("6's and 7's"), "sixes and sevens");
+        // The curly apostrophe folds to ASCII first.
+        assert_eq!(spoken("the 1920\u{2019}s"), "the nineteen twenties");
+        // The decimal guard still holds with the apostrophe.
+        assert!(spoken("it took 3.5's").starts_with("it took three point five"), "{}", spoken("it took 3.5's"));
     }
 
     #[test]
