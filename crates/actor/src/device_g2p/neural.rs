@@ -7,8 +7,9 @@ use crate::split_engine::GraphRunner;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-pub struct NeuralG2p {
-    graph: GraphRunner,
+/// Parsed, validated contents of `g2p_meta.json`.
+#[derive(Debug)]
+struct Meta {
     char_to_id: HashMap<char, f32>,
     id_to_phoneme: HashMap<usize, String>,
     repeats: usize,
@@ -19,58 +20,88 @@ pub struct NeuralG2p {
     n_phonemes: usize,
 }
 
+/// Parses and validates `g2p_meta.json`'s already-deserialized contents. A
+/// missing or wrong-typed field is an error naming the field — never a
+/// silent fallback (0 / "" / dropped), per the port's binding constraint
+/// that a missing or incomplete asset refuses rather than degrades.
+fn parse_meta(meta: &serde_json::Value) -> Result<Meta, String> {
+    let mut char_to_id = HashMap::new();
+    for (k, v) in meta["char2idx"].as_object().ok_or("g2p_meta.json: char2idx missing")? {
+        if k.chars().count() != 1 {
+            continue;
+        }
+        let id = v.as_f64().ok_or_else(|| format!("g2p_meta.json: char2idx[{k}] is not a number"))?;
+        char_to_id.insert(k.chars().next().unwrap(), id as f32);
+    }
+    let mut id_to_phoneme = HashMap::new();
+    for (k, v) in meta["idx2ph"].as_object().ok_or("g2p_meta.json: idx2ph missing")? {
+        let id = k.parse::<usize>().map_err(|_| format!("g2p_meta.json: idx2ph key {k} is not a usize"))?;
+        let phoneme = v.as_str().ok_or_else(|| format!("g2p_meta.json: idx2ph[{k}] is not a string"))?;
+        id_to_phoneme.insert(id, phoneme.to_string());
+    }
+    let mut special = HashSet::new();
+    for (i, s) in meta["special"].as_array().ok_or("g2p_meta.json: special missing")?.iter().enumerate() {
+        let s = s.as_str().ok_or_else(|| format!("g2p_meta.json: special[{i}] is not a string"))?;
+        special.insert(s.to_string());
+    }
+    let num = |key: &str| meta[key].as_f64().ok_or(format!("g2p_meta.json: {key} missing"));
+    Ok(Meta {
+        char_to_id,
+        id_to_phoneme,
+        repeats: num("char_repeats")? as usize,
+        start: num("start")? as f32,
+        end: num("end")? as f32,
+        max_t: num("MAXT")? as usize,
+        special,
+        n_phonemes: num("n_phonemes")? as usize,
+    })
+}
+
+pub struct NeuralG2p {
+    graph: GraphRunner,
+    meta: Meta,
+}
+
 impl NeuralG2p {
     pub fn load(dir: &Path) -> Result<Self, String> {
         let meta_path = dir.join("g2p_meta.json");
-        let meta: serde_json::Value = serde_json::from_str(
+        let json: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(&meta_path).map_err(|e| format!("{}: {e}", meta_path.display()))?,
         )
         .map_err(|e| format!("{}: {e}", meta_path.display()))?;
+        let meta = parse_meta(&json)?;
         let graph = GraphRunner::new(&dir.join("dp_g2p_matcha_fp16.tflite"))?;
-        let char_to_id = meta["char2idx"].as_object().ok_or("g2p_meta.json: char2idx missing")?
-            .iter()
-            .filter(|(k, _)| k.chars().count() == 1)
-            .map(|(k, v)| (k.chars().next().unwrap(), v.as_f64().unwrap_or(0.0) as f32))
-            .collect();
-        let id_to_phoneme = meta["idx2ph"].as_object().ok_or("g2p_meta.json: idx2ph missing")?
-            .iter()
-            .map(|(k, v)| (k.parse::<usize>().unwrap_or(0), v.as_str().unwrap_or_default().to_string()))
-            .collect();
-        let num = |key: &str| meta[key].as_f64().ok_or(format!("g2p_meta.json: {key} missing"));
-        Ok(Self {
-            graph,
-            char_to_id,
-            id_to_phoneme,
-            repeats: num("char_repeats")? as usize,
-            start: num("start")? as f32,
-            end: num("end")? as f32,
-            max_t: num("MAXT")? as usize,
-            special: meta["special"].as_array().ok_or("g2p_meta.json: special missing")?
-                .iter().filter_map(|s| s.as_str().map(String::from)).collect(),
-            n_phonemes: num("n_phonemes")? as usize,
-        })
+        Ok(Self { graph, meta })
     }
 
     /// One out-of-dictionary word to IPA.
     pub fn word(&self, word: &str) -> Result<String, String> {
-        let mut ids = vec![self.start];
+        let mut ids = vec![self.meta.start];
         for ch in word.chars() {
-            if let Some(&id) = self.char_to_id.get(&ch) {
-                ids.extend(std::iter::repeat(id).take(self.repeats));
+            if let Some(&id) = self.meta.char_to_id.get(&ch) {
+                ids.extend(std::iter::repeat(id).take(self.meta.repeats));
             }
         }
-        ids.push(self.end);
-        let length = ids.len().min(self.max_t);
-        let mut padded = vec![0.0f32; self.max_t];
+        ids.push(self.meta.end);
+        let length = ids.len().min(self.meta.max_t);
+        let mut padded = vec![0.0f32; self.meta.max_t];
         padded[..length].copy_from_slice(&ids[..length]);
         self.graph.set_input(0, &padded)?;
         self.graph.invoke()?;
         let mut logits = Vec::new();
         self.graph.read_output(0, &mut logits)?;
+        let expected = length * self.meta.n_phonemes;
+        if logits.len() < expected {
+            return Err(format!(
+                "neural graph output too short: got {} floats, need {expected} ({length} steps x {} phonemes)",
+                logits.len(),
+                self.meta.n_phonemes
+            ));
+        }
         let mut pieces = String::new();
         let mut previous = usize::MAX;
         for t in 0..length {
-            let row = &logits[t * self.n_phonemes..(t + 1) * self.n_phonemes];
+            let row = &logits[t * self.meta.n_phonemes..(t + 1) * self.meta.n_phonemes];
             // numpy's argmax returns the FIRST maximum; only replace on a
             // strictly greater value so ties resolve the same way here.
             let mut best = 0usize;
@@ -85,8 +116,8 @@ impl NeuralG2p {
                 continue;
             }
             previous = best;
-            match self.id_to_phoneme.get(&best) {
-                Some(p) if best != 0 && !self.special.contains(p) => pieces.extend(p.chars().filter(|c| *c != '-')),
+            match self.meta.id_to_phoneme.get(&best) {
+                Some(p) if best != 0 && !self.meta.special.contains(p) => pieces.extend(p.chars().filter(|c| *c != '-')),
                 _ => {}
             }
         }
@@ -128,5 +159,34 @@ mod tests {
         let Some(neural) = load() else { return };
         let ipa = neural.word(&"blorp".repeat(8)).unwrap();
         assert!(!ipa.is_empty());
+    }
+
+    fn minimal_meta() -> serde_json::Value {
+        serde_json::json!({
+            "char2idx": {"a": 3},
+            "idx2ph": {"0": "_"},
+            "char_repeats": 3,
+            "start": 1,
+            "end": 2,
+            "MAXT": 96,
+            "special": ["_"],
+            "n_phonemes": 64,
+        })
+    }
+
+    #[test]
+    fn a_wrong_typed_char2idx_value_is_refused_not_coerced_to_zero() {
+        let mut meta = minimal_meta();
+        meta["char2idx"] = serde_json::json!({"a": "x"});
+        let err = parse_meta(&meta).unwrap_err();
+        assert!(err.contains("char2idx"), "{err}");
+    }
+
+    #[test]
+    fn a_wrong_typed_idx2ph_value_is_refused_not_dropped() {
+        let mut meta = minimal_meta();
+        meta["idx2ph"] = serde_json::json!({"1": 5});
+        let err = parse_meta(&meta).unwrap_err();
+        assert!(err.contains("idx2ph"), "{err}");
     }
 }
