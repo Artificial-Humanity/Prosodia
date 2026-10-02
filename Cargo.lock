@@ -7,6 +7,7 @@ name = "actor"
 version = "0.1.0"
 dependencies = [
  "deunicode",
+ "flate2",
  "once_cell",
  "regex",
  "serde",
