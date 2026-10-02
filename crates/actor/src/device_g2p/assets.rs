@@ -101,22 +101,28 @@ impl G2pAssets {
     pub fn load(dir: &Path) -> Result<Self, String> {
         let gz = dir.join("g2p_dict.txt.gz");
         let plain = dir.join("g2p_dict.txt");
-        let text = if gz.is_file() {
+        let (text, source) = if gz.is_file() {
             let mut s = String::new();
             flate2::read::GzDecoder::new(std::fs::File::open(&gz).map_err(|e| format!("{}: {e}", gz.display()))?)
                 .read_to_string(&mut s)
                 .map_err(|e| format!("{}: {e}", gz.display()))?;
-            s
+            (s, gz)
         } else if plain.is_file() {
-            std::fs::read_to_string(&plain).map_err(|e| format!("{}: {e}", plain.display()))?
+            (std::fs::read_to_string(&plain).map_err(|e| format!("{}: {e}", plain.display()))?, plain)
         } else {
             return Err(format!("no g2p_dict.txt(.gz) in {}", dir.display()));
         };
-        let dict = text
-            .lines()
-            .filter_map(|line| line.split_once('\t'))
-            .map(|(w, ipa)| (w.to_string(), ipa.replace(COMBINING_TILDE, "")))
-            .collect();
+        let mut dict = HashMap::new();
+        for (word, ipa) in text.lines().filter_map(|line| line.split_once('\t')) {
+            let ipa = ipa.replace(COMBINING_TILDE, "");
+            if ipa.is_empty() {
+                return Err(format!("{}: {word:?} has no IPA; re-export the dictionary", source.display()));
+            }
+            dict.insert(word.to_string(), ipa);
+        }
+        if dict.is_empty() {
+            return Err(format!("{}: no entries (no word<TAB>ipa lines); re-export the dictionary", source.display()));
+        }
         let tables_path = dir.join("g2p_contractions.json");
         let tables = if tables_path.is_file() {
             tables_from_json(&std::fs::read_to_string(&tables_path).map_err(|e| format!("{}: {e}", tables_path.display()))?)?
@@ -155,6 +161,37 @@ mod tests {
     fn a_missing_dictionary_is_an_error_naming_the_file() {
         let err = G2pAssets::load(Path::new("/nonexistent")).err().unwrap();
         assert!(err.contains("g2p_dict.txt"), "{err}");
+    }
+
+    /// A fresh directory under the system temp dir holding one plain
+    /// `g2p_dict.txt` with `contents`.
+    fn dict_dir(name: &str, contents: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("prosodia-g2p-assets-{}-{name}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("g2p_dict.txt"), contents).unwrap();
+        dir
+    }
+
+    #[test]
+    fn an_empty_dictionary_is_refused() {
+        for (name, contents) in [("empty", ""), ("no-tabs", "hello\nworld\n")] {
+            let dir = dict_dir(name, contents);
+            let result = G2pAssets::load(&dir);
+            std::fs::remove_dir_all(&dir).unwrap();
+            let err = result.err().unwrap_or_else(|| panic!("{name}: an entry-less dictionary loaded"));
+            assert!(err.contains("g2p_dict.txt") && err.contains("no entries"), "{name}: {err}");
+        }
+    }
+
+    #[test]
+    fn an_entry_with_no_ipa_is_refused_naming_the_word() {
+        for (name, contents) in [("blank", "hello\thəlˈoʊ\nword\t\n"), ("tilde-only", "hello\thəlˈoʊ\nword\t\u{303}\n")] {
+            let dir = dict_dir(name, contents);
+            let result = G2pAssets::load(&dir);
+            std::fs::remove_dir_all(&dir).unwrap();
+            let err = result.err().unwrap_or_else(|| panic!("{name}: an empty IPA value loaded"));
+            assert!(err.contains("\"word\""), "{name}: {err}");
+        }
     }
 
     #[test]
