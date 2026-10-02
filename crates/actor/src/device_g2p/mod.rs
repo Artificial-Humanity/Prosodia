@@ -185,11 +185,19 @@ impl DeviceG2p {
 /// except before the FIRST word, which `phonemize` never precedes with a
 /// space even when punctuation comes first (`"Hello,"` has no space after
 /// the opening quote).
+///
+/// A span with no word ("…", "…!?") yields no tokens, so the pipeline
+/// renders nothing for it rather than a model forward over bare
+/// punctuation. `DeviceG2p::phonemize` still returns the spec's string
+/// for such text ("...!?"); only the processor drops it.
 pub struct DeviceG2pProcessor(pub Arc<DeviceG2p>);
 
 impl ProsodiaG2PProcessor for DeviceG2pProcessor {
     fn process(&self, text: String) -> Vec<MToken> {
         let pairs = self.0.phonemize_tokens(&text);
+        if !pairs.iter().any(|(token, _)| is_word(token)) {
+            return Vec::new();
+        }
         let mut out: Vec<MToken> = Vec::with_capacity(pairs.len());
         let mut first = true;
         for (token, ipa) in pairs {
@@ -261,8 +269,14 @@ mod tests {
     #[test]
     fn degenerate_input_yields_nothing_and_no_panic() {
         let Some(g2p) = load() else { return };
-        for text in ["", "   ", "…!?"] {
-            assert!(g2p.phonemize(text).chars().all(|c| !c.is_alphabetic()), "{text:?}");
+        let g2p = Arc::new(g2p);
+        let processor = DeviceG2pProcessor(g2p.clone());
+        // `phonemize` is the spec: OpenPhonemizerG2P(homographs=False).phonemize
+        // gives exactly these. The processor renders no word-less span at all.
+        for (text, spec) in [("", ""), ("   ", ""), ("…!?", "...!?")] {
+            assert_eq!(g2p.phonemize(text), spec, "{text:?}");
+            let tokens = processor.process(text.to_string());
+            assert!(tokens.is_empty(), "{text:?} produced tokens: {:?}", tokens.iter().map(|t| &t.text).collect::<Vec<_>>());
         }
     }
 
