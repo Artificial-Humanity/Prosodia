@@ -11,7 +11,19 @@ const AMOUNT: &str = r"(\d[\d,]*)(\.\d+)?";
 static CURRENCY: Lazy<Regex> = Lazy::new(|| Regex::new(&format!(r"([$£€¥])\s?{AMOUNT}")).unwrap());
 static PERCENT: Lazy<Regex> = Lazy::new(|| Regex::new(&format!(r"{AMOUNT}\s?%")).unwrap());
 static FRACTION: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d+)\s*/\s*(\d+)").unwrap());
-static NUMERO: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bno\.\s?(\d)").unwrap());
+// Case-sensitive: book text capitalizes the abbreviation ("No. 7"), and №
+// folds to "No. " (see fold.rs's OVERRIDES). Case-insensitive used to also
+// catch a bare lowercase "no." used as a word, not as the Numero sign —
+// "said no. 7 cats" has no number being named, just a digit to speak.
+static NUMERO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bNo\.\s?(\d)").unwrap());
+// Ordinals: a digit run immediately followed by st/nd/rd/th must consume
+// the suffix with it, or NUMBER below spells only the digits and leaves
+// the suffix stranded ("2nd" -> "two nd").
+static ORDINAL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(\d[\d,]*)(?:st|nd|rd|th)\b").unwrap());
+// Decade/plural digits: a digit run immediately followed by a bare "s"
+// must also consume the suffix with it, for the same reason ("1990s" ->
+// "nineteen ninety s" otherwise).
+static DECADE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(\d[\d,]*)s\b").unwrap());
 static NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(AMOUNT).unwrap());
 
 /// `whole[.frac]` in words; years for bare four-digit 1100–2099.
@@ -46,6 +58,40 @@ fn split_trailing_comma(whole: &str) -> (&str, &str) {
     }
 }
 
+/// `whole` in ordinal words (`21` -> `twenty-first`).
+fn ordinal_words(whole: &str) -> String {
+    let digits = whole.replace(',', "");
+    NumberToWords::ordinal_str(&digits).unwrap_or_else(|| digits.clone())
+}
+
+/// Pluralizes the last whitespace-delimited word only, so a hyphenated
+/// head (`twenty-one`) stays intact and only its own tail is touched: a
+/// final `y` becomes `ies` (`ninety` -> `nineties`), everything else just
+/// takes a trailing `s` (`hundred` -> `hundreds`).
+fn pluralize_last(words: &str) -> String {
+    match words.rsplit_once(' ') {
+        Some((head, last)) => format!("{head} {}", pluralize_word(last)),
+        None => pluralize_word(words),
+    }
+}
+
+fn pluralize_word(word: &str) -> String {
+    match word.strip_suffix('y') {
+        Some(stem) => format!("{stem}ies"),
+        None => format!("{word}s"),
+    }
+}
+
+/// `whole` as a decade/plural: year words for a bare four-digit
+/// 1100-2099, cardinal otherwise, with the last word pluralized.
+fn decade_words(whole: &str) -> String {
+    let digits = whole.replace(',', "");
+    let year = digits.len() == 4 && digits.parse::<i64>().is_ok_and(|v| (1100..=2099).contains(&v));
+    let words = if year { NumberToWords::year_str(&digits) } else { NumberToWords::cardinal_str(&digits) }
+        .unwrap_or_else(|| digits.clone());
+    pluralize_last(&words)
+}
+
 /// Before the fold: currency amounts and percentages.
 pub fn expand_symbols(text: &str) -> String {
     let t = CURRENCY.replace_all(text, |c: &Captures| {
@@ -68,7 +114,10 @@ pub fn expand_symbols(text: &str) -> String {
         .into_owned()
 }
 
-/// After the fold: fractions, `No. N`, then every remaining number.
+/// After the fold: fractions, `No. N`, ordinals and decade plurals (both
+/// must consume their letter suffix before the plain number pass would
+/// otherwise spell just the digits and strand the suffix), then every
+/// remaining number.
 pub fn expand_digits(folded: &str) -> String {
     let t = FRACTION.replace_all(folded, |c: &Captures| match (&c[1], &c[2]) {
         ("1", "2") => " one half ".to_string(),
@@ -77,6 +126,8 @@ pub fn expand_digits(folded: &str) -> String {
         (a, b) => format!(" {} over {} ", amount(a, None, false), amount(b, None, false)),
     });
     let t = NUMERO.replace_all(&t, " number $1");
+    let t = ORDINAL.replace_all(&t, |c: &Captures| format!(" {} ", ordinal_words(&c[1])));
+    let t = DECADE.replace_all(&t, |c: &Captures| format!(" {} ", decade_words(&c[1])));
     NUMBER
         .replace_all(&t, |c: &Captures| {
             let (whole, trailing) = split_trailing_comma(&c[1]);
@@ -115,5 +166,26 @@ mod tests {
     #[test]
     fn text_without_numbers_is_unchanged() {
         assert_eq!(spoken("No numbers here."), "No numbers here.");
+    }
+
+    #[test]
+    fn ordinals_are_spelled_as_ordinals_not_a_floating_suffix() {
+        assert_eq!(spoken("the 2nd edition"), "the second edition");
+        assert_eq!(spoken("October 21st,"), "October twenty-first ,");
+        assert_eq!(spoken("3rd and 4th"), "third and fourth");
+    }
+
+    #[test]
+    fn decade_plurals_keep_the_final_word_pluralized() {
+        assert_eq!(spoken("the 1990s were"), "the nineteen nineties were");
+        assert_eq!(spoken("the 20s"), "the twenties");
+        assert_eq!(spoken("1800s"), "eighteen hundreds");
+    }
+
+    #[test]
+    fn numero_only_fires_on_the_capitalized_abbreviation() {
+        assert_eq!(spoken("No. 7"), "number seven");
+        assert_eq!(spoken("№3"), "number three");
+        assert_eq!(spoken("said no. 7 cats"), "said no. seven cats");
     }
 }
