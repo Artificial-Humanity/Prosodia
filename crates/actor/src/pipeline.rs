@@ -163,10 +163,6 @@ impl ProsodiaActorPipeline {
         *g2p = processor;
     }
 
-    fn should_map_ipa(&self, is_matcha: bool) -> bool {
-        is_matcha && self.is_matcha_ipa
-    }
-
     pub fn tokenize_phonemes(&self, phonemes: String, is_matcha: bool) -> Vec<i32> {
         self.tokenize(&phonemes, is_matcha)
     }
@@ -174,11 +170,7 @@ impl ProsodiaActorPipeline {
     fn tokenize(&self, phonemes: &str, is_matcha: bool) -> Vec<i32> {
         let mut ids = Vec::new();
         ids.push(0); // 0-bound padding identical to standard StyleTTS2 G2P tokenizer format
-        let mapped = if self.should_map_ipa(is_matcha) {
-            map_styletts2_to_matcha_ipa(phonemes)
-        } else {
-            phonemes.to_string()
-        };
+        let mapped = phonemes.to_string();
         for c in mapped.chars() {
             if let Some(&id) = self.vocab.get(&c.to_string()) {
                 ids.push(id);
@@ -365,11 +357,7 @@ impl ProsodiaActorPipeline {
                     let scale = d_scales.get(global_token_idx).copied().unwrap_or(1.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
-                        map_styletts2_to_matcha_ipa(word_phonemes)
-                    } else {
-                        word_phonemes.to_string()
-                    };
+                    let mapped_word_phonemes = word_phonemes.to_string();
                     for char in mapped_word_phonemes.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
@@ -378,11 +366,7 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    let mapped_whitespace = if self.should_map_ipa(is_matcha) {
-                        map_styletts2_to_matcha_ipa(&token.whitespace)
-                    } else {
-                        token.whitespace.to_string()
-                    };
+                    let mapped_whitespace = token.whitespace.to_string();
                     for char in mapped_whitespace.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
@@ -404,11 +388,7 @@ impl ProsodiaActorPipeline {
                     let bias = biases.get(global_token_idx).copied().unwrap_or(0.0);
 
                     let word_phonemes = token.phonemes.as_deref().unwrap_or("");
-                    let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
-                        map_styletts2_to_matcha_ipa(word_phonemes)
-                    } else {
-                        word_phonemes.to_string()
-                    };
+                    let mapped_word_phonemes = word_phonemes.to_string();
                     for char in mapped_word_phonemes.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
@@ -417,11 +397,7 @@ impl ProsodiaActorPipeline {
                             }
                         }
                     }
-                    let mapped_whitespace = if self.should_map_ipa(is_matcha) {
-                        map_styletts2_to_matcha_ipa(&token.whitespace)
-                    } else {
-                        token.whitespace.to_string()
-                    };
+                    let mapped_whitespace = token.whitespace.to_string();
                     for char in mapped_whitespace.chars() {
                         if self.vocab.contains_key(&char.to_string()) {
                             if p_idx < ids.len().saturating_sub(1) {
@@ -468,11 +444,7 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
-                    map_styletts2_to_matcha_ipa(word_phonemes)
-                } else {
-                    word_phonemes.to_string()
-                };
+                let mapped_word_phonemes = word_phonemes.to_string();
                 for char in mapped_word_phonemes.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
@@ -482,11 +454,7 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                let mapped_whitespace = if self.should_map_ipa(is_matcha) {
-                    map_styletts2_to_matcha_ipa(whitespace)
-                } else {
-                    whitespace.to_string()
-                };
+                let mapped_whitespace = whitespace.to_string();
                 for char in mapped_whitespace.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
@@ -615,36 +583,12 @@ impl ProsodiaActorPipeline {
             let trimmed_states = &raw_states[start_idx..end_idx];
 
             let mut filtered_states = Vec::new();
-            let mut mapped_phonemes = String::new();
-
-            if self.should_map_ipa(is_matcha) {
-                for (idx, c) in trimmed_phonemes.chars().enumerate() {
-                    if let Some(rep) = map_char_to_matcha_ipa(c) {
-                        mapped_phonemes.push_str(rep);
-                        for sub_c in rep.chars() {
-                            if self.vocab.contains_key(&sub_c.to_string()) {
-                                filtered_states.push(trimmed_states[idx].clone());
-                            } else {
-                                warn_unknown_phoneme(sub_c, true);
-                            }
-                        }
-                    } else {
-                        mapped_phonemes.push(c);
-                        if self.vocab.contains_key(&c.to_string()) {
-                            filtered_states.push(trimmed_states[idx].clone());
-                        } else {
-                            warn_unknown_phoneme(c, true);
-                        }
-                    }
-                }
-            } else {
-                mapped_phonemes = trimmed_phonemes.clone();
-                for (idx, c) in trimmed_phonemes.chars().enumerate() {
-                    if self.vocab.contains_key(&c.to_string()) {
-                        filtered_states.push(trimmed_states[idx].clone());
-                    } else {
-                        warn_unknown_phoneme(c, true);
-                    }
+            let mapped_phonemes = trimmed_phonemes.clone();
+            for (idx, c) in trimmed_phonemes.chars().enumerate() {
+                if self.vocab.contains_key(&c.to_string()) {
+                    filtered_states.push(trimmed_states[idx].clone());
+                } else {
+                    warn_unknown_phoneme(c, true);
                 }
             }
 
@@ -702,11 +646,7 @@ impl ProsodiaActorPipeline {
 
                 let word_start_time = audio_time_offset + current_time;
 
-                let mapped_word_phonemes = if self.should_map_ipa(is_matcha) {
-                    map_styletts2_to_matcha_ipa(word_phonemes)
-                } else {
-                    word_phonemes.to_string()
-                };
+                let mapped_word_phonemes = word_phonemes.to_string();
                 for char in mapped_word_phonemes.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
@@ -716,11 +656,7 @@ impl ProsodiaActorPipeline {
                     }
                 }
 
-                let mapped_whitespace = if self.should_map_ipa(is_matcha) {
-                    map_styletts2_to_matcha_ipa(whitespace)
-                } else {
-                    whitespace.to_string()
-                };
+                let mapped_whitespace = whitespace.to_string();
                 for char in mapped_whitespace.chars() {
                     if self.vocab.contains_key(&char.to_string()) {
                         if token_idx < pred_dur.len().saturating_sub(1) {
@@ -1182,6 +1118,32 @@ mod tests {
         assert!(!WARNED_PHONEMES.lock().unwrap().insert('🔥'));
         warn_unknown_phoneme('⭐', false);
         assert!(!WARNED_PHONEMES.lock().unwrap().insert('⭐'));
+    }
+
+    #[test]
+    fn processors_emitting_ipa_reach_the_model_unmapped() {
+        struct Ipa;
+        impl crate::g2p::ProsodiaG2PProcessor for Ipa {
+            fn process(&self, _t: String) -> Vec<crate::g2p::MToken> {
+                vec![crate::g2p::MToken { text: "x".into(), tag: String::new(), whitespace: String::new(), phonemes: Some("hˈɔːɹsᵻz ɐ".into()) }]
+            }
+        }
+        struct NoVoices;
+        impl crate::voice_loader::VoiceAssetProvider for NoVoices {
+            fn load_voice_bytes(&self, _v: String) -> Option<Vec<u8>> { None }
+        }
+        let symbols: Vec<String> = ["_", " ", "h", "ˈ", "ɔ", "ː", "ɹ", "s", "ᵻ", "z", "ɐ", "ɪ", "ə"].iter().map(|s| s.to_string()).collect();
+        let pipeline = ProsodiaActorPipeline::new(
+            Box::new(Ipa), crate::voice_loader::VoiceLoader::new(Box::new(NoVoices)),
+            serde_json::json!({ "symbols": symbols }).to_string(), 24000, "en-us".into(),
+        ).unwrap();
+        let out = pipeline.process_span(stage::prosody_payload::ProsodySpan {
+            text: "x".into(), emotion: stage::prosody::EmotionVector { valence: 0.0, arousal: 0.0, tension: 0.0 },
+            leading_pause: 0.0, acoustics: None,
+        });
+        let ids = pipeline.tokenize_phonemes(out.phonemes[0].phonemes.clone(), true);
+        let spelled: String = ids.iter().skip(1).step_by(2).map(|&i| symbols[i as usize].as_str()).collect();
+        assert_eq!(spelled, "hˈɔːɹsᵻz ɐ");
     }
 }
 

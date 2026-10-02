@@ -650,14 +650,14 @@ impl ProsodiaSpeech {
 #[uniffi::export]
 impl ProsodiaG2PProcessor for ProsodiaSpeech {
     fn process(&self, text: String) -> Vec<MToken> {
-        let resolved = self.process_internal(text);
-        resolved.into_iter()
-            .map(|t| MToken {
-                text: t.text,
-                tag: t.tag,
-                whitespace: t.whitespace,
-                phonemes: t.phonemes,
-            })
+        // Processors emit Matcha IPA. Misaki's own symbols (A, I, O, ʤ, …)
+        // are mapped here; the legacy "1.0" symbol set is left as it is.
+        let map = |s: String| {
+            if self.version.as_deref() == Some("1.0") { s } else { crate::pipeline::map_styletts2_to_matcha_ipa(&s) }
+        };
+        self.process_internal(text)
+            .into_iter()
+            .map(|t| MToken { text: t.text, tag: t.tag, whitespace: map(t.whitespace), phonemes: t.phonemes.map(map) })
             .collect()
     }
 }
