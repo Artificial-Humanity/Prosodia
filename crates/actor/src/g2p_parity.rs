@@ -10,6 +10,12 @@
 //! reports the split runtime's token limit (256); at the e2e engine's 50 most
 //! probes would be split into separately synthesized chunks.
 //!
+//! Two front ends are measured on that path. `prosodia_g2p_parity_with_the_training_front_end`
+//! measures the Misaki-based `ProsodiaSpeech` G2P against per-group floors
+//! (below). `device_g2p_parity_on_the_app_path` measures the device G2P port
+//! (`crate::device_g2p`), whose floor is all 86 probes exact: it is the
+//! training front end's spec, so any mismatch is a regression.
+//!
 //! Four contraction probes (`i'd`, `i'll`, `i'm`, `i've`) use the table's
 //! lowercase keys; Prosodia's lexicon is case-sensitive and resolves `I'm` in
 //! real text, so their low scores are partly an artifact of the probe.
@@ -103,10 +109,10 @@ impl VoiceAssetProvider for NoVoices {
 
 /// The symbols the model receives for `text` on the app path. Chunks are
 /// joined with a space, which is what a chunk boundary replaces.
-fn app_path_symbols(symbols: &[String], text: &str) -> String {
+fn app_path_symbols(g2p: Box<dyn ProsodiaG2PProcessor>, symbols: &[String], text: &str) -> String {
     let config = serde_json::json!({ "symbols": symbols }).to_string();
     let pipeline = ProsodiaActorPipeline::new(
-        Box::new(AppG2p(ProsodiaSpeech::new())),
+        g2p,
         VoiceLoader::new(Box::new(NoVoices)),
         config,
         24000,
@@ -181,7 +187,7 @@ fn prosodia_g2p_parity_with_the_training_front_end() {
             want_raw.chars().count(),
             "reference for {text:?} has symbols outside the vocabulary"
         );
-        let got: Vec<char> = app_path_symbols(&symbols, text).chars().collect();
+        let got: Vec<char> = app_path_symbols(Box::new(AppG2p(ProsodiaSpeech::new())), &symbols, text).chars().collect();
         let similarity = 1.0 - edit_distance(&want, &got) as f64 / want.len().max(got.len()).max(1) as f64;
         let entry = groups.entry(group).or_default();
         entry.0 += 1;
@@ -205,6 +211,29 @@ fn prosodia_g2p_parity_with_the_training_front_end() {
         assert!(exact >= exact_floor, "{group}: exact matches fell to {exact} (floor {exact_floor})");
         assert!(mean >= similarity_floor, "{group}: mean similarity fell to {mean:.3} (floor {similarity_floor})");
     }
+}
+
+#[test]
+fn device_g2p_parity_on_the_app_path() {
+    const ASSETS: &str = "/data/models/litert-community/Matcha-TTS";
+    if !std::path::Path::new(ASSETS).join("g2p_dict.txt.gz").exists() {
+        assert!(std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() != Ok("1"), "{ASSETS} missing");
+        println!("Skipping: {ASSETS} not found");
+        return;
+    }
+    let g2p = Arc::new(crate::device_g2p::DeviceG2p::load(std::path::Path::new(ASSETS), true).unwrap());
+    let reference: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(REFERENCE).unwrap()).unwrap();
+    let symbols: Vec<String> = reference["symbols"].as_array().unwrap().iter().map(|s| s.as_str().unwrap().to_string()).collect();
+    let mut exact = 0;
+    for probe in reference["probes"].as_array().unwrap() {
+        let got = app_path_symbols(Box::new(crate::device_g2p::DeviceG2pProcessor(g2p.clone())), &symbols, probe["text"].as_str().unwrap());
+        if got == probe["ipa"].as_str().unwrap() {
+            exact += 1;
+        } else {
+            println!("{}\n  want {}\n  got  {got}", probe["text"], probe["ipa"]);
+        }
+    }
+    assert_eq!(exact, 86, "device G2P on the app path: {exact} of 86 exact");
 }
 
 #[test]

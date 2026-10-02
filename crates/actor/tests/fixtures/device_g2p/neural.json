@@ -1,0 +1,24 @@
+{
+  "sonora_commit": "ead7e53e4f7ac16f760802963a6f712e6af9869e",
+  "sha256": {
+    "dp_g2p_matcha_fp16.tflite": "6e4b481f6874dfabc32ce73bf6f0ea1ba6ab5986ee6f76a27779364be8a53c73",
+    "g2p_meta.json": "7b87bfeaaa072be236e8491d771b0cb97cc92c3e5d83e3558fff8849868810f5"
+  },
+  "contractions_sha256": "102acfc2c06b0ab09ae67111e639a56b1b48ed0c98acaebb694dba32d4996222",
+  "words": {
+    "alors": "ˈælɚz",
+    "blorptastic": "bloːɹptˈæstɪk",
+    "brillig": "bɹˈɪlɪɡ",
+    "brulee": "bɹˈuːliː",
+    "d": "dˈ",
+    "dartagnan": "dˈɑːɹɾæɡnən",
+    "frunge": "fɹˈʌndʒ",
+    "gpu": "ɡpˈuː",
+    "maevan": "mˈiːvən",
+    "maitre": "mˈeɪɾɚ",
+    "matcha": "mˈætʃə",
+    "obrien": "ˈɑːbɹiən",
+    "verdad": "vˈɜːdæd",
+    "zyzzyqx": "zˈɪzɪks"
+  }
+}

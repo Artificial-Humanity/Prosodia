@@ -1,0 +1,349 @@
+{
+  "sonora_commit": "ead7e53e4f7ac16f760802963a6f712e6af9869e",
+  "cases": [
+    {
+      "text": "Don't go — we'll be late, and it won't matter.",
+      "normalized": "don't go we'll be late, and it won't matter."
+    },
+    {
+      "text": "He's here, she'd know, they've gone, I'm sure, you're right.",
+      "normalized": "he's here, she'd know, they've gone, i'm sure, you're right."
+    },
+    {
+      "text": "The cat's dish, James's hat, the horses' stalls, the church's bell.",
+      "normalized": "the cat's dish, james's hat, the horses' stalls, the church's bell."
+    },
+    {
+      "text": "Dickens's world, the fox's den, the lamp's glow, the moth's wing.",
+      "normalized": "dickens's world, the fox's den, the lamp's glow, the moth's wing."
+    },
+    {
+      "text": "The cat's, the dog's, the horse's, the judge's, the cliff's, the myth's.",
+      "normalized": "the cat's, the dog's, the horse's, the judge's, the cliff's, the myth's."
+    },
+    {
+      "text": "'Hello,' he said, 'it is late.'",
+      "normalized": "'hello,' he said, 'it is late.'"
+    },
+    {
+      "text": "The boys' coats and the ladies' gloves.",
+      "normalized": "the boys' coats and the ladies' gloves."
+    },
+    {
+      "text": "'Tis a fine morning, and 'twas brillig; hand 'em over by o'clock.",
+      "normalized": "'tis a fine morning, and 'twas brillig; hand 'em over by o'clock."
+    },
+    {
+      "text": "Ma'am, ne'er a word, e'er again, o'er the hill, y'all.",
+      "normalized": "ma'am, ne'er a word, e'er again, o'er the hill, y'all."
+    },
+    {
+      "text": "O'Brien and d'Artagnan rode with Ma'evan.",
+      "normalized": "o'brien and d'artagnan rode with ma'evan."
+    },
+    {
+      "text": "Mr. Smith and Dr. Jones walked to St. Paul's with Col. Reed.",
+      "normalized": "mister smith and doctor jones walked to saint paul's with colonel reed."
+    },
+    {
+      "text": "A well-known (and much-loved) tune — the second-best kind.",
+      "normalized": "a well known and much loved tune the second best kind."
+    },
+    {
+      "text": "The naïve café serves crème brûlée — “quite good,” said the maître d'.",
+      "normalized": "the naive cafe serves creme brulee \"quite good,\" said the maitre d'."
+    },
+    {
+      "text": "Wait… what? Yes; no: maybe! «Alors» ¿verdad? ¡Claro!",
+      "normalized": "wait... what? yes; no: maybe! <<alors>> ?verdad? !claro!"
+    },
+    {
+      "text": "Zyzzyqx blorptastic frunge.",
+      "normalized": "zyzzyqx blorptastic frunge."
+    },
+    {
+      "text": "The quick brown fox jumps over the lazy dog.",
+      "normalized": "the quick brown fox jumps over the lazy dog."
+    },
+    {
+      "text": "Hello, this is Matcha running on the mobile GPU.",
+      "normalized": "hello, this is matcha running on the mobile gpu."
+    },
+    {
+      "text": "And then 'em said the thing.",
+      "normalized": "and then 'em said the thing."
+    },
+    {
+      "text": "And then 'tis said the thing.",
+      "normalized": "and then 'tis said the thing."
+    },
+    {
+      "text": "And then 'twas said the thing.",
+      "normalized": "and then 'twas said the thing."
+    },
+    {
+      "text": "And then 'twould said the thing.",
+      "normalized": "and then 'twould said the thing."
+    },
+    {
+      "text": "And then ain't said the thing.",
+      "normalized": "and then ain't said the thing."
+    },
+    {
+      "text": "And then aren't said the thing.",
+      "normalized": "and then aren't said the thing."
+    },
+    {
+      "text": "And then can't said the thing.",
+      "normalized": "and then can't said the thing."
+    },
+    {
+      "text": "And then couldn't said the thing.",
+      "normalized": "and then couldn't said the thing."
+    },
+    {
+      "text": "And then daren't said the thing.",
+      "normalized": "and then daren't said the thing."
+    },
+    {
+      "text": "And then didn't said the thing.",
+      "normalized": "and then didn't said the thing."
+    },
+    {
+      "text": "And then doesn't said the thing.",
+      "normalized": "and then doesn't said the thing."
+    },
+    {
+      "text": "And then don't said the thing.",
+      "normalized": "and then don't said the thing."
+    },
+    {
+      "text": "And then e'er said the thing.",
+      "normalized": "and then e'er said the thing."
+    },
+    {
+      "text": "And then hadn't said the thing.",
+      "normalized": "and then hadn't said the thing."
+    },
+    {
+      "text": "And then hasn't said the thing.",
+      "normalized": "and then hasn't said the thing."
+    },
+    {
+      "text": "And then haven't said the thing.",
+      "normalized": "and then haven't said the thing."
+    },
+    {
+      "text": "And then he'd said the thing.",
+      "normalized": "and then he'd said the thing."
+    },
+    {
+      "text": "And then he'll said the thing.",
+      "normalized": "and then he'll said the thing."
+    },
+    {
+      "text": "And then he's said the thing.",
+      "normalized": "and then he's said the thing."
+    },
+    {
+      "text": "And then here's said the thing.",
+      "normalized": "and then here's said the thing."
+    },
+    {
+      "text": "And then i'd said the thing.",
+      "normalized": "and then i'd said the thing."
+    },
+    {
+      "text": "And then i'll said the thing.",
+      "normalized": "and then i'll said the thing."
+    },
+    {
+      "text": "And then i'm said the thing.",
+      "normalized": "and then i'm said the thing."
+    },
+    {
+      "text": "And then i've said the thing.",
+      "normalized": "and then i've said the thing."
+    },
+    {
+      "text": "And then isn't said the thing.",
+      "normalized": "and then isn't said the thing."
+    },
+    {
+      "text": "And then it'd said the thing.",
+      "normalized": "and then it'd said the thing."
+    },
+    {
+      "text": "And then it'll said the thing.",
+      "normalized": "and then it'll said the thing."
+    },
+    {
+      "text": "And then it's said the thing.",
+      "normalized": "and then it's said the thing."
+    },
+    {
+      "text": "And then let's said the thing.",
+      "normalized": "and then let's said the thing."
+    },
+    {
+      "text": "And then ma'am said the thing.",
+      "normalized": "and then ma'am said the thing."
+    },
+    {
+      "text": "And then mightn't said the thing.",
+      "normalized": "and then mightn't said the thing."
+    },
+    {
+      "text": "And then mustn't said the thing.",
+      "normalized": "and then mustn't said the thing."
+    },
+    {
+      "text": "And then ne'er said the thing.",
+      "normalized": "and then ne'er said the thing."
+    },
+    {
+      "text": "And then needn't said the thing.",
+      "normalized": "and then needn't said the thing."
+    },
+    {
+      "text": "And then o'clock said the thing.",
+      "normalized": "and then o'clock said the thing."
+    },
+    {
+      "text": "And then o'er said the thing.",
+      "normalized": "and then o'er said the thing."
+    },
+    {
+      "text": "And then oughtn't said the thing.",
+      "normalized": "and then oughtn't said the thing."
+    },
+    {
+      "text": "And then shan't said the thing.",
+      "normalized": "and then shan't said the thing."
+    },
+    {
+      "text": "And then she'd said the thing.",
+      "normalized": "and then she'd said the thing."
+    },
+    {
+      "text": "And then she'll said the thing.",
+      "normalized": "and then she'll said the thing."
+    },
+    {
+      "text": "And then she's said the thing.",
+      "normalized": "and then she's said the thing."
+    },
+    {
+      "text": "And then shouldn't said the thing.",
+      "normalized": "and then shouldn't said the thing."
+    },
+    {
+      "text": "And then that'll said the thing.",
+      "normalized": "and then that'll said the thing."
+    },
+    {
+      "text": "And then that's said the thing.",
+      "normalized": "and then that's said the thing."
+    },
+    {
+      "text": "And then there'll said the thing.",
+      "normalized": "and then there'll said the thing."
+    },
+    {
+      "text": "And then there's said the thing.",
+      "normalized": "and then there's said the thing."
+    },
+    {
+      "text": "And then they'd said the thing.",
+      "normalized": "and then they'd said the thing."
+    },
+    {
+      "text": "And then they'll said the thing.",
+      "normalized": "and then they'll said the thing."
+    },
+    {
+      "text": "And then they're said the thing.",
+      "normalized": "and then they're said the thing."
+    },
+    {
+      "text": "And then they've said the thing.",
+      "normalized": "and then they've said the thing."
+    },
+    {
+      "text": "And then wasn't said the thing.",
+      "normalized": "and then wasn't said the thing."
+    },
+    {
+      "text": "And then we'd said the thing.",
+      "normalized": "and then we'd said the thing."
+    },
+    {
+      "text": "And then we'll said the thing.",
+      "normalized": "and then we'll said the thing."
+    },
+    {
+      "text": "And then we're said the thing.",
+      "normalized": "and then we're said the thing."
+    },
+    {
+      "text": "And then we've said the thing.",
+      "normalized": "and then we've said the thing."
+    },
+    {
+      "text": "And then weren't said the thing.",
+      "normalized": "and then weren't said the thing."
+    },
+    {
+      "text": "And then what'll said the thing.",
+      "normalized": "and then what'll said the thing."
+    },
+    {
+      "text": "And then what's said the thing.",
+      "normalized": "and then what's said the thing."
+    },
+    {
+      "text": "And then who'd said the thing.",
+      "normalized": "and then who'd said the thing."
+    },
+    {
+      "text": "And then who'll said the thing.",
+      "normalized": "and then who'll said the thing."
+    },
+    {
+      "text": "And then who's said the thing.",
+      "normalized": "and then who's said the thing."
+    },
+    {
+      "text": "And then who've said the thing.",
+      "normalized": "and then who've said the thing."
+    },
+    {
+      "text": "And then won't said the thing.",
+      "normalized": "and then won't said the thing."
+    },
+    {
+      "text": "And then wouldn't said the thing.",
+      "normalized": "and then wouldn't said the thing."
+    },
+    {
+      "text": "And then y'all said the thing.",
+      "normalized": "and then y'all said the thing."
+    },
+    {
+      "text": "And then you'd said the thing.",
+      "normalized": "and then you'd said the thing."
+    },
+    {
+      "text": "And then you'll said the thing.",
+      "normalized": "and then you'll said the thing."
+    },
+    {
+      "text": "And then you're said the thing.",
+      "normalized": "and then you're said the thing."
+    },
+    {
+      "text": "And then you've said the thing.",
+      "normalized": "and then you've said the thing."
+    }
+  ]
+}

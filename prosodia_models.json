@@ -48,6 +48,15 @@
         "sonora_vocoder24k_fp16.tflite": "3fd5c6caf920e7efdf2d260da10e874cf42ceb393f7be2a8504410f0d2917568",
         "spk_emb.bin": "e002f88370c8bd37780980c59775548fd79469ea3f58a27e9ae17b6878fdf03f"
       }
+    },
+    "g2p": {
+      "path": "litert-community/Matcha-TTS",
+      "display": "Sonora device G2P assets",
+      "sha256": {
+        "g2p_dict.txt.gz": "5b3493a8cd4d20b72c7b91415afaf3f32335ebd81f349698e1cedc898c59f979",
+        "g2p_meta.json": "7b87bfeaaa072be236e8491d771b0cb97cc92c3e5d83e3558fff8849868810f5",
+        "dp_g2p_matcha_fp16.tflite": "6e4b481f6874dfabc32ce73bf6f0ea1ba6ab5986ee6f76a27779364be8a53c73"
+      }
     }
   },
   "directorRoleOrder": [

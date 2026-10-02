@@ -2,6 +2,7 @@ uniffi::setup_scaffolding!();
 
 pub mod asset_manager;
 pub mod chunking;
+pub mod device_g2p;
 pub mod engine;
 pub mod g2p;
 pub mod pipeline;
@@ -18,3 +19,5 @@ mod model_pins;
 #[cfg(test)]
 mod g2p_parity;
 
+#[cfg(test)]
+mod ffi_checksums;

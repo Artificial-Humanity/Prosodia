@@ -106,13 +106,24 @@ fn pin_dir(role_path: &Path) -> PathBuf {
     }
 }
 
-/// Files the actor engines read from a role's directory. For a split model
-/// directory that is every `{matcha,sonora}_{textenc,decoder,vocoder}*.tflite`
-/// graph (`find_graph` takes the first match in directory order, so all
-/// candidates count) plus `emb.bin`, `config.json` and, when present,
-/// `spk_emb.bin`; for an e2e model it is the model file plus the adjacent
-/// `config.json`.
-fn loaded_files(role_path: &Path) -> Vec<String> {
+/// Files the actor engines read from a role's directory. The `g2p` role is
+/// decided by name, before any path-based logic: the device G2P's directory
+/// also holds `matcha_*` split-graph files, `emb.bin` and `config.json` (a
+/// split model's file names, as in `actor-split`'s directory, though not
+/// that directory), none of which the G2P loads, so deciding by path would
+/// sweep those in too. For other roles: a split model directory
+/// is every `{matcha,sonora}_{textenc,decoder,vocoder}*.tflite` graph
+/// (`find_graph` takes the first match in directory order, so all candidates
+/// count) plus `emb.bin`, `config.json` and, when present, `spk_emb.bin`;
+/// for an e2e model it is the model file plus the adjacent `config.json`.
+fn loaded_files(name: &str, role_path: &Path) -> Vec<String> {
+    if name == "g2p" {
+        return vec![
+            "dp_g2p_matcha_fp16.tflite".to_string(),
+            "g2p_dict.txt.gz".to_string(),
+            "g2p_meta.json".to_string(),
+        ];
+    }
     if !is_directory_role(role_path) {
         let model = role_path.file_name().unwrap().to_string_lossy().to_string();
         return vec![model, "config.json".to_string()];
@@ -170,7 +181,7 @@ fn pinned_roles_pin_exactly_the_files_the_engines_load() {
     let cfg = load_config();
     let roles = pinned_roles(&cfg);
     let names: Vec<&str> = roles.iter().map(|(n, _, _)| n.as_str()).collect();
-    for required in ["actor", "actor-split", "actor-split-24k"] {
+    for required in ["actor", "actor-split", "actor-split-24k", "g2p"] {
         assert!(names.contains(&required), "role {required} has no sha256 pins");
     }
     for (name, role_path, pins) in &roles {
@@ -179,7 +190,7 @@ fn pinned_roles_pin_exactly_the_files_the_engines_load() {
             skip(&format!("role {name}: {} not found", pin_dir(role_path).display()));
             continue;
         }
-        let loaded = loaded_files(role_path);
+        let loaded = loaded_files(name, role_path);
         for file in &loaded {
             assert!(pins.contains_key(file), "role {name} loads {file} but does not pin it");
         }
