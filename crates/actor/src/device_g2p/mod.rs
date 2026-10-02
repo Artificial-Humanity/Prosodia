@@ -1,4 +1,225 @@
-pub mod fold;
-pub mod normalize;
+//! Sonora's device text front end (`scripts/litert_export/device_g2p.py`),
+//! ported: the executable spec Sonora's export gate G7 checks against the
+//! training front end, phoneme string for phoneme string.
+
 pub mod assets;
+pub mod fold;
 pub mod neural;
+pub mod normalize;
+
+use crate::g2p::{MToken, ProsodiaG2PProcessor};
+use assets::G2pAssets;
+use neural::NeuralG2p;
+use normalize::{is_word, normalize, tokens};
+use std::collections::BTreeSet;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+
+pub struct DeviceG2p {
+    assets: G2pAssets,
+    neural: Option<NeuralG2p>,
+    /// Words nothing resolved; they pass through as letters. Read this —
+    /// letters are inside the vocabulary, so nothing else reports them.
+    pub oov_words: Mutex<BTreeSet<String>>,
+    /// Apostrophe words that took the bare-letters guess (mostly names).
+    pub apostrophe_fallback_words: Mutex<BTreeSet<String>>,
+}
+
+impl DeviceG2p {
+    /// Loads the assets from `dir`; `use_neural_oov` loads the OOV graph too.
+    pub fn load(dir: &Path, use_neural_oov: bool) -> Result<Self, String> {
+        Ok(Self {
+            assets: G2pAssets::load(dir)?,
+            neural: if use_neural_oov { Some(NeuralG2p::load(dir)?) } else { None },
+            oov_words: Mutex::new(BTreeSet::new()),
+            apostrophe_fallback_words: Mutex::new(BTreeSet::new()),
+        })
+    }
+
+    fn neural_word(&self, word: &str) -> Option<String> {
+        self.neural.as_ref().and_then(|n| n.word(word).ok()).filter(|ipa| !ipa.is_empty())
+    }
+
+    /// Dictionary, then neural, for a word with no apostrophes.
+    fn plain_word(&self, word: &str) -> Option<String> {
+        self.assets.dict.get(word).cloned().or_else(|| self.neural_word(word))
+    }
+
+    fn possessive_suffix(&self, base: &str) -> &str {
+        let p = &self.assets.tables.possessive;
+        let tail = base.trim_end_matches(|c| p.stress_marks.contains(c));
+        if p.sibilant.iter().any(|s| tail.ends_with(s.as_str())) {
+            &p.after_sibilant
+        } else if p.voiceless.iter().any(|s| tail.ends_with(s.as_str())) {
+            &p.after_voiceless
+        } else {
+            &p.default
+        }
+    }
+
+    /// Contraction table, plural possessive, clitics, then "'s" — the table
+    /// wins over decomposition.
+    fn apostrophe_word(&self, word: &str) -> Option<String> {
+        let t = &self.assets.tables;
+        if let Some(ipa) = t.contractions.get(word) {
+            return Some(ipa.clone());
+        }
+        if let Some(base) = word.strip_suffix('\'') {
+            return self.plain_word(base);
+        }
+        for (clitic, suffix) in &t.clitics {
+            if word.ends_with(clitic.as_str()) && word.len() > clitic.len() {
+                return self.plain_word(&word[..word.len() - clitic.len()]).map(|b| b + suffix);
+            }
+        }
+        if word.ends_with("'s") && word.len() > 2 {
+            if let Some(base) = self.plain_word(&word[..word.len() - 2]) {
+                let suffix = self.possessive_suffix(&base).to_string();
+                return Some(base + &suffix);
+            }
+        }
+        None
+    }
+
+    fn phonemize_word(&self, word: &str) -> Option<String> {
+        if let Some(ipa) = self.assets.dict.get(word) {
+            return Some(ipa.clone());
+        }
+        if word.contains('\'') {
+            if let Some(ipa) = self.apostrophe_word(word).filter(|s| !s.is_empty()) {
+                return Some(ipa);
+            }
+            let bare = word.replace('\'', "");
+            if !bare.is_empty() {
+                if let Some(ipa) = self.plain_word(&bare) {
+                    self.apostrophe_fallback_words.lock().unwrap().insert(word.to_string());
+                    return Some(ipa);
+                }
+            }
+        } else if let Some(ipa) = self.neural_word(word) {
+            return Some(ipa);
+        }
+        self.oov_words.lock().unwrap().insert(word.to_string());
+        None
+    }
+
+    /// `(token, ipa)` pairs in order; punctuation maps to itself, words to
+    /// IPA (or their letters when nothing resolves).
+    pub fn phonemize_tokens(&self, text: &str) -> Vec<(String, String)> {
+        let normalized = normalize(text);
+        let mut out = Vec::new();
+        for token in tokens(&normalized) {
+            if !is_word(token) {
+                out.push((token.to_string(), token.to_string()));
+                continue;
+            }
+            let word = if self.assets.tables.contractions.contains_key(token) { token } else { token.trim_start_matches('\'') };
+            if word.is_empty() || word == "'" {
+                continue;
+            }
+            let ipa = self.phonemize_word(word).unwrap_or_else(|| word.to_string());
+            out.push((word.to_string(), ipa));
+        }
+        out
+    }
+
+    /// The phoneme string, joined as Sonora joins it: a space before every
+    /// word but the first, punctuation attached.
+    pub fn phonemize(&self, text: &str) -> String {
+        let mut s = String::new();
+        let mut first = true;
+        for (token, ipa) in self.phonemize_tokens(text) {
+            if is_word(&token) {
+                if !first {
+                    s.push(' ');
+                }
+                first = false;
+            }
+            s.push_str(&ipa);
+        }
+        s
+    }
+}
+
+/// The device G2P as the pipeline's processor. Each token carries its IPA;
+/// the space Sonora puts before a word is the previous token's whitespace.
+pub struct DeviceG2pProcessor(pub Arc<DeviceG2p>);
+
+impl ProsodiaG2PProcessor for DeviceG2pProcessor {
+    fn process(&self, text: String) -> Vec<MToken> {
+        let pairs = self.0.phonemize_tokens(&text);
+        let mut out: Vec<MToken> = Vec::with_capacity(pairs.len());
+        for (token, ipa) in pairs {
+            if is_word(&token) {
+                if let Some(prev) = out.last_mut() {
+                    prev.whitespace = " ".to_string();
+                }
+            }
+            out.push(MToken { text: token, tag: String::new(), whitespace: String::new(), phonemes: Some(ipa) });
+        }
+        out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    const ASSETS: &str = "/data/models/litert-community/Matcha-TTS";
+
+    fn load() -> Option<DeviceG2p> {
+        if !Path::new(ASSETS).join("g2p_dict.txt.gz").exists() {
+            assert!(std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() != Ok("1"), "{ASSETS} missing");
+            println!("Skipping: {ASSETS} not found");
+            return None;
+        }
+        Some(DeviceG2p::load(Path::new(ASSETS), true).unwrap())
+    }
+
+    #[test]
+    fn reproduces_the_training_front_end_on_every_g7_probe() {
+        let Some(g2p) = load() else { return };
+        let reference: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/g2p_parity/reference.json")).unwrap(),
+        )
+        .unwrap();
+        let probes = reference["probes"].as_array().unwrap();
+        assert_eq!(probes.len(), 86);
+        let bad: Vec<String> = probes.iter()
+            .filter_map(|p| {
+                let (text, want) = (p["text"].as_str().unwrap(), p["ipa"].as_str().unwrap());
+                let got = g2p.phonemize(text);
+                (got != want).then(|| format!("{text}\n  want {want}\n  got  {got}"))
+            })
+            .collect();
+        assert!(bad.is_empty(), "{} of 86 differ:\n{}", bad.len(), bad.join("\n"));
+    }
+
+    #[test]
+    fn the_d_c1_exemplars_resolve_through_the_tables() {
+        let Some(g2p) = load() else { return };
+        assert_eq!(g2p.phonemize("we'll"), "wiːl");
+        assert_eq!(g2p.phonemize("don't"), "dˈoʊnt");
+        assert_eq!(g2p.phonemize("the horse's"), "ðə hˈɔːɹsᵻz");
+    }
+
+    #[test]
+    fn degenerate_input_yields_nothing_and_no_panic() {
+        let Some(g2p) = load() else { return };
+        for text in ["", "   ", "…!?"] {
+            assert!(g2p.phonemize(text).chars().all(|c| !c.is_alphabetic()), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn foreign_scripts_and_symbols_stay_inside_the_vocabulary() {
+        let Some(g2p) = load() else { return };
+        let symbols: std::collections::HashSet<char> = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/g2p_parity/reference.json")).unwrap(),
+        )
+        .unwrap()["symbols"].as_array().unwrap().iter().flat_map(|s| s.as_str().unwrap().chars().collect::<Vec<_>>()).collect();
+        let out = g2p.phonemize("Москва & 東京 🎉 at a@b.com");
+        assert!(out.chars().all(|c| symbols.contains(&c)), "{out}");
+    }
+}
