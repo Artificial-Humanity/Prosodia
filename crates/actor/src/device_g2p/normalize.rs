@@ -21,7 +21,7 @@ static ABBREVIATIONS: Lazy<Vec<(Regex, &'static str)>> = Lazy::new(|| {
 static BRACKETS: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\[\]\(\)\{\}]").unwrap());
 static DASH_RUN: Lazy<Regex> = Lazy::new(|| Regex::new("[-\u{2010}-\u{2015}\u{2212}]+").unwrap());
 static WHITESPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
-static TOKEN: Lazy<Regex> = Lazy::new(|| Regex::new(r#"[a-z']+|[.,!?;:—…"«»""¡¿]"#).unwrap());
+static TOKEN: Lazy<Regex> = Lazy::new(|| Regex::new("[a-z']+|[.,!?;:\u{2014}\u{2026}\"\u{00AB}\u{00BB}\u{201C}\u{201D}\u{00A1}\u{00BF}]").unwrap());
 static WORD: Lazy<Regex> = Lazy::new(|| Regex::new("^[a-z']+$").unwrap());
 
 /// The text the tokenizer sees, as `op_g2p.normalize_for_tokens` produces it.
@@ -69,5 +69,21 @@ mod tests {
         let n = normalize("Don't go -- 'Hello,' he said!");
         assert_eq!(tokens(&n), vec!["don't", "go", "'hello", ",", "'", "he", "said", "!"]);
         assert!(is_word("don't") && !is_word(","));
+    }
+
+    #[test]
+    fn tokens_punctuation_set_each_returns_separately_and_is_not_word() {
+        // Test every punctuation character in the vocabulary.
+        // This string has: . , ! ? ; : — … " « » " " ¡ ¿
+        let input = "a.b,c!d?e;f:g\u{2014}h\u{2026}i\"j\u{00AB}k\u{00BB}l\u{201C}m\u{201D}n\u{00A1}o\u{00BF}";
+        let result = tokens(input);
+        let expected = vec!["a", ".", "b", ",", "c", "!", "d", "?", "e", ";", "f", ":", "g", "\u{2014}", "h", "\u{2026}", "i", "\"", "j", "\u{00AB}", "k", "\u{00BB}", "l", "\u{201C}", "m", "\u{201D}", "n", "\u{00A1}", "o", "\u{00BF}"];
+        assert_eq!(result, expected);
+
+        // Verify each punctuation is not a word
+        let punctuation = vec![".", ",", "!", "?", ";", ":", "\u{2014}", "\u{2026}", "\"", "\u{00AB}", "\u{00BB}", "\u{201C}", "\u{201D}", "\u{00A1}", "\u{00BF}"];
+        for p in punctuation {
+            assert!(!is_word(p), "punctuation {:?} should not be a word", p);
+        }
     }
 }
