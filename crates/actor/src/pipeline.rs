@@ -163,6 +163,12 @@ impl ProsodiaActorPipeline {
         *g2p = processor;
     }
 
+    /// Retained for the FFI surface (Swift/Kotlin bindings); the pipeline no longer
+    /// maps — G2P processors emit Matcha IPA. Removal belongs with Phase B's app work.
+    pub fn should_map_ipa(&self, is_matcha: bool) -> bool {
+        is_matcha && self.is_matcha_ipa
+    }
+
     pub fn tokenize_phonemes(&self, phonemes: String, is_matcha: bool) -> Vec<i32> {
         self.tokenize(&phonemes, is_matcha)
     }
