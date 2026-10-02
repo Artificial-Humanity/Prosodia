@@ -1,0 +1,711 @@
+{
+  "oracle": "matcha.text.op_g2p.OpenPhonemizerG2P(use_neural_oov=True, homographs=False).phonemize",
+  "probes_from": "device_g2p.probe_sentences(op_g2p.contraction_tables())",
+  "sonora_commit": "ead7e53e4f7ac16f760802963a6f712e6af9869e",
+  "homographs": false,
+  "assets_dir": "/data/models/litert-community/Matcha-TTS",
+  "sha256": {
+    "g2p_dict.txt.gz": "5b3493a8cd4d20b72c7b91415afaf3f32335ebd81f349698e1cedc898c59f979",
+    "g2p_meta.json": "7b87bfeaaa072be236e8491d771b0cb97cc92c3e5d83e3558fff8849868810f5",
+    "dp_g2p_matcha_fp16.tflite": "6e4b481f6874dfabc32ce73bf6f0ea1ba6ab5986ee6f76a27779364be8a53c73",
+    "g2p_contractions.json": "102acfc2c06b0ab09ae67111e639a56b1b48ed0c98acaebb694dba32d4996222"
+  },
+  "symbols": [
+    "_",
+    ";",
+    ":",
+    ",",
+    ".",
+    "!",
+    "?",
+    "¡",
+    "¿",
+    "—",
+    "…",
+    "\"",
+    "«",
+    "»",
+    "“",
+    "”",
+    " ",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "ɑ",
+    "ɐ",
+    "ɒ",
+    "æ",
+    "ɓ",
+    "ʙ",
+    "β",
+    "ɔ",
+    "ɕ",
+    "ç",
+    "ɗ",
+    "ɖ",
+    "ð",
+    "ʤ",
+    "ə",
+    "ɘ",
+    "ɚ",
+    "ɛ",
+    "ɜ",
+    "ɝ",
+    "ɞ",
+    "ɟ",
+    "ʄ",
+    "ɡ",
+    "ɠ",
+    "ɢ",
+    "ʛ",
+    "ɦ",
+    "ɧ",
+    "ħ",
+    "ɥ",
+    "ʜ",
+    "ɨ",
+    "ɪ",
+    "ʝ",
+    "ɭ",
+    "ɬ",
+    "ɫ",
+    "ɮ",
+    "ʟ",
+    "ɱ",
+    "ɯ",
+    "ɰ",
+    "ŋ",
+    "ɳ",
+    "ɲ",
+    "ɴ",
+    "ø",
+    "ɵ",
+    "ɸ",
+    "θ",
+    "œ",
+    "ɶ",
+    "ʘ",
+    "ɹ",
+    "ɺ",
+    "ɾ",
+    "ɻ",
+    "ʀ",
+    "ʁ",
+    "ɽ",
+    "ʂ",
+    "ʃ",
+    "ʈ",
+    "ʧ",
+    "ʉ",
+    "ʊ",
+    "ʋ",
+    "ⱱ",
+    "ʌ",
+    "ɣ",
+    "ɤ",
+    "ʍ",
+    "χ",
+    "ʎ",
+    "ʏ",
+    "ʑ",
+    "ʐ",
+    "ʒ",
+    "ʔ",
+    "ʡ",
+    "ʕ",
+    "ʢ",
+    "ǀ",
+    "ǁ",
+    "ǂ",
+    "ǃ",
+    "ˈ",
+    "ˌ",
+    "ː",
+    "ˑ",
+    "ʼ",
+    "ʴ",
+    "ʰ",
+    "ʱ",
+    "ʲ",
+    "ʷ",
+    "ˠ",
+    "ˤ",
+    "˞",
+    "↓",
+    "↑",
+    "→",
+    "↗",
+    "↘",
+    "'",
+    "̩",
+    "ᵻ",
+    "ᵊ"
+  ],
+  "probes": [
+    {
+      "text": "Don't go — we'll be late, and it won't matter.",
+      "ipa": "dˈoʊnt ɡˈoʊ wiːl bˈiː lˈeɪt, ænd ɪt wˈoʊnt mˈæɾɚ.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "He's here, she'd know, they've gone, I'm sure, you're right.",
+      "ipa": "hiːz hˈɪɹ, ʃiːd nˈoʊ, ðeɪv ɡˈɔn, ˈaɪm ʃˈʊɹ, jʊɹ ɹˈaɪt.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "The cat's dish, James's hat, the horses' stalls, the church's bell.",
+      "ipa": "ðə kˈæts dˈɪʃ, dʒˈeɪmzᵻz hˈæt, ðə hˈɔːɹsᵻz stˈɔːlz, ðə tʃˈɜːtʃᵻz bˈɛl.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "Dickens's world, the fox's den, the lamp's glow, the moth's wing.",
+      "ipa": "dˈɪkənzᵻz wˈɜːld, ðə fˈɑːksᵻz dˈɛn, ðə lˈæmps ɡlˈoʊ, ðə mˈɑːθs wˈɪŋ.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "The cat's, the dog's, the horse's, the judge's, the cliff's, the myth's.",
+      "ipa": "ðə kˈæts, ðə dˈɑːɡz, ðə hˈɔːɹsᵻz, ðə dʒˈʌdʒᵻz, ðə klˈɪfs, ðə mˈɪθs.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "'Hello,' he said, 'it is late.'",
+      "ipa": "həlˈoʊ, hiː sˈɛd, ɪt ɪz lˈeɪt.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "The boys' coats and the ladies' gloves.",
+      "ipa": "ðə bˈɔɪz kˈoʊts ænd ðə lˈeɪdiz ɡlˈʌvz.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "'Tis a fine morning, and 'twas brillig; hand 'em over by o'clock.",
+      "ipa": "tˈɪz ɐ fˈaɪn mˈɔːɹnɪŋ, ænd twˈʌz bɹˈɪlɪɡ; hˈænd əm ˈoʊvɚ bˈaɪ əklˈɑːk.",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "Ma'am, ne'er a word, e'er again, o'er the hill, y'all.",
+      "ipa": "mˈæm, nˈɛɹ ɐ wˈɜːd, ˈɛɹ ɐɡˈɛn, ˈoʊɹ ðə hˈɪl, jˈɔːl.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "O'Brien and d'Artagnan rode with Ma'evan.",
+      "ipa": "ˈɑːbɹiən ænd dˈɑːɹɾæɡnən ɹˈoʊd wɪð mˈiːvən.",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "Mr. Smith and Dr. Jones walked to St. Paul's with Col. Reed.",
+      "ipa": "mˈɪstɚ smˈɪθ ænd dˈɑːktɚ dʒˈoʊnz wˈɔːkt tuː sˈeɪnt pˈɔːlz wɪð kˈɜːnəl ɹˈiːd.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "A well-known (and much-loved) tune — the second-best kind.",
+      "ipa": "ɐ wˈɛl nˈoʊn ænd mˈʌtʃ lˈʌvd tˈuːn ðə sˈɛkənd bˈɛst kˈaɪnd.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "The naïve café serves crème brûlée — “quite good,” said the maître d'.",
+      "ipa": "ðə naɪˈiːv kˈæfeɪ sˈɜːvz kɹˈiːm bɹˈuːliː\" kwˈaɪt ɡˈʊd,\" sˈɛd ðə mˈeɪɾɚ dˈ.",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "Wait… what? Yes; no: maybe! «Alors» ¿verdad? ¡Claro!",
+      "ipa": "wˈeɪt... wˌʌt? jˈɛs; nˈoʊ: mˈeɪbiː! ˈælɚz? vˈɜːdæd?! klˈæɹoʊ!",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "Zyzzyqx blorptastic frunge.",
+      "ipa": "zˈɪzɪks bloːɹptˈæstɪk fɹˈʌndʒ.",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "The quick brown fox jumps over the lazy dog.",
+      "ipa": "ðə kwˈɪk bɹˈaʊn fˈɑːks dʒˈʌmps ˈoʊvɚ ðə lˈeɪzi dˈɑːɡ.",
+      "contraction": false,
+      "neural": false
+    },
+    {
+      "text": "Hello, this is Matcha running on the mobile GPU.",
+      "ipa": "həlˈoʊ, ðˈɪs ɪz mˈætʃə ɹˈʌnɪŋ ˈɔn ðə mˈoʊbəl ɡpˈuː.",
+      "contraction": false,
+      "neural": true
+    },
+    {
+      "text": "And then 'em said the thing.",
+      "ipa": "ænd ðˈɛn əm sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then 'tis said the thing.",
+      "ipa": "ænd ðˈɛn tˈɪz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then 'twas said the thing.",
+      "ipa": "ænd ðˈɛn twˈʌz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then 'twould said the thing.",
+      "ipa": "ænd ðˈɛn twˈʊd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then ain't said the thing.",
+      "ipa": "ænd ðˈɛn ˈeɪnt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then aren't said the thing.",
+      "ipa": "ænd ðˈɛn ˈɑːɹənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then can't said the thing.",
+      "ipa": "ænd ðˈɛn kˈænt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then couldn't said the thing.",
+      "ipa": "ænd ðˈɛn kˈʊdənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then daren't said the thing.",
+      "ipa": "ænd ðˈɛn dˈɛɹənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then didn't said the thing.",
+      "ipa": "ænd ðˈɛn dˈɪdənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then doesn't said the thing.",
+      "ipa": "ænd ðˈɛn dˈʌzənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then don't said the thing.",
+      "ipa": "ænd ðˈɛn dˈoʊnt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then e'er said the thing.",
+      "ipa": "ænd ðˈɛn ˈɛɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then hadn't said the thing.",
+      "ipa": "ænd ðˈɛn hˈædənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then hasn't said the thing.",
+      "ipa": "ænd ðˈɛn hˈæzənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then haven't said the thing.",
+      "ipa": "ænd ðˈɛn hˈævənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then he'd said the thing.",
+      "ipa": "ænd ðˈɛn hiːd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then he'll said the thing.",
+      "ipa": "ænd ðˈɛn hiːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then he's said the thing.",
+      "ipa": "ænd ðˈɛn hiːz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then here's said the thing.",
+      "ipa": "ænd ðˈɛn hˈɪɹz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then i'd said the thing.",
+      "ipa": "ænd ðˈɛn ˈaɪd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then i'll said the thing.",
+      "ipa": "ænd ðˈɛn ˈaɪl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then i'm said the thing.",
+      "ipa": "ænd ðˈɛn ˈaɪm sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then i've said the thing.",
+      "ipa": "ænd ðˈɛn ˈaɪv sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then isn't said the thing.",
+      "ipa": "ænd ðˈɛn ˈɪzənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then it'd said the thing.",
+      "ipa": "ænd ðˈɛn ˈɪtəd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then it'll said the thing.",
+      "ipa": "ænd ðˈɛn ˈɪtəl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then it's said the thing.",
+      "ipa": "ænd ðˈɛn ɪts sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then let's said the thing.",
+      "ipa": "ænd ðˈɛn lˈɛts sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then ma'am said the thing.",
+      "ipa": "ænd ðˈɛn mˈæm sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then mightn't said the thing.",
+      "ipa": "ænd ðˈɛn mˈaɪtənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then mustn't said the thing.",
+      "ipa": "ænd ðˈɛn mˈʌsənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then ne'er said the thing.",
+      "ipa": "ænd ðˈɛn nˈɛɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then needn't said the thing.",
+      "ipa": "ænd ðˈɛn nˈiːdənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then o'clock said the thing.",
+      "ipa": "ænd ðˈɛn əklˈɑːk sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then o'er said the thing.",
+      "ipa": "ænd ðˈɛn ˈoʊɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then oughtn't said the thing.",
+      "ipa": "ænd ðˈɛn ˈɔːtənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then shan't said the thing.",
+      "ipa": "ænd ðˈɛn ʃˈænt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then she'd said the thing.",
+      "ipa": "ænd ðˈɛn ʃiːd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then she'll said the thing.",
+      "ipa": "ænd ðˈɛn ʃiːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then she's said the thing.",
+      "ipa": "ænd ðˈɛn ʃiːz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then shouldn't said the thing.",
+      "ipa": "ænd ðˈɛn ʃˈʊdənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then that'll said the thing.",
+      "ipa": "ænd ðˈɛn ðˈætəl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then that's said the thing.",
+      "ipa": "ænd ðˈɛn ðæts sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then there'll said the thing.",
+      "ipa": "ænd ðˈɛn ðˈɛɹəl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then there's said the thing.",
+      "ipa": "ænd ðˈɛn ðɛɹz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then they'd said the thing.",
+      "ipa": "ænd ðˈɛn ðeɪd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then they'll said the thing.",
+      "ipa": "ænd ðˈɛn ðeɪl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then they're said the thing.",
+      "ipa": "ænd ðˈɛn ðɛɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then they've said the thing.",
+      "ipa": "ænd ðˈɛn ðeɪv sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then wasn't said the thing.",
+      "ipa": "ænd ðˈɛn wˈɑːzənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then we'd said the thing.",
+      "ipa": "ænd ðˈɛn wiːd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then we'll said the thing.",
+      "ipa": "ænd ðˈɛn wiːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then we're said the thing.",
+      "ipa": "ænd ðˈɛn wɪɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then we've said the thing.",
+      "ipa": "ænd ðˈɛn wiːv sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then weren't said the thing.",
+      "ipa": "ænd ðˈɛn wˈɜːnt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then what'll said the thing.",
+      "ipa": "ænd ðˈɛn wˈʌtəl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then what's said the thing.",
+      "ipa": "ænd ðˈɛn wˌʌts sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then who'd said the thing.",
+      "ipa": "ænd ðˈɛn hˈuːd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then who'll said the thing.",
+      "ipa": "ænd ðˈɛn hˈuːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then who's said the thing.",
+      "ipa": "ænd ðˈɛn hˈuːz sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then who've said the thing.",
+      "ipa": "ænd ðˈɛn hˈuːv sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then won't said the thing.",
+      "ipa": "ænd ðˈɛn wˈoʊnt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then wouldn't said the thing.",
+      "ipa": "ænd ðˈɛn wˈʊdənt sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then y'all said the thing.",
+      "ipa": "ænd ðˈɛn jˈɔːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then you'd said the thing.",
+      "ipa": "ænd ðˈɛn jˈuːd sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then you'll said the thing.",
+      "ipa": "ænd ðˈɛn jˈuːl sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then you're said the thing.",
+      "ipa": "ænd ðˈɛn jʊɹ sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    },
+    {
+      "text": "And then you've said the thing.",
+      "ipa": "ænd ðˈɛn jˈuːv sˈɛd ðə θˈɪŋ.",
+      "contraction": true,
+      "neural": false
+    }
+  ]
+}
