@@ -1325,6 +1325,29 @@ mod tests {
     }
 
     #[test]
+    fn chunks_fill_the_limit_after_the_framing_ids() {
+        let pipeline = limited_pipeline();
+        // Matcha: 10 symbols are 21 ids, 11 are 23. StyleTTS2: 10 are 12.
+        assert_eq!(pipeline.chunk_phonemes_for("abcdefghijk", 21, true), ["abcdefghij", "k"]);
+        assert_eq!(pipeline.chunk_phonemes_for("abcdefghijk", 22, true), ["abcdefghij", "k"]);
+        assert_eq!(pipeline.chunk_phonemes_for("abcdefghijk", 12, false), ["abcdefghij", "k"]);
+
+        let token = |p: &str, ws: &str| MToken {
+            text: p.to_string(),
+            tag: "".to_string(),
+            whitespace: ws.to_string(),
+            phonemes: Some(p.to_string()),
+        };
+        let words = [token("abcde", " "), token("fghij", "")];
+        // "abcde fghij" is 11 symbols: 23 Matcha ids, 13 StyleTTS2 ids.
+        let chunks = |limit, matcha| pipeline.chunk_tokens_for(&words, limit, matcha).len();
+        assert_eq!(chunks(23, true), 1);
+        assert_eq!(chunks(22, true), 2);
+        assert_eq!(chunks(13, false), 1);
+        assert_eq!(chunks(12, false), 2);
+    }
+
+    #[test]
     fn a_zero_token_limit_means_no_limit() {
         // As on the app path (`ProsodiaActorEngine::process_and_synthesize`).
         for (path, forwards) in ids_per_path(&limited_pipeline(), LONG_TEXT, 0, true) {
