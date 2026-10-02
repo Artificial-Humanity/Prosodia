@@ -300,10 +300,10 @@ impl ProsodiaActorPipeline {
         }
 
         let is_matcha = speech_engine.is_matcha();
-        let token_limit = speech_engine.get_token_limit() as u32;
+        let token_limit = speech_engine.get_token_limit();
 
         let tokens = self.g2p.lock().unwrap().process(text.clone());
-        let token_chunks = self.chunk_tokens(&tokens, token_limit);
+        let token_chunks = self.chunk_tokens_for(&tokens, token_limit, is_matcha);
         let frame_duration = 512.0 / self.sample_rate as f64;
 
         let mut total_audio = Vec::new();
@@ -534,14 +534,14 @@ impl ProsodiaActorPipeline {
         }
 
         let is_matcha = speech_engine.is_matcha();
-        let token_limit = speech_engine.get_token_limit() as u32;
+        let token_limit = speech_engine.get_token_limit();
 
         let parsed = stage::markup_parser::parse_markup(markup_text);
         let clean_text = parsed.clean_text;
         let character_prosody = parsed.character_prosody;
 
         let tokens = self.g2p.lock().unwrap().process(clean_text.clone());
-        let token_chunks = self.chunk_tokens(&tokens, token_limit);
+        let token_chunks = self.chunk_tokens_for(&tokens, token_limit, is_matcha);
         let frame_duration = 512.0 / self.sample_rate as f64;
 
         let mut total_audio = Vec::new();
@@ -737,7 +737,7 @@ impl ProsodiaActorPipeline {
         }
 
         let is_matcha = speech_engine.is_matcha();
-        let token_limit = speech_engine.get_token_limit() as u32;
+        let token_limit = speech_engine.get_token_limit();
 
         let tokens = self.g2p.lock().unwrap().process(text);
         let full_phonemes = tokens
@@ -754,7 +754,7 @@ impl ProsodiaActorPipeline {
             .trim()
             .to_string();
 
-        let chunks = self.chunk_phonemes(&full_phonemes, token_limit);
+        let chunks = self.chunk_phonemes_for(&full_phonemes, token_limit, is_matcha);
 
         let mut last_style: Option<StyleVector> = None;
 
@@ -803,7 +803,7 @@ impl ProsodiaActorPipeline {
         }
 
         let is_matcha = speech_engine.is_matcha();
-        let token_limit = speech_engine.get_token_limit() as u32;
+        let token_limit = speech_engine.get_token_limit();
 
         let tokens = self.g2p.lock().unwrap().process(text);
         let full_phonemes = tokens
@@ -820,7 +820,7 @@ impl ProsodiaActorPipeline {
             .trim()
             .to_string();
 
-        let chunks = self.chunk_phonemes(&full_phonemes, token_limit);
+        let chunks = self.chunk_phonemes_for(&full_phonemes, token_limit, is_matcha);
 
         let mut last_style: Option<StyleVector> = None;
 
@@ -888,73 +888,122 @@ impl ProsodiaActorPipeline {
     }
 
     pub fn chunk_phonemes(&self, phonemes: &str, limit: u32) -> Vec<String> {
-        let limit = limit as usize;
-        let trimmed = phonemes.trim();
-        let characters: Vec<char> = trimmed.chars().collect();
-        if characters.len() <= limit {
-            return if trimmed.is_empty() { vec![] } else { vec![trimmed.to_string()] };
-        }
-
-        let break_characters: std::collections::HashSet<char> =
-            [" ", ".", ",", ";", ":", "!", "?", "—", "…"]
-                .iter()
-                .map(|s| s.chars().next().unwrap())
-                .collect();
-
-        let mut chunks = Vec::new();
-        let mut start = 0;
-
-        while start < characters.len() {
-            let end_limit = (start + limit).min(characters.len());
-            if end_limit == characters.len() {
-                let chunk_str: String = characters[start..end_limit].iter().collect();
-                chunks.push(chunk_str.trim().to_string());
-                break;
-            }
-
-            let mut split_index = end_limit;
-            let mut cursor = end_limit - 1;
-            while cursor > start + (limit / 2) {
-                if break_characters.contains(&characters[cursor]) {
-                    split_index = cursor + 1;
-                    break;
-                }
-                cursor -= 1;
-            }
-
-            let chunk_str: String = characters[start..split_index].iter().collect();
-            chunks.push(chunk_str.trim().to_string());
-            start = split_index;
-            while start < characters.len() && characters[start].is_whitespace() {
-                start += 1;
-            }
-        }
-
-        chunks.into_iter().filter(|s| !s.is_empty()).collect()
+        split_phonemes(phonemes, limit as usize, |_| 1)
     }
 
     fn chunk_tokens(&self, tokens: &[MToken], limit: u32) -> Vec<Vec<MToken>> {
-        let limit = limit as usize;
-        let mut chunks = Vec::new();
-        let mut current_chunk = Vec::new();
-        let mut current_len = 0;
-
-        for token in tokens {
-            let token_len = token.phonemes.as_deref().unwrap_or("").chars().count() + token.whitespace.chars().count();
-            if current_len + token_len > limit && !current_chunk.is_empty() {
-                chunks.push(current_chunk);
-                current_chunk = vec![token.clone()];
-                current_len = token_len;
-            } else {
-                current_chunk.push(token.clone());
-                current_len += token_len;
-            }
-        }
-        if !current_chunk.is_empty() {
-            chunks.push(current_chunk);
-        }
-        chunks
+        group_tokens(tokens, limit as usize, |_| 1)
     }
+}
+
+// Not exported: chunking against an engine's token limit, which counts the ids
+// `tokenize` emits for that engine, as `ProsodiaActorEngine::process_and_synthesize`
+// does on the app path.
+impl ProsodiaActorPipeline {
+    /// Chunks a phoneme string so each chunk tokenizes to at most `limit` ids.
+    fn chunk_phonemes_for(&self, phonemes: &str, limit: i32, is_matcha: bool) -> Vec<String> {
+        split_phonemes(phonemes, self.id_budget(limit, is_matcha), |c| self.symbol_ids(c, is_matcha))
+    }
+
+    /// Groups tokens so each chunk tokenizes to at most `limit` ids.
+    fn chunk_tokens_for(&self, tokens: &[MToken], limit: i32, is_matcha: bool) -> Vec<Vec<MToken>> {
+        group_tokens(tokens, self.id_budget(limit, is_matcha), |c| self.symbol_ids(c, is_matcha))
+    }
+
+    /// The ids left for symbols once `tokenize` has framed a chunk (Matcha:
+    /// a leading blank; StyleTTS2: a bound at each end). A limit of 0 or less
+    /// means no limit.
+    fn id_budget(&self, limit: i32, is_matcha: bool) -> usize {
+        if limit <= 0 {
+            return usize::MAX;
+        }
+        (limit as usize).saturating_sub(self.tokenize("", is_matcha).len())
+    }
+
+    /// The ids `tokenize` emits for one symbol: none when it is outside the
+    /// vocabulary, otherwise one, and for Matcha a blank after it.
+    fn symbol_ids(&self, c: char, is_matcha: bool) -> usize {
+        let mut buf = [0u8; 4];
+        self.tokenize(c.encode_utf8(&mut buf), is_matcha).len() - self.tokenize("", is_matcha).len()
+    }
+}
+
+/// Splits a phoneme string into chunks whose symbols cost at most `budget`.
+///
+/// When a chunk would end mid-word, the split is pulled back to the last break
+/// character past the chunk's midpoint; without one it is cut at the budget. A
+/// symbol that alone exceeds the budget gets a chunk of its own. Chunks are
+/// whitespace-trimmed and empty ones dropped.
+fn split_phonemes(phonemes: &str, budget: usize, cost: impl Fn(char) -> usize) -> Vec<String> {
+    let trimmed = phonemes.trim();
+    let characters: Vec<char> = trimmed.chars().collect();
+    let costs: Vec<usize> = characters.iter().map(|&c| cost(c)).collect();
+    if costs.iter().sum::<usize>() <= budget {
+        return if trimmed.is_empty() { vec![] } else { vec![trimmed.to_string()] };
+    }
+
+    let break_characters = [' ', '.', ',', ';', ':', '!', '?', '—', '…'];
+
+    let mut chunks = Vec::new();
+    let mut start = 0;
+
+    while start < characters.len() {
+        let mut end_limit = start;
+        let mut used = 0;
+        while end_limit < characters.len() && used + costs[end_limit] <= budget {
+            used += costs[end_limit];
+            end_limit += 1;
+        }
+        let end_limit = end_limit.max(start + 1);
+        if end_limit == characters.len() {
+            let chunk_str: String = characters[start..end_limit].iter().collect();
+            chunks.push(chunk_str.trim().to_string());
+            break;
+        }
+
+        let mut split_index = end_limit;
+        let mut cursor = end_limit - 1;
+        while cursor > start + (end_limit - start) / 2 {
+            if break_characters.contains(&characters[cursor]) {
+                split_index = cursor + 1;
+                break;
+            }
+            cursor -= 1;
+        }
+
+        let chunk_str: String = characters[start..split_index].iter().collect();
+        chunks.push(chunk_str.trim().to_string());
+        start = split_index;
+        while start < characters.len() && characters[start].is_whitespace() {
+            start += 1;
+        }
+    }
+
+    chunks.into_iter().filter(|s| !s.is_empty()).collect()
+}
+
+/// Groups tokens into chunks whose phonemes and whitespace cost at most
+/// `budget`. A token that alone exceeds the budget gets a chunk of its own.
+fn group_tokens(tokens: &[MToken], budget: usize, cost: impl Fn(char) -> usize) -> Vec<Vec<MToken>> {
+    let mut chunks = Vec::new();
+    let mut current_chunk = Vec::new();
+    let mut current_len = 0;
+
+    for token in tokens {
+        let token_len: usize = token.phonemes.as_deref().unwrap_or("").chars().chain(token.whitespace.chars()).map(&cost).sum();
+        if current_len + token_len > budget && !current_chunk.is_empty() {
+            chunks.push(current_chunk);
+            current_chunk = vec![token.clone()];
+            current_len = token_len;
+        } else {
+            current_chunk.push(token.clone());
+            current_len += token_len;
+        }
+    }
+    if !current_chunk.is_empty() {
+        chunks.push(current_chunk);
+    }
+    chunks
 }
 
 fn limit_audio(samples: &mut [f32]) {
@@ -1153,6 +1202,134 @@ mod tests {
         let ids = pipeline.tokenize_phonemes(out.phonemes[0].phonemes.clone(), true);
         let spelled: String = ids.iter().skip(1).step_by(2).map(|&i| symbols[i as usize].as_str()).collect();
         assert_eq!(spelled, "hˈɔːɹsᵻz ɐ");
+    }
+
+    /// Records the phoneme ids of every forward and reports a fixed token
+    /// limit, as the split runtime reports its graph's MAX_TEXT.
+    struct LimitedEngine {
+        ids: Arc<Mutex<Vec<Vec<i32>>>>,
+        limit: i32,
+        matcha: bool,
+    }
+
+    impl ProsodiaSpeechEngine for LimitedEngine {
+        fn synthesize(&self, _input: PipelineOutput) -> ActorEngineOutput {
+            ActorEngineOutput { audio: Vec::new(), pred_dur: Vec::new() }
+        }
+
+        fn forward(
+            &self,
+            phoneme_ids: Vec<i32>,
+            _style: StyleVector,
+            _speed: f32,
+            _vat: Option<Vec<f32>>,
+            _duration_scales: Option<Vec<f32>>,
+            _f0_bias: Option<Vec<f32>>,
+        ) -> Result<ActorEngineOutput, SpeechEngineError> {
+            let count = phoneme_ids.len();
+            self.ids.lock().unwrap().push(phoneme_ids);
+            Ok(ActorEngineOutput { audio: vec![0.1; 100], pred_dur: vec![8; count] })
+        }
+
+        fn reclaim_memory(&self) {}
+
+        fn is_matcha(&self) -> bool {
+            self.matcha
+        }
+
+        fn get_token_limit(&self) -> i32 {
+            self.limit
+        }
+    }
+
+    struct IgnoreAudio;
+    impl AudioChunkCallback for IgnoreAudio {
+        fn on_audio_chunk(&self, _chunk: Vec<f32>) {}
+    }
+
+    const LONG_TEXT: &str = "the quick brown fox jumps over the lazy dog while the cat sleeps by the warm fire tonight";
+
+    fn limited_pipeline() -> Arc<ProsodiaActorPipeline> {
+        let mut vocab: HashMap<String, i32> = HashMap::new();
+        for (i, c) in " abcdefghijklmnopqrstuvwxyz".chars().enumerate() {
+            vocab.insert(c.to_string(), i as i32 + 1);
+        }
+        let config = serde_json::json!({ "vocab": vocab }).to_string();
+        ProsodiaActorPipeline::new(
+            Box::new(MockG2P),
+            VoiceLoader::new(Box::new(MockAssetProvider)),
+            config,
+            24000,
+            "en-us".to_string(),
+        )
+        .unwrap()
+    }
+
+    /// The phoneme ids each non-app synthesis path sends to the engine, one
+    /// entry per forward, by path name.
+    fn ids_per_path(pipeline: &ProsodiaActorPipeline, text: &str, limit: i32, matcha: bool) -> Vec<(&'static str, Vec<Vec<i32>>)> {
+        let mut out = Vec::new();
+        let mut run = |name: &'static str, call: &dyn Fn(Box<dyn ProsodiaSpeechEngine>)| {
+            let ids = Arc::new(Mutex::new(Vec::new()));
+            call(Box::new(LimitedEngine { ids: ids.clone(), limit, matcha }));
+            out.push((name, ids.lock().unwrap().clone()));
+        };
+        run("synthesize", &|engine| {
+            pipeline.synthesize(engine, text.to_string(), "v".to_string(), 1.0, None, None).unwrap();
+        });
+        run("synthesize_markup", &|engine| {
+            pipeline.synthesize_markup(engine, text.to_string(), "v".to_string(), 1.0).unwrap();
+        });
+        run("synthesize_stream", &|engine| {
+            pipeline
+                .synthesize_stream(engine, text.to_string(), "v".to_string(), 1.0, Box::new(IgnoreAudio))
+                .unwrap();
+        });
+        run("synthesize_stream_with_morph", &|engine| {
+            let blend = vec![vec![crate::voice_loader::VoiceBlend { voice: "v".to_string(), fraction: 1.0 }]];
+            pipeline
+                .synthesize_stream_with_morph(engine, text.to_string(), blend, 1.0, Box::new(IgnoreAudio))
+                .unwrap();
+        });
+        out
+    }
+
+    /// The ids of a sequence without blanks and spaces (`limited_pipeline`
+    /// gives the space id 1), which chunking may move or drop.
+    fn symbol_ids<'a>(ids: impl IntoIterator<Item = &'a i32>) -> Vec<i32> {
+        ids.into_iter().copied().filter(|&id| id > 1).collect()
+    }
+
+    /// Every path splits `text` into more than one forward, none longer than
+    /// `limit` ids, and loses no symbol. Chunk boundaries replace a space.
+    fn assert_chunks_fit(pipeline: &ProsodiaActorPipeline, text: &str, limit: i32, matcha: bool) {
+        for (path, forwards) in ids_per_path(pipeline, text, limit, matcha) {
+            assert!(forwards.len() > 1, "{path}: expected the text to be split, got {} forward(s)", forwards.len());
+            for ids in &forwards {
+                assert!(ids.len() <= limit as usize, "{path}: a forward has {} ids, over the limit of {limit}", ids.len());
+            }
+            assert_eq!(symbol_ids(forwards.iter().flatten()), symbol_ids(&pipeline.tokenize(text, matcha)), "{path}: symbols lost or reordered");
+        }
+    }
+
+    #[test]
+    fn matcha_chunks_count_interleaved_ids_against_the_limit() {
+        // 2n + 1 ids for n symbols: at most 10 symbols per forward.
+        assert_chunks_fit(&limited_pipeline(), LONG_TEXT, 21, true);
+    }
+
+    #[test]
+    fn styletts2_chunks_count_the_bounding_ids_against_the_limit() {
+        // n + 2 ids for n symbols.
+        assert_chunks_fit(&limited_pipeline(), LONG_TEXT, 12, false);
+    }
+
+    #[test]
+    fn a_zero_token_limit_means_no_limit() {
+        // As on the app path (`ProsodiaActorEngine::process_and_synthesize`).
+        for (path, forwards) in ids_per_path(&limited_pipeline(), LONG_TEXT, 0, true) {
+            assert_eq!(forwards.len(), 1, "{path}: a limit of 0 must not split the text");
+        }
     }
 }
 
