@@ -944,31 +944,22 @@ mod tests {
     use super::*;
     use std::path::Path;
 
-    #[test]
-    fn test_matcha_stock_forward() {
-        let model_path = "../../../models/matcha_stock.tflite";
-        if !Path::new(model_path).exists() {
-            println!("Skipping test: {} not found", model_path);
-            return;
+    /// The staged e2e actor model and its config (the `actor` role in
+    /// `prosodia_models.json`, pinned by sha256), or `None` with a message
+    /// when they are absent. They are looked up in `PROSODIA_MODELS_DIR` when
+    /// set (on ai-lab-0, `/data/models`), else in the workspace's `models/`.
+    /// `PROSODIA_REQUIRE_PINNED_MODELS=1` turns the skip into a failure.
+    fn staged_actor() -> Option<(String, String)> {
+        let dir = std::env::var("PROSODIA_MODELS_DIR").unwrap_or_else(|_| "../../../models".to_string());
+        let (model, config) = (format!("{dir}/sonora.tflite"), format!("{dir}/config.json"));
+        if Path::new(&model).exists() && Path::new(&config).exists() {
+            return Some((model, config));
         }
-
-        let engine = LiteRtActorEngine::new(model_path.to_string());
-        assert!(engine.is_matcha(), "Expected loaded model to be detected as Matcha");
-
-        let phoneme_ids = vec![12, 15, 18, 5, 9];
-        let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
-        
-        let output = engine.forward(
-            phoneme_ids.clone(),
-            style,
-            1.0,
-            None,
-            None,
-            None,
-        ).expect("Forward execution failed");
-
-        assert!(!output.audio.is_empty(), "Expected non-empty output audio");
-        assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected pred_dur to match phoneme count");
+        if std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() == Ok("1") {
+            panic!("PROSODIA_REQUIRE_PINNED_MODELS=1 but {model} or {config} not found");
+        }
+        println!("Skipping: staged model/config not found");
+        None
     }
 
     /// Regression test for the 50-token static-limit overflow (2026-07-11): a
@@ -977,12 +968,7 @@ mod tests {
     /// app render path: G2P → process_span → chunked forward.
     #[test]
     fn test_span_render_chunks_past_static_limit() {
-        let model_path = "../../../models/sonora.tflite";
-        let config_path = "../../../models/config.json";
-        if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
-            println!("Skipping test: staged model/config not found");
-            return;
-        }
+        let Some((model_path, config_path)) = staged_actor() else { return };
 
         struct NoVoices;
         impl crate::voice_loader::VoiceAssetProvider for NoVoices {
@@ -1081,17 +1067,14 @@ mod tests {
         }
     }
 
-    /// TEMP diagnostic: same phrase as the reference-ids test, but through our
-    /// Rust G2P + IPA mapping — prints phonemes/ids for diffing and writes
-    /// audio for A/B audition against ref_render_test.wav.
+    /// Diagnostic, not a check: same phrase as the reference-ids render, but
+    /// through our Rust G2P + IPA mapping — prints phonemes/ids for diffing and
+    /// writes audio for A/B audition against ref_render_test.wav. Run with
+    /// `cargo test -- --ignored test_our_g2p_render_tmp`.
     #[test]
+    #[ignore = "diagnostic render for manual audition; writes target/g2p_render_test.wav"]
     fn test_our_g2p_render_tmp() {
-        let model_path = "../../../models/sonora.tflite";
-        let config_path = "../../../models/config.json";
-        if !Path::new(model_path).exists() || !Path::new(config_path).exists() {
-            println!("Skipping: staged model/config not found");
-            return;
-        }
+        let Some((model_path, config_path)) = staged_actor() else { return };
         struct NoVoices;
         impl crate::voice_loader::VoiceAssetProvider for NoVoices {
             fn load_voice_bytes(&self, _voice_name: String) -> Option<Vec<u8>> { None }
@@ -1153,27 +1136,21 @@ mod tests {
         println!("wrote ../../target/g2p_render_test.wav");
     }
 
-    /// TEMP diagnostic: forward pre-built espeak-IPA reference ids (written by
-    /// a Python helper to target/ref_ids.json) and write the audio for manual
-    /// audition — isolates the G2P frontend from the model.
+    /// Diagnostic, not a check: forward pre-built espeak-IPA reference ids
+    /// (written by a Python helper to target/ref_ids.json) and write the audio
+    /// for manual audition — isolates the G2P frontend from the model. Run with
+    /// `cargo test -- --ignored test_reference_ids_render_tmp`.
     #[test]
+    #[ignore = "diagnostic render for manual audition; needs target/ref_ids.json"]
     fn test_reference_ids_render_tmp() {
-        let model_path = "../../../models/sonora.tflite";
+        let Some((model_path, _)) = staged_actor() else { return };
         let ids_path = "../../target/ref_ids.json";
-        if !Path::new(model_path).exists() || !Path::new(ids_path).exists() {
-            println!("Skipping: model or ref_ids.json missing");
-            return;
-        }
-        let ids: Vec<i32> = serde_json::from_str(&std::fs::read_to_string(ids_path).unwrap()).unwrap();
+        let ids: Vec<i32> = serde_json::from_str(
+            &std::fs::read_to_string(ids_path).expect("target/ref_ids.json (written by a Python helper)"),
+        )
+        .unwrap();
         println!("reference ids: {:?}", ids);
-        for (model, out_name) in [
-            (model_path, "../../target/ref_render_test.wav"),
-            ("../../../models/matcha_stock.tflite", "../../target/ref_render_stock.wav"),
-        ] {
-            if !Path::new(model).exists() {
-                println!("skipping {model} (not found)");
-                continue;
-            }
+        for (model, out_name) in [(model_path, "../../target/ref_render_test.wav")] {
             let engine = LiteRtActorEngine::new(model.to_string());
             let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
             let out = engine.forward(ids.clone(), style, 1.0, None, None, None).expect("forward failed");
@@ -1206,11 +1183,7 @@ mod tests {
     /// the workspace `../models/sonora.tflite` is absent).
     #[test]
     fn test_sonora_e2e_forward() {
-        let model_path = "../../../models/sonora.tflite";
-        if !Path::new(model_path).exists() {
-            println!("Skipping test: {} not found", model_path);
-            return;
-        }
+        let Some((model_path, _)) = staged_actor() else { return };
 
         let engine = LiteRtActorEngine::new(model_path.to_string());
         assert!(engine.is_matcha(), "Expected loaded model to be detected as Matcha");
@@ -1234,6 +1207,21 @@ mod tests {
         );
         assert!(!output.audio.is_empty(), "Expected non-empty output audio");
         assert!(peak > 0.001, "Output audio is silent (peak {})", peak);
+        assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected one duration per phoneme id");
+    }
+
+    /// The split-model directory `dir`, or `None` with a message when this
+    /// machine has no Sonora registry checkout beside the repo.
+    /// `PROSODIA_REQUIRE_PINNED_MODELS=1` turns the skip into a failure.
+    fn split_dir(dir: &'static str) -> Option<&'static str> {
+        if crate::split_engine::is_split_model_dir(Path::new(dir)) {
+            return Some(dir);
+        }
+        if std::env::var("PROSODIA_REQUIRE_PINNED_MODELS").as_deref() == Ok("1") {
+            panic!("PROSODIA_REQUIRE_PINNED_MODELS=1 but split model dir {dir} not found");
+        }
+        println!("Skipping: split model dir {dir} not found");
+        None
     }
 
     /// End-to-end dispatch through LiteRtActorEngine with a split-model
@@ -1241,11 +1229,7 @@ mod tests {
     /// Skips when the `Sonora/huggingface` registry checkout is absent.
     #[test]
     fn test_split_dispatch_through_engine() {
-        let dir = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
-        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
-            println!("Skipping: split model dir not found");
-            return;
-        }
+        let Some(dir) = split_dir("../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split") else { return };
         let engine = LiteRtActorEngine::new(dir.to_string());
         assert!(engine.is_matcha(), "split dir must report matcha");
         assert_eq!(engine.get_token_limit(), 256, "split token limit = MAX_TEXT");
@@ -1272,11 +1256,7 @@ mod tests {
     /// count stays a whole number of 256-sample hops.
     #[test]
     fn test_split_dispatch_24k_conditioned_model() {
-        let dir = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
-        if !crate::split_engine::is_split_model_dir(Path::new(dir)) {
-            println!("Skipping: split model dir {dir} not found");
-            return;
-        }
+        let Some(dir) = split_dir("../../../Sonora/huggingface/derisk-energy-24k/litert-split") else { return };
         let engine = LiteRtActorEngine::new(dir.to_string());
         assert!(engine.is_matcha());
         assert_eq!(engine.get_token_limit(), 256);
