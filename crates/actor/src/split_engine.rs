@@ -109,7 +109,7 @@ const TIME_EMB_SCALE: f32 = 1000.0;
 /// The split graphs expose anonymous `serving_default_args_N` tensor names, so
 /// the monolithic engine's name-substring binding does not apply — argument
 /// order is part of the recipe's contract instead.
-struct GraphRunner {
+pub(crate) struct GraphRunner {
     model: *mut tflite::TfLiteModel,
     options: *mut tflite::TfLiteInterpreterOptions,
     interpreter: *mut tflite::TfLiteInterpreter,
@@ -140,7 +140,7 @@ impl Drop for GraphRunner {
 }
 
 impl GraphRunner {
-    fn new(path: &Path) -> Result<Self, String> {
+    pub(crate) fn new(path: &Path) -> Result<Self, String> {
         let path_str = path
             .to_str()
             .ok_or_else(|| format!("non-UTF8 model path: {}", path.display()))?;
@@ -198,7 +198,7 @@ impl GraphRunner {
         }
     }
 
-    fn set_input(&self, index: i32, data: &[f32]) -> Result<(), String> {
+    pub(crate) fn set_input(&self, index: i32, data: &[f32]) -> Result<(), String> {
         unsafe {
             let tensor = tflite::TfLiteInterpreterGetInputTensor(self.interpreter, index);
             if tensor.is_null() {
@@ -223,7 +223,7 @@ impl GraphRunner {
         }
     }
 
-    fn invoke(&self) -> Result<(), String> {
+    pub(crate) fn invoke(&self) -> Result<(), String> {
         unsafe {
             let status = tflite::TfLiteInterpreterInvoke(self.interpreter);
             if status != 0 {
@@ -233,7 +233,7 @@ impl GraphRunner {
         }
     }
 
-    fn read_output(&self, index: i32, out: &mut Vec<f32>) -> Result<(), String> {
+    pub(crate) fn read_output(&self, index: i32, out: &mut Vec<f32>) -> Result<(), String> {
         unsafe {
             let tensor = tflite::TfLiteInterpreterGetOutputTensor(self.interpreter, index);
             if tensor.is_null() {
