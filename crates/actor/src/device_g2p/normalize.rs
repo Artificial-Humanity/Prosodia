@@ -46,6 +46,11 @@ pub fn is_word(token: &str) -> bool {
     WORD.is_match(token)
 }
 
+/// Whether a digit would reach the tokenizer, which deletes it.
+pub fn carries_digits(normalized: &str) -> bool {
+    normalized.bytes().any(|b| b.is_ascii_digit())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

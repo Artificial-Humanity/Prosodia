@@ -6,6 +6,7 @@ pub mod assets;
 pub mod fold;
 pub mod neural;
 pub mod normalize;
+pub mod numbers;
 
 use crate::g2p::{MToken, ProsodiaG2PProcessor};
 use assets::G2pAssets;
@@ -33,6 +34,10 @@ pub struct DeviceG2p {
     /// failed", which is read-this evidence of a broken asset or runtime
     /// rather than an ordinary miss.
     pub neural_failures: Mutex<BTreeSet<String>>,
+    /// Texts where a digit survived number expansion and reached the
+    /// tokenizer, which deletes it silently. Never populated in normal
+    /// operation — read-this evidence of a gap in `numbers::expand_digits`.
+    pub digit_drops: Mutex<BTreeSet<String>>,
 }
 
 impl DeviceG2p {
@@ -44,6 +49,7 @@ impl DeviceG2p {
             oov_words: Mutex::new(BTreeSet::new()),
             apostrophe_fallback_words: Mutex::new(BTreeSet::new()),
             neural_failures: Mutex::new(BTreeSet::new()),
+            digit_drops: Mutex::new(BTreeSet::new()),
         })
     }
 
@@ -133,7 +139,13 @@ impl DeviceG2p {
     /// `(token, ipa)` pairs in order; punctuation maps to itself, words to
     /// IPA (or their letters when nothing resolves).
     pub fn phonemize_tokens(&self, text: &str) -> Vec<(String, String)> {
-        let normalized = normalize(text);
+        let spelled = numbers::expand_digits(&fold::ascii_fold(&numbers::expand_symbols(text)));
+        let normalized = normalize(&spelled);
+        if normalize::carries_digits(&normalized) {
+            // Never silent: the tokenizer would delete these.
+            eprintln!("device G2P: digits survived number expansion and will be dropped: {text:?}");
+            self.digit_drops.lock().unwrap().insert(text.to_string());
+        }
         let mut out = Vec::new();
         for token in tokens(&normalized) {
             if !is_word(token) {
@@ -209,6 +221,14 @@ mod tests {
             return None;
         }
         Some(DeviceG2p::load(Path::new(ASSETS), true).unwrap())
+    }
+
+    #[test]
+    fn no_digit_reaches_the_tokenizer() {
+        let Some(g2p) = load() else { return };
+        let ipa = g2p.phonemize("Chapter 12: £5 and ½ cup, x², １００ pages, №3, in 1984.");
+        assert!(g2p.digit_drops.lock().unwrap().is_empty(), "{:?}", g2p.digit_drops.lock().unwrap());
+        assert!(ipa.contains("twˈɛlv") && ipa.contains("pˈaʊndz") && ipa.contains("hˈæf"), "{ipa}");
     }
 
     #[test]

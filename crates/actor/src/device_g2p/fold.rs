@@ -10,6 +10,7 @@ const OVERRIDES: &[(char, &str)] = &[
     ('\u{00BE}', " 3/4"), // deunicode "3/4"
     ('\u{014A}', "NG"), // deunicode "ng"
     ('\u{014B}', "ng"), // deunicode "NG"
+    ('\u{2116}', "No. "), // deunicode "No" — verified against unidecode 1.4.0 locally (Task 8, № not in the fixture: no G7 probe carries it)
     ('\u{0241}', ""), // deunicode "'"
     ('\u{0242}', ""), // deunicode "'"
     ('\u{204A}', "&"), // deunicode "7"
