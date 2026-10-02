@@ -206,6 +206,34 @@ fn compile_lexicons() {
     println!("cargo:rerun-if-changed=resources/gb_silver.json");
 }
 
+/// Links the TensorFlow Lite C library on Linux.
+///
+/// `TFLITE_LIB_DIR` names the directory holding `libtensorflowlite_c.so`.
+/// Without it, the lab's toolchain directory and the usual system library
+/// directories are searched. When none has the library, the build warns and
+/// leaves the symbols unresolved, as before.
+fn link_linux_tflite() {
+    println!("cargo:rerun-if-env-changed=TFLITE_LIB_DIR");
+    let candidates: Vec<PathBuf> = match env::var("TFLITE_LIB_DIR") {
+        Ok(dir) => vec![PathBuf::from(dir)],
+        Err(_) => ["/data/toolchain", "/usr/local/lib", "/usr/lib", "/usr/lib/x86_64-linux-gnu"]
+            .iter()
+            .map(PathBuf::from)
+            .collect(),
+    };
+    match candidates.iter().find(|dir| dir.join("libtensorflowlite_c.so").is_file()) {
+        Some(dir) => {
+            println!("cargo:rustc-link-search=native={}", dir.display());
+            println!("cargo:rustc-link-lib=dylib=tensorflowlite_c");
+            println!("cargo:rustc-link-arg=-Wl,-rpath,{}", dir.display());
+        }
+        None => println!(
+            "cargo:warning=libtensorflowlite_c.so not found in {:?}; set TFLITE_LIB_DIR to link it",
+            candidates
+        ),
+    }
+}
+
 fn main() {
     compile_lexicons();
 
@@ -226,6 +254,8 @@ fn main() {
         }
     } else if target_os == "android" {
         println!("cargo:rustc-link-arg=-Wl,-z,undefs");
+    } else if target_os == "linux" {
+        link_linux_tflite();
     }
 
     println!("cargo:rerun-if-changed=build.rs");
