@@ -1,5 +1,5 @@
 {
-  "sonora_commit": "ead7e53e4f7ac16f760802963a6f712e6af9869e",
+  "sonora_commit": "45c63f5f6eacdd75b36de20a96d3d7433eb8d22f",
   "sha256": {
     "dp_g2p_matcha_fp16.tflite": "6e4b481f6874dfabc32ce73bf6f0ea1ba6ab5986ee6f76a27779364be8a53c73",
     "g2p_meta.json": "7b87bfeaaa072be236e8491d771b0cb97cc92c3e5d83e3558fff8849868810f5"
