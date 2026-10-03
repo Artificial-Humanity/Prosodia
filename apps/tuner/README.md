@@ -57,13 +57,8 @@ For real speech in the harness on macOS, models are resolved via `prosodia_model
 │   └── gemma-4-26B-A4B-it-qat-q4_0-gguf/  # Gemma 4 26B-A4B MoE (128 experts/8 active, 256K ctx), QAT q4_0 GGUF, Apache-2.0 — was the OFFLINE server-side Director for Sonora book_ingest labeling (ollama, :11434), since superseded there by a larger Gemma 4; NOT an on-device/Tuner model
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
-├── shivammehta25/
-│   └── Matcha-TTS/                   # Clean upstream clone (reference). The old spike workspace was rescued + pruned 2026-07-13 (history: github.com/Artificial-Humanity/StyleTTS2FineTune; ONNX: Prosodia-Storage bucket archive/)
-├── IIEleven11/
-│   └── StyleTTS2FineTune/            # StyleTTS2 fine-tuning pipeline (academic/side-discussion)
-└── semidark/
-    ├── StyleTTS2/                    # StyleTTS2 fork (academic/side-discussion)
-    └── kikiri-tts/                   # kikiri-tts (academic/side-discussion)
+└── shivammehta25/
+    └── Matcha-TTS/                   # Clean upstream clone (reference). The old spike workspace was rescued + pruned 2026-07-13 (history: github.com/Artificial-Humanity/StyleTTS2FineTune; ONNX: Prosodia-Storage bucket archive/)
 ```
 
 The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `/data/models`: it is a working artifact registry, not a reference model. It's checked out at `Sonora/huggingface/` (superseding the `Registry/Sonora/` gitignored-clone layout from the retired umbrella-workspace era).
