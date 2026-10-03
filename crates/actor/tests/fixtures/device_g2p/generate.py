@@ -5,12 +5,14 @@ reproduce: unidecode's fold, op_g2p's normalized text per probe, every word
 op_g2p sent to its neural graph with the IPA it got back, and the canonical
 contraction tables (embedded by the Rust crate).
 
-The fold is checked on every code point from U+0080 to U+10FFFF. unidecode is
+The fold is checked on every code point from U+0000 to U+10FFFF. unidecode is
 GPL, so its output is not committed: `fold.json` holds an FNV-1a 64 hash per
-4096 code points, and the code points it folds to nothing are written as
-ranges to the Rust crate (`device_g2p/fold/unidecode_empty.rs`). When a block
-fails the Rust test, print unidecode's values for it with
-`generate.py --dump LO HI` (hex) and compare.
+4096 code points, over lines `XXXX=value\n`, and the code points it folds to
+nothing are written as ranges to the Rust crate
+(`device_g2p/fold/unidecode_empty.rs`). When a block fails, the Rust test
+writes the fold's lines for it to a temp file; diff them against
+`generate.py --dump LO HI` (hex), which prints unidecode's in the same format
+and needs only unidecode.
 
 Run from the Prosodia repo root on ai-lab-0:
 
@@ -31,15 +33,13 @@ sys.path.insert(0, str(SONORA))
 sys.path.insert(0, str(SONORA / "scripts" / "litert_export"))
 
 import unidecode  # noqa: E402
-import device_g2p  # noqa: E402
-from matcha.text import op_g2p  # noqa: E402
 
-FOLD_FIRST, FOLD_LAST, BLOCK = 0x80, 0x10FFFF, 0x1000
+FOLD_FIRST, FOLD_LAST, BLOCK = 0x0, 0x10FFFF, 0x1000
 EMPTY_RS = REPO / "crates" / "actor" / "src" / "device_g2p" / "fold" / "unidecode_empty.rs"
 
 
 def fold_code_points():
-    """Every scalar value the fold is checked on: U+0080..U+10FFFF without surrogates."""
+    """Every scalar value the fold is checked on: U+0000..U+10FFFF without surrogates."""
     return (cp for cp in range(FOLD_FIRST, FOLD_LAST + 1) if not 0xD800 <= cp <= 0xDFFF)
 
 
@@ -85,6 +85,9 @@ def write(path, obj):
 
 
 def main():
+    import device_g2p
+    from matcha.text import op_g2p
+
     commit = subprocess.run(["git", "-C", str(SONORA), "rev-parse", "HEAD"],
                             capture_output=True, text=True, check=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", str(SONORA), "status", "--porcelain", "--",
@@ -130,13 +133,15 @@ def main():
 
 
 def dump(lo, hi):
-    """unidecode's value for each code point in LO..HI, to compare with the fold."""
-    print(json.dumps({f"{cp:04X}": unidecode.unidecode(chr(cp)) for cp in range(lo, hi + 1)
-                      if not 0xD800 <= cp <= 0xDFFF}, indent=1, ensure_ascii=False))
+    """unidecode's line for each code point in LO..HI, as the fold test hashes them."""
+    sys.stdout.write("".join(f"{cp:04X}={unidecode.unidecode(chr(cp))}\n"
+                             for cp in range(lo, hi + 1) if not 0xD800 <= cp <= 0xDFFF))
 
 
 if __name__ == "__main__":
     if sys.argv[1:2] == ["--dump"]:
+        if len(sys.argv) != 4:
+            sys.exit("usage: generate.py --dump LO HI   (hex code points)")
         dump(int(sys.argv[2], 16), int(sys.argv[3], 16))
     else:
         main()

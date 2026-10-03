@@ -1,7 +1,7 @@
 //! The ASCII fold Sonora's front end applies first (`unidecode`), reproduced
 //! with `deunicode` plus rules for where the two disagree.
 //!
-//! The fold matches unidecode 1.4.0 on every code point from U+0080 to
+//! The fold matches unidecode 1.4.0 on every code point from U+0000 to
 //! U+10FFFF; the test checks it against `tests/fixtures/device_g2p/fold.json`
 //! (from `generate.py`), which holds a hash per block of 4096 code points.
 //! deunicode speaks symbols, emoji and whole scripts that unidecode drops
@@ -507,16 +507,17 @@ const OVERRIDES: &[(char, &str)] = &[
 pub fn ascii_fold(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for ch in text.chars() {
-        out.push_str(&fold_char(ch));
+        if ch.is_ascii() {
+            out.push(ch);
+        } else {
+            out.push_str(&fold_non_ascii(ch));
+        }
     }
     out
 }
 
-fn fold_char(ch: char) -> std::borrow::Cow<'static, str> {
+fn fold_non_ascii(ch: char) -> std::borrow::Cow<'static, str> {
     let cp = ch as u32;
-    if ch.is_ascii() {
-        return ch.to_string().into();
-    }
     if folds_to_nothing(cp) {
         return "".into();
     }
@@ -564,7 +565,7 @@ mod tests {
         let (first, last) = (hex("first"), hex("last"));
         let block = fixture["block"].as_u64().unwrap() as u32;
         let want = fixture["fnv1a64"].as_object().unwrap();
-        assert_eq!((first, last, block), (0x80, 0x10FFFF, 0x1000), "the fixture must cover U+0080..U+10FFFF");
+        assert_eq!((first, last, block), (0, 0x10FFFF, 0x1000), "the fixture must cover U+0000..U+10FFFF");
         assert_eq!(want.len(), 272, "one hash per block");
 
         let mut lines: std::collections::BTreeMap<u32, String> = std::collections::BTreeMap::new();
@@ -577,16 +578,19 @@ mod tests {
             let key = format!("{start:04X}");
             let got = format!("{:016x}", fnv1a64(text.as_bytes()));
             if want.get(&key).and_then(|v| v.as_str()) != Some(got.as_str()) {
-                failing.push(format!("{key}..{:04X}", start + block - 1));
+                let path = std::env::temp_dir().join(format!("prosodia-fold-{key}.txt"));
+                std::fs::write(&path, text).unwrap();
+                failing.push(format!("{key} {:04X}: {}", start + block - 1, path.display()));
             }
         }
         assert_eq!(lines.len(), want.len(), "blocks checked");
         assert!(
             failing.is_empty(),
-            "the fold disagrees with unidecode in {} block(s): {}. Compare with \
-             `../Sonora/github/.venv/bin/python crates/actor/tests/fixtures/device_g2p/generate.py --dump LO HI`.",
+            "the fold disagrees with unidecode in {} block(s); the fold's lines are written to the files \
+             below. Diff each against `../Sonora/github/.venv/bin/python \
+             crates/actor/tests/fixtures/device_g2p/generate.py --dump LO HI`:\n{}",
             failing.len(),
-            failing.join(", ")
+            failing.join("\n")
         );
     }
 
@@ -599,6 +603,17 @@ mod tests {
             assert!(!rep.is_empty(), "U+{:04X}: empty values belong in UNIDECODE_EMPTY", ch as u32);
             assert!(!folds_to_nothing(ch as u32), "U+{:04X}: shadowed by UNIDECODE_EMPTY", ch as u32);
             assert_ne!(deunicode::deunicode_char(ch).unwrap_or(""), rep, "U+{:04X}: deunicode already agrees", ch as u32);
+        }
+        for &(lo, hi, _, _) in LETTER_RANGES {
+            assert_eq!(hi as u32 - lo as u32, 25, "U+{:04X}: a letter range is A to Z", lo as u32);
+            let range = lo..=hi;
+            assert!((lo as u32..=hi as u32).all(|cp| !folds_to_nothing(cp)), "U+{:04X}: shadowed by UNIDECODE_EMPTY", lo as u32);
+            assert!(OVERRIDES.iter().all(|(c, _)| !range.contains(c)), "U+{:04X}: overlaps OVERRIDES", lo as u32);
+            assert!(
+                range.clone().any(|c| deunicode::deunicode_char(c).unwrap_or("") != fold_non_ascii(c)),
+                "U+{:04X}: deunicode already agrees on the whole range",
+                lo as u32
+            );
         }
     }
 

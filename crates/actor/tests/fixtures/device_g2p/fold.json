@@ -1,11 +1,11 @@
 {
   "unidecode_version": "1.4.0",
   "sonora_commit": "45c63f5f6eacdd75b36de20a96d3d7433eb8d22f",
-  "first": "0080",
+  "first": "0000",
   "last": "10FFFF",
   "block": 4096,
   "fnv1a64": {
-    "0000": "699e2ac1cad9a913",
+    "0000": "ec6fe494090c65d3",
     "1000": "bfdd9147c6825954",
     "2000": "7e7d9d74d047796c",
     "3000": "a0a8d1a439fe4d73",
