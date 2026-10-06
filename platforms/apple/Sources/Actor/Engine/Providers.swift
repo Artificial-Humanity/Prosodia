@@ -35,7 +35,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
         phonemeIds: [Int32],
         style: StyleVector,
         speed: Float,
-        vat: [Float]?,
+        controls: SynthesisControls,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> Kit.ActorEngineOutput {
@@ -43,7 +43,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
             phonemeIds: phonemeIds,
             refS: style,
             speed: speed,
-            vat: vat,
+            controls: controls,
             durationScales: durationScales,
             f0Bias: f0Bias
         )
@@ -67,7 +67,10 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
 public actor LiteRtVocalActor: Stage.VocalActor {
     private let rustEngine: ProsodiaActorEngine
 
-    public init(modelURL: URL, configURL: URL, voiceDirectoryURL: URL) throws {
+    /// - Parameter conditioning: The role's conditioning facts from `parseRoleConditioning`,
+    ///   or `nil` for none (no VAT channel trained, speaker 0). A block that does not fit
+    ///   the model throws here.
+    public init(modelURL: URL, configURL: URL, voiceDirectoryURL: URL, conditioning: RoleConditioning? = nil) throws {
         let provider = DiskVoiceAssetProvider(baseDirectory: voiceDirectoryURL)
         let voiceLoader = VoiceLoader(provider: provider)
         let g2p = ProsodiaSpeech()
@@ -80,10 +83,16 @@ public actor LiteRtVocalActor: Stage.VocalActor {
             sampleRate: Kit.getSampleRate(),
             langCode: "en-us"
         )
-        let backend = try LiteRtActorEngine(modelPath: modelURL, configURL: configURL)
+        let backend = try LiteRtActorEngine(modelPath: modelURL, configURL: configURL, conditioning: conditioning)
         let speechEngine = SwiftSpeechEngine(backend: backend)
 
         self.rustEngine = ProsodiaActorEngine(pipeline: pipeline, speechEngine: speechEngine)
+    }
+
+    /// Selects the speaker row for the next payload; `nil` restores the role's default.
+    /// A whole payload renders in one actor-isolated call, so a change lands between payloads.
+    public func setSpeaker(_ row: UInt32?) async {
+        rustEngine.setSpeaker(row: row)
     }
 
     public nonisolated func render(payload: String) -> [Float] {
@@ -183,14 +192,21 @@ public actor LiteRtVocalActor: Stage.VocalActor {
 public struct LiteRtVocalActorProvider: VocalActorProvider {
     public init() {}
 
-    /// True when `modelURL` is a split-model directory (multi-graph Plan A
-    /// runtime): textenc graph + host embedding table + config.
-    private func isSplitModelDirectory(_ url: URL) -> Bool {
+    /// Text-encoder graph prefixes of a split model, as Rust's `TEXTENC_PREFIXES`
+    /// (`crates/actor/src/split_engine.rs`): the LJSpeech recipe's, then the
+    /// multi-speaker exports'.
+    private static let textEncoderPrefixes = ["matcha_textenc", "sonora_textenc"]
+
+    /// True when `url` is a split-model directory (multi-graph Plan A runtime):
+    /// a text-encoder graph, the host embedding table and the config.
+    public static func isSplitModelDirectory(_ url: URL) -> Bool {
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir),
               isDir.boolValue else { return false }
         let hasTextenc = ((try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? [])
-            .contains { $0.hasPrefix("matcha_textenc") && $0.hasSuffix(".tflite") }
+            .contains { name in
+                name.hasSuffix(".tflite") && textEncoderPrefixes.contains { name.hasPrefix($0) }
+            }
         return hasTextenc &&
                FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path) &&
                FileManager.default.fileExists(atPath: url.appendingPathComponent("emb.bin").path)
@@ -199,14 +215,14 @@ public struct LiteRtVocalActorProvider: VocalActorProvider {
     /// The engine-contract config sits INSIDE a split-model directory, and
     /// NEXT TO a monolithic .tflite file.
     private func configURL(for modelURL: URL) -> URL {
-        if isSplitModelDirectory(modelURL) {
+        if Self.isSplitModelDirectory(modelURL) {
             return modelURL.appendingPathComponent("config.json")
         }
         return modelURL.deletingLastPathComponent().appendingPathComponent("config.json")
     }
 
     public func canHandle(modelURL: URL) -> Bool {
-        if isSplitModelDirectory(modelURL) { return true }
+        if Self.isSplitModelDirectory(modelURL) { return true }
         let ext = modelURL.pathExtension.lowercased()
         let isTflite = ext == "tflite" || modelURL.path.hasSuffix(".tflite")
         return isTflite &&
@@ -214,9 +230,14 @@ public struct LiteRtVocalActorProvider: VocalActorProvider {
                FileManager.default.fileExists(atPath: configURL(for: modelURL).path)
     }
 
-    public func makeActor(modelURL: URL, voiceDirectoryURL: URL?) -> any Stage.VocalActor {
+    public func makeActor(modelURL: URL, voiceDirectoryURL: URL?, conditioning: RoleConditioning?) throws -> any Stage.VocalActor {
         let voiceDir = voiceDirectoryURL ?? modelURL.deletingLastPathComponent()
-        return try! LiteRtVocalActor(modelURL: modelURL, configURL: configURL(for: modelURL), voiceDirectoryURL: voiceDir)
+        return try LiteRtVocalActor(
+            modelURL: modelURL,
+            configURL: configURL(for: modelURL),
+            voiceDirectoryURL: voiceDir,
+            conditioning: conditioning
+        )
     }
 }
 

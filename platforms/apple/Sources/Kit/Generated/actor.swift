@@ -648,7 +648,7 @@ public func FfiConverterTypeDefaultModelAssetManager_lower(_ value: DefaultModel
  */
 public protocol LiteRtActorEngineProtocol : AnyObject {
     
-    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, controls: SynthesisControls, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
     
     func getTokenLimit()  -> Int32
     
@@ -708,15 +708,30 @@ public convenience init(modelPath: String) {
     }
 
     
+    /**
+     * An engine with its role's conditioning facts (`parse_role_conditioning`).
+     * With a block, `model_path` must be a split-model directory, and the
+     * graphs load now, so a block that does not fit them is refused here
+     * rather than at the first render. `None` is the same as `new`.
+     */
+public static func newWithConditioning(modelPath: String, conditioning: RoleConditioning?)throws  -> LiteRtActorEngine {
+    return try  FfiConverterTypeLiteRtActorEngine.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
+    uniffi_actor_fn_constructor_litertactorengine_new_with_conditioning(
+        FfiConverterString.lower(modelPath),
+        FfiConverterOptionTypeRoleConditioning.lower(conditioning),$0
+    )
+})
+}
+    
 
     
-open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?)throws  -> ActorEngineOutput {
+open func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, controls: SynthesisControls, durationScales: [Float]?, f0Bias: [Float]?)throws  -> ActorEngineOutput {
     return try  FfiConverterTypeActorEngineOutput.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
     uniffi_actor_fn_method_litertactorengine_forward(self.uniffiClonePointer(),
         FfiConverterSequenceInt32.lower(phonemeIds),
         FfiConverterTypeStyleVector.lower(style),
         FfiConverterFloat.lower(speed),
-        FfiConverterOptionSequenceFloat.lower(vat),
+        FfiConverterTypeSynthesisControls.lower(controls),
         FfiConverterOptionSequenceFloat.lower(durationScales),
         FfiConverterOptionSequenceFloat.lower(f0Bias),$0
     )
@@ -797,6 +812,12 @@ public protocol ProsodiaActorEngineProtocol : AnyObject {
     
     func reclaimMemory() 
     
+    /**
+     * Selects the speaker row for the spans that start after this call;
+     * `None` restores the role's default.
+     */
+    func setSpeaker(row: UInt32?) 
+    
 }
 
 open class ProsodiaActorEngine:
@@ -859,6 +880,17 @@ open func processAndSynthesize(span: ProsodySpan)throws  -> ActorEngineOutput {
     
 open func reclaimMemory() {try! rustCall() {
     uniffi_actor_fn_method_prosodiaactorengine_reclaim_memory(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+    /**
+     * Selects the speaker row for the spans that start after this call;
+     * `None` restores the role's default.
+     */
+open func setSpeaker(row: UInt32?) {try! rustCall() {
+    uniffi_actor_fn_method_prosodiaactorengine_set_speaker(self.uniffiClonePointer(),
+        FfiConverterOptionUInt32.lower(row),$0
     )
 }
 }
@@ -1803,6 +1835,111 @@ public func FfiConverterTypePipelineOutput_lower(_ value: PipelineOutput) -> Rus
 }
 
 
+/**
+ * One actor role's conditioning facts from `prosodia_models.json`: which VAT
+ * channels its model trained, its default speaker row, and its speaker
+ * labels. The export does not record which channels trained, so the role
+ * config is authoritative.
+ */
+public struct RoleConditioning {
+    /**
+     * VAT channels the model trained: 0 valence, 1 arousal (Energy), 2 tension.
+     */
+    public var trainedVat: [UInt32]
+    /**
+     * Speaker row used when the app selects none.
+     */
+    public var defaultSpeaker: UInt32
+    /**
+     * Raw LibriTTS-R reader IDs ("229") by speaker row; empty when the block has no `speakers`.
+     * The Tuner formats the label, "LibriTTS-R 229".
+     */
+    public var speakerLabels: [String]
+    /**
+     * Where the facts come from.
+     */
+    public var evidence: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * VAT channels the model trained: 0 valence, 1 arousal (Energy), 2 tension.
+         */trainedVat: [UInt32], 
+        /**
+         * Speaker row used when the app selects none.
+         */defaultSpeaker: UInt32, 
+        /**
+         * Raw LibriTTS-R reader IDs ("229") by speaker row; empty when the block has no `speakers`.
+         * The Tuner formats the label, "LibriTTS-R 229".
+         */speakerLabels: [String], 
+        /**
+         * Where the facts come from.
+         */evidence: String) {
+        self.trainedVat = trainedVat
+        self.defaultSpeaker = defaultSpeaker
+        self.speakerLabels = speakerLabels
+        self.evidence = evidence
+    }
+}
+
+
+
+extension RoleConditioning: Equatable, Hashable {
+    public static func ==(lhs: RoleConditioning, rhs: RoleConditioning) -> Bool {
+        if lhs.trainedVat != rhs.trainedVat {
+            return false
+        }
+        if lhs.defaultSpeaker != rhs.defaultSpeaker {
+            return false
+        }
+        if lhs.speakerLabels != rhs.speakerLabels {
+            return false
+        }
+        if lhs.evidence != rhs.evidence {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(trainedVat)
+        hasher.combine(defaultSpeaker)
+        hasher.combine(speakerLabels)
+        hasher.combine(evidence)
+    }
+}
+
+
+public struct FfiConverterTypeRoleConditioning: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RoleConditioning {
+        return
+            try RoleConditioning(
+                trainedVat: FfiConverterSequenceUInt32.read(from: &buf), 
+                defaultSpeaker: FfiConverterUInt32.read(from: &buf), 
+                speakerLabels: FfiConverterSequenceString.read(from: &buf), 
+                evidence: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RoleConditioning, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.trainedVat, into: &buf)
+        FfiConverterUInt32.write(value.defaultSpeaker, into: &buf)
+        FfiConverterSequenceString.write(value.speakerLabels, into: &buf)
+        FfiConverterString.write(value.evidence, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeRoleConditioning_lift(_ buf: RustBuffer) throws -> RoleConditioning {
+    return try FfiConverterTypeRoleConditioning.lift(buf)
+}
+
+public func FfiConverterTypeRoleConditioning_lower(_ value: RoleConditioning) -> RustBuffer {
+    return FfiConverterTypeRoleConditioning.lower(value)
+}
+
+
 public struct StyleVector {
     public var data: [Float]
     public var shape: [UInt32]
@@ -1857,6 +1994,94 @@ public func FfiConverterTypeStyleVector_lift(_ buf: RustBuffer) throws -> StyleV
 
 public func FfiConverterTypeStyleVector_lower(_ value: StyleVector) -> RustBuffer {
     return FfiConverterTypeStyleVector.lower(value)
+}
+
+
+/**
+ * Per-call synthesis controls, passed through `forward`. The Swift and
+ * Kotlin bridges pass the record through without reading it, so a new field
+ * changes the record and the bindings, not the bridges.
+ */
+public struct SynthesisControls {
+    /**
+     * Row of the model's speaker table; `None` means the role's default.
+     */
+    public var speaker: UInt32?
+    /**
+     * [valence, arousal, tension] for the whole call.
+     */
+    public var vat: [Float]?
+    /**
+     * Gain in dB for the whole call; `None` means 0 dB.
+     */
+    public var gainDb: Float?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Row of the model's speaker table; `None` means the role's default.
+         */speaker: UInt32?, 
+        /**
+         * [valence, arousal, tension] for the whole call.
+         */vat: [Float]?, 
+        /**
+         * Gain in dB for the whole call; `None` means 0 dB.
+         */gainDb: Float?) {
+        self.speaker = speaker
+        self.vat = vat
+        self.gainDb = gainDb
+    }
+}
+
+
+
+extension SynthesisControls: Equatable, Hashable {
+    public static func ==(lhs: SynthesisControls, rhs: SynthesisControls) -> Bool {
+        if lhs.speaker != rhs.speaker {
+            return false
+        }
+        if lhs.vat != rhs.vat {
+            return false
+        }
+        if lhs.gainDb != rhs.gainDb {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(speaker)
+        hasher.combine(vat)
+        hasher.combine(gainDb)
+    }
+}
+
+
+public struct FfiConverterTypeSynthesisControls: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SynthesisControls {
+        return
+            try SynthesisControls(
+                speaker: FfiConverterOptionUInt32.read(from: &buf), 
+                vat: FfiConverterOptionSequenceFloat.read(from: &buf), 
+                gainDb: FfiConverterOptionFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SynthesisControls, into buf: inout [UInt8]) {
+        FfiConverterOptionUInt32.write(value.speaker, into: &buf)
+        FfiConverterOptionSequenceFloat.write(value.vat, into: &buf)
+        FfiConverterOptionFloat.write(value.gainDb, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSynthesisControls_lift(_ buf: RustBuffer) throws -> SynthesisControls {
+    return try FfiConverterTypeSynthesisControls.lift(buf)
+}
+
+public func FfiConverterTypeSynthesisControls_lower(_ value: SynthesisControls) -> RustBuffer {
+    return FfiConverterTypeSynthesisControls.lower(value)
 }
 
 
@@ -2763,7 +2988,7 @@ public protocol ProsodiaSpeechEngine : AnyObject {
     
     func synthesize(input: PipelineOutput)  -> ActorEngineOutput
     
-    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, vat: [Float]?, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
+    func forward(phonemeIds: [Int32], style: StyleVector, speed: Float, controls: SynthesisControls, durationScales: [Float]?, f0Bias: [Float]?) throws  -> ActorEngineOutput
     
     func reclaimMemory() 
     
@@ -2810,7 +3035,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
             phonemeIds: RustBuffer,
             style: RustBuffer,
             speed: Float,
-            vat: RustBuffer,
+            controls: RustBuffer,
             durationScales: RustBuffer,
             f0Bias: RustBuffer,
             uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
@@ -2825,7 +3050,7 @@ fileprivate struct UniffiCallbackInterfaceProsodiaSpeechEngine {
                      phonemeIds: try FfiConverterSequenceInt32.lift(phonemeIds),
                      style: try FfiConverterTypeStyleVector.lift(style),
                      speed: try FfiConverterFloat.lift(speed),
-                     vat: try FfiConverterOptionSequenceFloat.lift(vat),
+                     controls: try FfiConverterTypeSynthesisControls.lift(controls),
                      durationScales: try FfiConverterOptionSequenceFloat.lift(durationScales),
                      f0Bias: try FfiConverterOptionSequenceFloat.lift(f0Bias)
                 )
@@ -3031,6 +3256,48 @@ extension FfiConverterCallbackInterfaceVoiceAssetProvider : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionFloat: FfiConverterRustBuffer {
+    typealias SwiftType = Float?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterFloat.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterFloat.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -3068,6 +3335,27 @@ fileprivate struct FfiConverterOptionData: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterData.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeRoleConditioning: FfiConverterRustBuffer {
+    typealias SwiftType = RoleConditioning?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeRoleConditioning.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeRoleConditioning.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -3538,6 +3826,21 @@ public func parseBlendString(input: String) -> [VoiceBlend] {
 })
 }
 /**
+ * Reads `role`'s `conditioning` block from the text of `prosodia_models.json`.
+ * `Ok(None)` when the role has no block. An error when the role is not in
+ * `roles`, or the block is malformed: an unknown key anywhere in it, a wrong
+ * type, or a missing required field (`trainedVat`, `evidence`, and all three
+ * keys of `speakers` when it is present).
+ */
+public func parseRoleConditioning(modelsJson: String, role: String)throws  -> RoleConditioning? {
+    return try  FfiConverterOptionTypeRoleConditioning.lift(try rustCallWithError(FfiConverterTypeSpeechEngineError.lift) {
+    uniffi_actor_fn_func_parse_role_conditioning(
+        FfiConverterString.lower(modelsJson),
+        FfiConverterString.lower(role),$0
+    )
+})
+}
+/**
  * Parse a `.safetensors` byte buffer into its named tensors.
  *
  * Layout: an 8-byte little-endian header length, a JSON header describing each
@@ -3598,6 +3901,9 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_func_parse_blend_string() != 16093) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_func_parse_role_conditioning() != 31918) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_func_parse_safetensors() != 36374) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3610,7 +3916,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_litertactorengine_forward() != 5996) {
+    if (uniffi_actor_checksum_method_litertactorengine_forward() != 39900) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_litertactorengine_get_token_limit() != 61050) {
@@ -3626,6 +3932,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory() != 18014) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_actor_checksum_method_prosodiaactorengine_set_speaker() != 34027) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_phonemes() != 36190) {
@@ -3703,6 +4012,9 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_constructor_litertactorengine_new() != 30265) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_actor_checksum_constructor_litertactorengine_new_with_conditioning() != 5811) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_actor_checksum_constructor_prosodiaactorengine_new() != 12372) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3736,7 +4048,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 40977) {
+    if (uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 52347) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538) {

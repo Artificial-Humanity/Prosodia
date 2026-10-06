@@ -658,7 +658,7 @@ internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod0 : com.sun.
     fun callback(`uniffiHandle`: Long,`input`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod1 : com.sun.jna.Callback {
-    fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+    fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`controls`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceProsodiaSpeechEngineMethod2 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
@@ -960,6 +960,12 @@ internal open class UniffiVTableCallbackInterfaceVoiceAssetProvider(
 
 
 
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -1001,7 +1007,9 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_actor_fn_constructor_litertactorengine_new(`modelPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
-    fun uniffi_actor_fn_method_litertactorengine_forward(`ptr`: Pointer,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_actor_fn_constructor_litertactorengine_new_with_conditioning(`modelPath`: RustBuffer.ByValue,`conditioning`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Pointer
+    fun uniffi_actor_fn_method_litertactorengine_forward(`ptr`: Pointer,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`controls`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_method_litertactorengine_get_token_limit(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Int
@@ -1018,6 +1026,8 @@ internal interface UniffiLib : Library {
     fun uniffi_actor_fn_method_prosodiaactorengine_process_and_synthesize(`ptr`: Pointer,`span`: RustBufferProsodySpan.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_method_prosodiaactorengine_reclaim_memory(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_actor_fn_method_prosodiaactorengine_set_speaker(`ptr`: Pointer,`row`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_actor_fn_clone_prosodiaactorpipeline(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
@@ -1106,6 +1116,8 @@ internal interface UniffiLib : Library {
     fun uniffi_actor_fn_func_normalize_style_pack(`pack`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_func_parse_blend_string(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_actor_fn_func_parse_role_conditioning(`modelsJson`: RustBuffer.ByValue,`role`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_actor_fn_func_parse_safetensors(`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1233,6 +1245,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_actor_checksum_func_parse_blend_string(
     ): Short
+    fun uniffi_actor_checksum_func_parse_role_conditioning(
+    ): Short
     fun uniffi_actor_checksum_func_parse_safetensors(
     ): Short
     fun uniffi_actor_checksum_func_slice_style_row(
@@ -1252,6 +1266,8 @@ internal interface UniffiLib : Library {
     fun uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory(
+    ): Short
+    fun uniffi_actor_checksum_method_prosodiaactorengine_set_speaker(
     ): Short
     fun uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_phonemes(
     ): Short
@@ -1302,6 +1318,8 @@ internal interface UniffiLib : Library {
     fun uniffi_actor_checksum_constructor_defaultmodelassetmanager_new(
     ): Short
     fun uniffi_actor_checksum_constructor_litertactorengine_new(
+    ): Short
+    fun uniffi_actor_checksum_constructor_litertactorengine_new_with_conditioning(
     ): Short
     fun uniffi_actor_checksum_constructor_prosodiaactorengine_new(
     ): Short
@@ -1367,6 +1385,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_func_parse_blend_string() != 16093.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_actor_checksum_func_parse_role_conditioning() != 31918.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_actor_checksum_func_parse_safetensors() != 36374.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1379,7 +1400,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_defaultmodelassetmanager_resolve_casting_profile() != 9145.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_litertactorengine_forward() != 5996.toShort()) {
+    if (lib.uniffi_actor_checksum_method_litertactorengine_forward() != 39900.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_litertactorengine_get_token_limit() != 61050.toShort()) {
@@ -1395,6 +1416,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory() != 18014.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_actor_checksum_method_prosodiaactorengine_set_speaker() != 34027.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_phonemes() != 36190.toShort()) {
@@ -1472,6 +1496,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_constructor_litertactorengine_new() != 30265.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_actor_checksum_constructor_litertactorengine_new_with_conditioning() != 5811.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_actor_checksum_constructor_prosodiaactorengine_new() != 12372.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1505,7 +1532,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_synthesize() != 52579.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 40977.toShort()) {
+    if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_forward() != 52347.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_actor_checksum_method_prosodiaspeechengine_reclaim_memory() != 13538.toShort()) {
@@ -2166,7 +2193,7 @@ public object FfiConverterTypeDefaultModelAssetManager: FfiConverter<DefaultMode
  */
 public interface LiteRtActorEngineInterface {
     
-    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
+    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `controls`: SynthesisControls, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
     
     fun `getTokenLimit`(): kotlin.Int
     
@@ -2269,12 +2296,12 @@ open class LiteRtActorEngine: Disposable, AutoCloseable, LiteRtActorEngineInterf
     }
 
     
-    @Throws(SpeechEngineException::class)override fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput {
+    @Throws(SpeechEngineException::class)override fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `controls`: SynthesisControls, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput {
             return FfiConverterTypeActorEngineOutput.lift(
     callWithPointer {
     uniffiRustCallWithError(SpeechEngineException) { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_method_litertactorengine_forward(
-        it, FfiConverterSequenceInt.lower(`phonemeIds`),FfiConverterTypeStyleVector.lower(`style`),FfiConverterFloat.lower(`speed`),FfiConverterOptionalSequenceFloat.lower(`vat`),FfiConverterOptionalSequenceFloat.lower(`durationScales`),FfiConverterOptionalSequenceFloat.lower(`f0Bias`),_status)
+        it, FfiConverterSequenceInt.lower(`phonemeIds`),FfiConverterTypeStyleVector.lower(`style`),FfiConverterFloat.lower(`speed`),FfiConverterTypeSynthesisControls.lower(`controls`),FfiConverterOptionalSequenceFloat.lower(`durationScales`),FfiConverterOptionalSequenceFloat.lower(`f0Bias`),_status)
 }
     }
     )
@@ -2319,8 +2346,26 @@ open class LiteRtActorEngine: Disposable, AutoCloseable, LiteRtActorEngineInterf
     
 
     
+    companion object {
+        
+    /**
+     * An engine with its role's conditioning facts (`parse_role_conditioning`).
+     * With a block, `model_path` must be a split-model directory, and the
+     * graphs load now, so a block that does not fit them is refused here
+     * rather than at the first render. `None` is the same as `new`.
+     */
+    @Throws(SpeechEngineException::class) fun `newWithConditioning`(`modelPath`: kotlin.String, `conditioning`: RoleConditioning?): LiteRtActorEngine {
+            return FfiConverterTypeLiteRtActorEngine.lift(
+    uniffiRustCallWithError(SpeechEngineException) { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_constructor_litertactorengine_new_with_conditioning(
+        FfiConverterString.lower(`modelPath`),FfiConverterOptionalTypeRoleConditioning.lower(`conditioning`),_status)
+}
+    )
+    }
     
-    companion object
+
+        
+    }
     
 }
 
@@ -2454,6 +2499,12 @@ public interface ProsodiaActorEngineInterface {
     
     fun `reclaimMemory`()
     
+    /**
+     * Selects the speaker row for the spans that start after this call;
+     * `None` restores the role's default.
+     */
+    fun `setSpeaker`(`row`: kotlin.UInt?)
+    
     companion object
 }
 
@@ -2564,6 +2615,21 @@ open class ProsodiaActorEngine: Disposable, AutoCloseable, ProsodiaActorEngineIn
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorengine_reclaim_memory(
         it, _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Selects the speaker row for the spans that start after this call;
+     * `None` restores the role's default.
+     */override fun `setSpeaker`(`row`: kotlin.UInt?)
+        = 
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_method_prosodiaactorengine_set_speaker(
+        it, FfiConverterOptionalUInt.lower(`row`),_status)
 }
     }
     
@@ -3807,6 +3873,62 @@ public object FfiConverterTypePipelineOutput: FfiConverterRustBuffer<PipelineOut
 
 
 
+/**
+ * One actor role's conditioning facts from `prosodia_models.json`: which VAT
+ * channels its model trained, its default speaker row, and its speaker
+ * labels. The export does not record which channels trained, so the role
+ * config is authoritative.
+ */
+data class RoleConditioning (
+    /**
+     * VAT channels the model trained: 0 valence, 1 arousal (Energy), 2 tension.
+     */
+    var `trainedVat`: List<kotlin.UInt>, 
+    /**
+     * Speaker row used when the app selects none.
+     */
+    var `defaultSpeaker`: kotlin.UInt, 
+    /**
+     * Raw LibriTTS-R reader IDs ("229") by speaker row; empty when the block has no `speakers`.
+     * The Tuner formats the label, "LibriTTS-R 229".
+     */
+    var `speakerLabels`: List<kotlin.String>, 
+    /**
+     * Where the facts come from.
+     */
+    var `evidence`: kotlin.String
+) {
+    
+    companion object
+}
+
+public object FfiConverterTypeRoleConditioning: FfiConverterRustBuffer<RoleConditioning> {
+    override fun read(buf: ByteBuffer): RoleConditioning {
+        return RoleConditioning(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RoleConditioning) = (
+            FfiConverterSequenceUInt.allocationSize(value.`trainedVat`) +
+            FfiConverterUInt.allocationSize(value.`defaultSpeaker`) +
+            FfiConverterSequenceString.allocationSize(value.`speakerLabels`) +
+            FfiConverterString.allocationSize(value.`evidence`)
+    )
+
+    override fun write(value: RoleConditioning, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`trainedVat`, buf)
+            FfiConverterUInt.write(value.`defaultSpeaker`, buf)
+            FfiConverterSequenceString.write(value.`speakerLabels`, buf)
+            FfiConverterString.write(value.`evidence`, buf)
+    }
+}
+
+
+
 data class StyleVector (
     var `data`: List<kotlin.Float>, 
     var `shape`: List<kotlin.UInt>
@@ -3831,6 +3953,53 @@ public object FfiConverterTypeStyleVector: FfiConverterRustBuffer<StyleVector> {
     override fun write(value: StyleVector, buf: ByteBuffer) {
             FfiConverterSequenceFloat.write(value.`data`, buf)
             FfiConverterSequenceUInt.write(value.`shape`, buf)
+    }
+}
+
+
+
+/**
+ * Per-call synthesis controls, passed through `forward`. The Swift and
+ * Kotlin bridges pass the record through without reading it, so a new field
+ * changes the record and the bindings, not the bridges.
+ */
+data class SynthesisControls (
+    /**
+     * Row of the model's speaker table; `None` means the role's default.
+     */
+    var `speaker`: kotlin.UInt?, 
+    /**
+     * [valence, arousal, tension] for the whole call.
+     */
+    var `vat`: List<kotlin.Float>?, 
+    /**
+     * Gain in dB for the whole call; `None` means 0 dB.
+     */
+    var `gainDb`: kotlin.Float?
+) {
+    
+    companion object
+}
+
+public object FfiConverterTypeSynthesisControls: FfiConverterRustBuffer<SynthesisControls> {
+    override fun read(buf: ByteBuffer): SynthesisControls {
+        return SynthesisControls(
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalSequenceFloat.read(buf),
+            FfiConverterOptionalFloat.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SynthesisControls) = (
+            FfiConverterOptionalUInt.allocationSize(value.`speaker`) +
+            FfiConverterOptionalSequenceFloat.allocationSize(value.`vat`) +
+            FfiConverterOptionalFloat.allocationSize(value.`gainDb`)
+    )
+
+    override fun write(value: SynthesisControls, buf: ByteBuffer) {
+            FfiConverterOptionalUInt.write(value.`speaker`, buf)
+            FfiConverterOptionalSequenceFloat.write(value.`vat`, buf)
+            FfiConverterOptionalFloat.write(value.`gainDb`, buf)
     }
 }
 
@@ -4558,7 +4727,7 @@ public interface ProsodiaSpeechEngine {
     
     fun `synthesize`(`input`: PipelineOutput): ActorEngineOutput
     
-    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `vat`: List<kotlin.Float>?, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
+    fun `forward`(`phonemeIds`: List<kotlin.Int>, `style`: StyleVector, `speed`: kotlin.Float, `controls`: SynthesisControls, `durationScales`: List<kotlin.Float>?, `f0Bias`: List<kotlin.Float>?): ActorEngineOutput
     
     fun `reclaimMemory`()
     
@@ -4586,14 +4755,14 @@ internal object uniffiCallbackInterfaceProsodiaSpeechEngine {
         }
     }
     internal object `forward`: UniffiCallbackInterfaceProsodiaSpeechEngineMethod1 {
-        override fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`vat`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+        override fun callback(`uniffiHandle`: Long,`phonemeIds`: RustBuffer.ByValue,`style`: RustBuffer.ByValue,`speed`: Float,`controls`: RustBuffer.ByValue,`durationScales`: RustBuffer.ByValue,`f0Bias`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
             val uniffiObj = FfiConverterTypeProsodiaSpeechEngine.handleMap.get(uniffiHandle)
             val makeCall = { ->
                 uniffiObj.`forward`(
                     FfiConverterSequenceInt.lift(`phonemeIds`),
                     FfiConverterTypeStyleVector.lift(`style`),
                     FfiConverterFloat.lift(`speed`),
-                    FfiConverterOptionalSequenceFloat.lift(`vat`),
+                    FfiConverterTypeSynthesisControls.lift(`controls`),
                     FfiConverterOptionalSequenceFloat.lift(`durationScales`),
                     FfiConverterOptionalSequenceFloat.lift(`f0Bias`),
                 )
@@ -4722,6 +4891,64 @@ public object FfiConverterTypeVoiceAssetProvider: FfiConverterCallbackInterface<
 
 
 
+public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
+    override fun read(buf: ByteBuffer): kotlin.UInt? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UInt?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UInt?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+public object FfiConverterOptionalFloat: FfiConverterRustBuffer<kotlin.Float?> {
+    override fun read(buf: ByteBuffer): kotlin.Float? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterFloat.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Float?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterFloat.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Float?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterFloat.write(value, buf)
+        }
+    }
+}
+
+
+
+
 public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
     override fun read(buf: ByteBuffer): kotlin.String? {
         if (buf.get().toInt() == 0) {
@@ -4773,6 +5000,35 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
         } else {
             buf.put(1)
             FfiConverterByteArray.write(value, buf)
+        }
+    }
+}
+
+
+
+
+public object FfiConverterOptionalTypeRoleConditioning: FfiConverterRustBuffer<RoleConditioning?> {
+    override fun read(buf: ByteBuffer): RoleConditioning? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeRoleConditioning.read(buf)
+    }
+
+    override fun allocationSize(value: RoleConditioning?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeRoleConditioning.allocationSize(value)
+        }
+    }
+
+    override fun write(value: RoleConditioning?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeRoleConditioning.write(value, buf)
         }
     }
 }
@@ -5327,6 +5583,23 @@ public object FfiConverterMapStringInt: FfiConverterRustBuffer<Map<kotlin.String
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_actor_fn_func_parse_blend_string(
         FfiConverterString.lower(`input`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads `role`'s `conditioning` block from the text of `prosodia_models.json`.
+         * `Ok(None)` when the role has no block. An error when the role is not in
+         * `roles`, or the block is malformed: an unknown key anywhere in it, a wrong
+         * type, or a missing required field (`trainedVat`, `evidence`, and all three
+         * keys of `speakers` when it is present).
+         */
+    @Throws(SpeechEngineException::class) fun `parseRoleConditioning`(`modelsJson`: kotlin.String, `role`: kotlin.String): RoleConditioning? {
+            return FfiConverterOptionalTypeRoleConditioning.lift(
+    uniffiRustCallWithError(SpeechEngineException) { _status ->
+    UniffiLib.INSTANCE.uniffi_actor_fn_func_parse_role_conditioning(
+        FfiConverterString.lower(`modelsJson`),FfiConverterString.lower(`role`),_status)
 }
     )
     }

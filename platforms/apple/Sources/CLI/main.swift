@@ -18,7 +18,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
         phonemeIds: [Int32],
         style: StyleVector,
         speed: Float,
-        vat: [Float]?,
+        controls: SynthesisControls,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> Kit.ActorEngineOutput {
@@ -26,7 +26,7 @@ class SwiftSpeechEngine: ProsodiaSpeechEngine {
             phonemeIds: phonemeIds,
             refS: style,
             speed: speed,
-            vat: vat,
+            controls: controls,
             durationScales: durationScales,
             f0Bias: f0Bias
         )

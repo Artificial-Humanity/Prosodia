@@ -16,6 +16,44 @@ import Stage
 
 
 
+/// What the selected actor role's model takes, from its path and its `conditioning`
+/// block. Decides which VAT values the Tuner sends and how far Volume may go.
+struct ActorRoleCapabilities: Equatable, Sendable {
+    /// The role's path is a split-model directory.
+    var isSplit: Bool
+    /// The role has a `conditioning` block in prosodia_models.json.
+    var hasConditioning: Bool
+    /// VAT channels the role's model trained: 0 valence, 1 Energy (arousal), 2 tension.
+    var trainedVat: Set<UInt32>
+
+    /// A monolith (today's `actor` role has no `vat` input): every slider stays live
+    /// and moves only the AcousticMatrix-derived speed and volume.
+    static let monolith = ActorRoleCapabilities(isSplit: false, hasConditioning: false, trainedVat: [])
+
+    /// Volume on split roles: [−12, +6] dB as `G:` writes it, to 3 decimals
+    /// (20·log10(0.251) = −12.007 dB would be refused).
+    static let splitVolumeBounds: ClosedRange<Double> = 0.252...1.995
+
+    /// Whether VAT channel `channel` is sent as set. On a split role only trained
+    /// channels are; a split role with no block trains none (fail closed).
+    func sends(_ channel: UInt32) -> Bool {
+        !isSplit || trainedVat.contains(channel)
+    }
+
+    /// Whether the model itself changes loudness with Energy.
+    var trainsEnergy: Bool { isSplit && trainedVat.contains(1) }
+
+    /// The Volume range the role accepts, or nil for no bound.
+    var volumeBounds: ClosedRange<Double>? { isSplit ? Self.splitVolumeBounds : nil }
+
+    /// The Volume range sent and shown: `limits` (the global gain limits) inside the
+    /// role's ``volumeBounds``.
+    func volumeRange(within limits: ClosedRange<Double>) -> ClosedRange<Double> {
+        guard let bounds = volumeBounds else { return limits }
+        return limits.clamped(to: bounds)
+    }
+}
+
 struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
     var id: UUID = UUID()
     var name: String
@@ -28,12 +66,15 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
     var ageProfile: Double = 0.0
     var masculinity: Double = 0.0
     var strainOrRasp: Double = 0.0
+    /// True while `volume` is `AcousticMatrix.gain` of the preset's emotion
+    /// (built by ``from(_:)``); false once the user sets Volume.
+    var volumeIsDerived: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case id, name, valence, arousal, tension, speed, volume, pitch, ageProfile, masculinity, strainOrRasp
+        case id, name, valence, arousal, tension, speed, volume, pitch, ageProfile, masculinity, strainOrRasp, volumeIsDerived
     }
 
-    init(id: UUID = UUID(), name: String, valence: Double, arousal: Double, tension: Double, speed: Double, volume: Double, pitch: Double = 0.0, ageProfile: Double = 0.0, masculinity: Double = 0.0, strainOrRasp: Double = 0.0) {
+    init(id: UUID = UUID(), name: String, valence: Double, arousal: Double, tension: Double, speed: Double, volume: Double, pitch: Double = 0.0, ageProfile: Double = 0.0, masculinity: Double = 0.0, strainOrRasp: Double = 0.0, volumeIsDerived: Bool = false) {
         self.id = id
         self.name = name
         self.valence = valence
@@ -45,6 +86,7 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         self.ageProfile = ageProfile
         self.masculinity = masculinity
         self.strainOrRasp = strainOrRasp
+        self.volumeIsDerived = volumeIsDerived
     }
 
     init(from decoder: Swift.Decoder) throws {
@@ -60,13 +102,33 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         self.ageProfile = try container.decodeIfPresent(Double.self, forKey: .ageProfile) ?? 0.0
         self.masculinity = try container.decodeIfPresent(Double.self, forKey: .masculinity) ?? 0.0
         self.strainOrRasp = try container.decodeIfPresent(Double.self, forKey: .strainOrRasp) ?? 0.0
+        // Saved presets predate the flag; their Volume is the one the user saved.
+        self.volumeIsDerived = try container.decodeIfPresent(Bool.self, forKey: .volumeIsDerived) ?? false
     }
 
-    var emotion: EmotionVector {
-        EmotionVector(valence: valence, arousal: arousal, tension: tension)
+    /// The emotion sent on a role with `capabilities`. The only place V and T are
+    /// zeroed: on a split role, a channel the role did not train is sent as 0. The
+    /// Director's output is never passed through here.
+    func sentEmotion(for capabilities: ActorRoleCapabilities) -> EmotionVector {
+        EmotionVector(
+            valence: capabilities.sends(0) ? valence : 0,
+            arousal: capabilities.sends(1) ? arousal : 0,
+            tension: capabilities.sends(2) ? tension : 0
+        )
     }
 
-    var acoustics: ProsodyAcoustics {
+    /// The Volume sent on a role with `capabilities`, which the Volume slider shows.
+    /// A derived Volume is 1.0 where the model trains Energy, so loudness is not
+    /// applied twice (model Energy plus mel Volume). The value is clamped to
+    /// `volumeLimits` (the global gain limits) inside the role's bounds
+    /// (``ActorRoleCapabilities/volumeRange(within:)``).
+    func sentVolume(for capabilities: ActorRoleCapabilities, volumeLimits: ClosedRange<Double>) -> Double {
+        let raw = volumeIsDerived && capabilities.trainsEnergy ? 1.0 : volume
+        let range = capabilities.volumeRange(within: volumeLimits)
+        return min(max(raw, range.lowerBound), range.upperBound)
+    }
+
+    func acoustics(for capabilities: ActorRoleCapabilities, volumeLimits: ClosedRange<Double>) -> ProsodyAcoustics {
         let cp = CastingProfile(
             ageProfile: ageProfile,
             masculinity: masculinity,
@@ -75,7 +137,7 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         return ProsodyAcoustics(
             speedMultiplier: speed,
             speedBias: nil,
-            gainMultiplier: volume,
+            gainMultiplier: sentVolume(for: capabilities, volumeLimits: volumeLimits),
             gainBias: nil,
             castingProfile: cp,
             speakerLock: nil,
@@ -87,9 +149,14 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
         )
     }
 
-    var directive: ProsodyDirective {
-        ProsodyDirective(emotion: emotion, acoustics: acoustics)
+    /// The directive for default presets, saved custom presets and the sliders alike.
+    func directive(for capabilities: ActorRoleCapabilities, volumeLimits: ClosedRange<Double>) -> ProsodyDirective {
+        ProsodyDirective(
+            emotion: sentEmotion(for: capabilities),
+            acoustics: acoustics(for: capabilities, volumeLimits: volumeLimits)
+        )
     }
+
     static func from(_ preset: EmotionPreset) -> AuditionPreset {
         let emotion = preset
         return AuditionPreset(
@@ -102,7 +169,8 @@ struct AuditionPreset: Codable, Identifiable, Hashable, Sendable {
             pitch: 0.0,
             ageProfile: 0.0,
             masculinity: 0.0,
-            strainOrRasp: 0.0
+            strainOrRasp: 0.0,
+            volumeIsDerived: true
         )
     }
 }
@@ -221,7 +289,7 @@ enum EmotionSourceMode: String, CaseIterable, Identifiable, Sendable {
     var helpText: String {
         switch self {
         case .preset:
-            return "Load a preset and tweak it with sliders. Sliders adjust Valence/Arousal/Tension continuously without auto-saving to the preset database, or you can save adjustments as a new preset."
+            return "Load a preset and tweak it with sliders. Sliders adjust Valence/Energy/Tension continuously without auto-saving to the preset database, or you can save adjustments as a new preset."
         case .director:
             return "The Director model reads each sentence and dynamically guides the continuous emotional reading (VAD) block on the fly (Gemma 4 via LiteRT-LM)."
         }
@@ -241,11 +309,18 @@ final class AuditionConfiguration {
         applyConfigToStageAndActors(ProsodiaConfigManager.shared.config)
     }
 
-    /// Builds the Director implementation for the current settings.
-    func makeDirector(model: DirectorModel?) -> any Stage.DirectorInference {
+    /// The global gain limits ("Volume Min Limit" … "Volume Max Limit"), in order.
+    var volumeLimits: ClosedRange<Double> {
+        min(globalConfig.gainMin, globalConfig.gainMax)...max(globalConfig.gainMin, globalConfig.gainMax)
+    }
+
+    /// Builds the Director implementation for the current settings. In preset mode the
+    /// directive is shaped for the selected actor role (`capabilities`); the Director's
+    /// own output is never adjusted — the engine refuses what the role did not train.
+    func makeDirector(model: DirectorModel?, capabilities: ActorRoleCapabilities) -> any Stage.DirectorInference {
         switch emotionMode {
         case .preset:
-            return StubDirectorInference(directive: activePreset.directive)
+            return StubDirectorInference(directive: activePreset.directive(for: capabilities, volumeLimits: volumeLimits))
         case .director:
             guard let model else {
                 return StubDirectorInference(directive: ProsodyDirective(preset: .baseline))

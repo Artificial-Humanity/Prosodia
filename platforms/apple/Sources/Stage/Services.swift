@@ -193,6 +193,10 @@ public protocol VocalActor: Kit.VocalActor, Sendable {
     ///
     /// - Parameter voice: The voice name, or `nil` to clear.
     func setBaseVoice(_ voice: String?) async
+    /// Sets the speaker row for the payloads rendered after this call.
+    ///
+    /// - Parameter row: A row of the model's speaker table, or `nil` for the role's default.
+    func setSpeaker(_ row: UInt32?) async
 }
 
 public extension VocalActor {
@@ -202,6 +206,8 @@ public extension VocalActor {
     func updateSpeedMultiplier(_: Double) async {}
     /// Default empty implementation for base voice selection.
     func setBaseVoice(_: String?) async {}
+    /// Default empty implementation for speaker selection.
+    func setSpeaker(_: UInt32?) async {}
 }
 
 /// A provider that can handle initialization of a specific ``VocalActor`` engine.
@@ -217,8 +223,10 @@ public protocol VocalActorProvider: Sendable {
     /// - Parameters:
     ///   - modelURL: The local URL path of the model.
     ///   - voiceDirectoryURL: The local URL path for voices or vocoders (optional).
+    ///   - conditioning: The role's conditioning facts (`parseRoleConditioning`), or `nil` for none.
     /// - Returns: A model conforming to ``VocalActor``.
-    func makeActor(modelURL: URL, voiceDirectoryURL: URL?) -> any VocalActor
+    /// - Throws: When the engine refuses the model or the conditioning.
+    func makeActor(modelURL: URL, voiceDirectoryURL: URL?, conditioning: RoleConditioning?) throws -> any VocalActor
 }
 
 /// A thread-safe registry to store and resolve ``VocalActor`` providers dynamically.
@@ -242,19 +250,19 @@ public final class VocalActorRegistry: @unchecked Sendable {
 
     /// Resolves and instantiates the correct vocal actor implementation for the given model.
     ///
+    /// The provider is chosen under the lock and the actor is built outside it: a build
+    /// with conditioning loads the model graphs, and ``canMakeActor(for:)`` — called from
+    /// UI code — must not wait for that.
+    ///
     /// - Parameters:
     ///   - modelURL: The local URL path of the model.
     ///   - voiceDirectoryURL: The local URL path for voices or vocoders (optional).
+    ///   - conditioning: The role's conditioning facts, or `nil` for none.
     /// - Returns: An initialized ``VocalActor`` engine, or nil if no provider supports the model.
-    public func makeActor(for modelURL: URL, voiceDirectoryURL: URL?) -> (any VocalActor)? {
-        lock.withLock {
-            for provider in providers {
-                if provider.canHandle(modelURL: modelURL) {
-                    return provider.makeActor(modelURL: modelURL, voiceDirectoryURL: voiceDirectoryURL)
-                }
-            }
-            return nil
-        }
+    /// - Throws: When the chosen provider's engine refuses the model or the conditioning.
+    public func makeActor(for modelURL: URL, voiceDirectoryURL: URL?, conditioning: RoleConditioning?) throws -> (any VocalActor)? {
+        let provider = lock.withLock { providers.first { $0.canHandle(modelURL: modelURL) } }
+        return try provider?.makeActor(modelURL: modelURL, voiceDirectoryURL: voiceDirectoryURL, conditioning: conditioning)
     }
 
     /// Reports whether any registered provider can resolve a real actor for `modelURL`,

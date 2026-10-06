@@ -36,7 +36,13 @@ final class ProductionRunner {
         let modelFile = Self.resolvedModelPath
         let voiceDir = Self.resolvedVoiceDirectory
         
-        if let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) {
+        var built: (any Stage.VocalActor)?
+        do {
+            built = try VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir, conditioning: nil)
+        } catch {
+            print("Warning: vocal actor build failed: \(error)")
+        }
+        if let resolved = built {
             actor = resolved
         } else {
             actor = StubVocalActor()
@@ -54,7 +60,14 @@ final class ProductionRunner {
         let modelFile = Self.resolvedModelPath
         let voiceDir = Self.resolvedVoiceDirectory
         Task.detached(priority: .utility) {
-            guard let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) else { return }
+            let built: (any Stage.VocalActor)?
+            do {
+                built = try VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir, conditioning: nil)
+            } catch {
+                print("Warning: vocal actor build failed: \(error)")
+                return
+            }
+            guard let resolved = built else { return }
             _ = resolved.render(payload: encodeDirective(directive: ProsodyDirective(preset: .baseline), text: "Hi."))
             await MainActor.run { [weak self] in
                 guard let self, self.cachedActor == nil else { return }

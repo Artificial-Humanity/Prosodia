@@ -29,6 +29,8 @@ struct TuningFeedbackLogger {
         spans: [ProsodySpan],
         mode: String,
         modelName: String?,
+        actorRole: String,
+        speaker: String,
         globalConfig: ProsodiaConfig
     ) {
         let stars = String(repeating: "⭐", count: rating) + String(repeating: "☆", count: 5 - rating)
@@ -40,6 +42,7 @@ struct TuningFeedbackLogger {
         
         ### [\(dateString)] Rating: \(stars) (\(rating)/5)
         - **Mode**: \(mode)\(modelString)
+        - **Actor**: \(actorRole) | Speaker: \(speaker)
         - **Passage**: "\(text)"
         - **Parameters**: Valence: \(String(format: "%.2f", emotion.valence)) | Arousal: \(String(format: "%.2f", emotion.arousal)) | Tension: \(String(format: "%.2f", emotion.tension))
         - **Modulation**: Speed ×\(String(format: "%.2f", speed)) | Volume ×\(String(format: "%.2f", volume))

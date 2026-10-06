@@ -13,10 +13,13 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
     /// Initializes a new LiteRT Actor engine.
     ///
     /// - Parameters:
-    ///   - modelPath: Local URL to the `.tflite` model file.
+    ///   - modelPath: Local URL to the `.tflite` model file or split-model directory.
     ///   - configURL: Local URL to the configuration `config.json` containing vocab mapping (unused).
-    public init(modelPath: URL, configURL: URL) throws {
-        self.rustEngine = Kit.LiteRtActorEngine(modelPath: modelPath.path)
+    ///   - conditioning: The role's conditioning facts, or `nil` for none. With a block, the path
+    ///     must be a split-model directory whose graphs the block fits; the graphs load here.
+    /// - Throws: `SpeechEngineError` when the conditioning is refused or the split graphs fail to load.
+    public init(modelPath: URL, configURL: URL, conditioning: RoleConditioning? = nil) throws {
+        self.rustEngine = try Kit.LiteRtActorEngine.newWithConditioning(modelPath: modelPath.path, conditioning: conditioning)
     }
 
     /// Reclaims memory by releasing the loaded interpreter and model structures.
@@ -31,7 +34,7 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
         phonemeIds: [Int32],
         refS: StyleVector,
         speed: Float,
-        vat: [Float]?,
+        controls: SynthesisControls,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> ActorEngineOutput {
@@ -39,7 +42,7 @@ public final class LiteRtActorEngine: @unchecked Sendable, ProsodiaActorBackend 
             phonemeIds: phonemeIds,
             style: refS,
             speed: speed,
-            vat: vat,
+            controls: controls,
             durationScales: durationScales,
             f0Bias: f0Bias
         )

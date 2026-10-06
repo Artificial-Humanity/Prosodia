@@ -502,6 +502,16 @@ impl SplitGraphEngine {
         self.time_emb_dim
     }
 
+    /// The facts `controls::resolve_controls` checks a call against: speaker
+    /// count (1 for a single-speaker model), VAT width and `MAX_MEL`.
+    pub(crate) fn model_facts(&self) -> crate::controls::ModelFacts {
+        crate::controls::ModelFacts {
+            speaker_count: self.speaker_count().unwrap_or(1),
+            vat_dim: self.vat_dim,
+            max_mel: self.cfg.max_mel,
+        }
+    }
+
     /// Validates `cond` against this model and returns the speaker vector and
     /// the per-utterance VAT values (zeros when `cond.vat` is `None`).
     fn resolve_conditioning(&self, cond: &Conditioning) -> Result<(Option<&[f32]>, Vec<f32>), String> {
@@ -563,12 +573,15 @@ impl SplitGraphEngine {
     ///   realized (post-ceil) durations. This is where the control contract's
     ///   `DS:` channel finally reaches a model.
     /// * `mel_gain_db` — optional per-frame dB envelope added to the
-    ///   denormalized log-mel between the decoder and vocoder graphs — the
-    ///   energy channel. Measured 2026-07-14 (exploit-before-train): the
-    ///   vocoder is linear in log-mel gain to within 0.1 dB, so this hook is
-    ///   dB-exact, frame-addressable, and WER-safe to at least −12 dB; ramp
-    ///   envelope edges (e.g. raised-cosine over ~8 frames) to avoid clicks.
-    ///   Indexed in frames; entries beyond the envelope default to 0 dB.
+    ///   denormalized log-mel between the decoder and vocoder graphs: the
+    ///   **Volume** control (loudness), not the trained energy channel
+    ///   `vat[1]`, which changes the voice. Measured linear on the 22 kHz
+    ///   graphs (2026-07-14, 0 to −12 dB, within 0.1 dB) and on
+    ///   `derisk-energy-24k` (2026-10-04, −12 to +6 dB, worst 0.37 dB, WER
+    ///   flat). `LiteRtActorEngine` sends one constant envelope per call; a
+    ///   varying envelope should ramp its edges (e.g. raised-cosine over ~8
+    ///   frames) to avoid clicks. Indexed in frames; entries beyond the
+    ///   envelope default to 0 dB.
     /// * `noise` — optional pre-scaled initial state x₀ (n_feats × MAX_MEL),
     ///   for reproducible runs and reference-parity tests; when absent, x₀ is
     ///   sampled N(0, temperature²).
@@ -727,8 +740,9 @@ impl SplitGraphEngine {
             t += dt;
         }
 
-        // 6. Denormalize mel (masked), apply the per-frame energy envelope
-        //    (dB → natural-log mel units), vocode, clip, trim.
+        // 6. Denormalize mel (masked), apply the per-frame Volume envelope
+        //    (dB → natural-log mel units), vocode, clip (a guard: the 24 kHz
+        //    vocoder ends in tanh), trim.
         const DB_TO_LN: f32 = 0.115_129_255; // ln(10)/20
         let mut mel = vec![0.0f32; state_len];
         for c in 0..cfg.n_feats {
@@ -809,6 +823,7 @@ impl GaussianRng {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::SynthesisControls;
 
     const MODEL_DIR: &str = "../../../Sonora/huggingface/baseline-ljspeech-22k/litert-split";
     const DERISK_DIR: &str = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
@@ -1030,7 +1045,7 @@ mod tests {
     }
 
     /// Baseline parity, then the host hooks on the same render: per-token
-    /// duration dictation and the per-frame mel-gain (energy) envelope.
+    /// duration dictation and the per-frame mel-gain (Volume) envelope.
     #[test]
     fn baseline_matches_the_reference_pipeline() {
         let Some((engine, ids, z)) = assert_parity_with_reference(MODEL_DIR, "baseline-ljspeech-22k") else {
@@ -1084,5 +1099,87 @@ mod tests {
             let err = err.unwrap_or_else(|| panic!("a config with {marker} must be refused"));
             assert!(err.contains("contract-v2"), "{err}");
         }
+    }
+
+    /// The committed `actor-split-24k` conditioning block.
+    fn derisk_role() -> crate::controls::RoleConditioning {
+        crate::controls::parse_role_conditioning(crate::controls::committed_models_json(), "actor-split-24k".to_string())
+            .expect("the committed block parses")
+            .expect("actor-split-24k has a block")
+    }
+
+    /// Renders `controls` the way `LiteRtActorEngine` does — through
+    /// `resolve_controls` with the derisk role — but with fixed noise `z`.
+    fn render_resolved(engine: &SplitGraphEngine, ids: &[i32], z: &[f32], controls: &SynthesisControls) -> Result<Vec<f32>, String> {
+        let resolved = crate::controls::resolve_controls(controls, Some(&derisk_role()), engine.model_facts())?;
+        engine
+            .forward(
+                ids,
+                1.0,
+                None,
+                resolved.mel_gain_db.as_deref(),
+                0.667,
+                Some(z),
+                Conditioning { speaker: resolved.speaker, vat: resolved.vat.as_deref() },
+            )
+            .map(|out| out.audio)
+    }
+
+    #[test]
+    fn derisk_default_speaker_is_row_22_and_differs_from_row_0() {
+        let Some(engine) = load(DERISK_DIR) else { return };
+        let ids = ids_for(DERISK_DIR, PHRASE);
+        let z = fixed_noise(&engine, 0.667);
+        let row0 = render_resolved(&engine, &ids, &z, &SynthesisControls { speaker: Some(0), ..Default::default() }).unwrap();
+        let row22 = render_resolved(&engine, &ids, &z, &SynthesisControls { speaker: Some(22), ..Default::default() }).unwrap();
+        let default = render_resolved(&engine, &ids, &z, &SynthesisControls::default()).unwrap();
+        assert_eq!(default, row22, "speaker None must resolve to the role's default, row 22");
+        let c = cosine(&row0, &row22);
+        println!("derisk speakers 0 vs 22: cosine {c:.4}");
+        assert!(c < 0.95, "rows 0 and 22 rendered alike (cosine {c:.4})");
+    }
+
+    /// The valence refusal, checked against the model facts read from the
+    /// real derisk graphs.
+    #[test]
+    fn derisk_untrained_valence_is_refused_before_the_graph() {
+        let Some(engine) = load(DERISK_DIR) else { return };
+        let err = crate::controls::resolve_controls(
+            &SynthesisControls { vat: Some(vec![0.2, 0.0, 0.0]), ..Default::default() },
+            Some(&derisk_role()),
+            engine.model_facts(),
+        )
+        .unwrap_err();
+        assert!(err.contains("vat[0] (valence)"), "{err}");
+    }
+
+    /// Volume on the 24 kHz graphs: −6 dB lowers RMS by 6 dB within 0.5 dB
+    /// (Sonora's worst 24 kHz linearity error was 0.27 dB, at −12 dB).
+    #[test]
+    fn derisk_volume_is_db_exact() {
+        let Some(engine) = load(DERISK_DIR) else { return };
+        let ids = ids_for(DERISK_DIR, PHRASE);
+        let z = fixed_noise(&engine, 0.667);
+        let base = render_resolved(&engine, &ids, &z, &SynthesisControls::default()).unwrap();
+        let quiet = render_resolved(&engine, &ids, &z, &SynthesisControls { gain_db: Some(-6.0), ..Default::default() }).unwrap();
+        let delta = rms_db(&quiet) - rms_db(&base);
+        println!("derisk volume: requested -6.0 dB, measured {delta:.2} dB");
+        assert!((delta + 6.0).abs() < 0.5, "Volume: requested -6 dB, measured {delta:.2} dB");
+    }
+
+    /// The energy sweep at the role's default speaker, through the refusal
+    /// rules.
+    #[test]
+    fn derisk_energy_sweep_through_resolve_is_monotonic() {
+        let Some(engine) = load(DERISK_DIR) else { return };
+        let ids = ids_for(DERISK_DIR, PHRASE);
+        let z = fixed_noise(&engine, 0.667);
+        let render = |e: f32| {
+            render_resolved(&engine, &ids, &z, &SynthesisControls { vat: Some(vec![0.0, e, 0.0]), ..Default::default() })
+                .expect("energy is trained")
+        };
+        let (lo, mid, hi) = (rms_db(&render(-1.0)), rms_db(&render(0.0)), rms_db(&render(1.0)));
+        println!("derisk energy sweep at row 22: e=-1 {lo:.2} dB, e=0 {mid:.2} dB, e=+1 {hi:.2} dB");
+        assert!(lo < mid && mid < hi, "energy not monotonic: {lo:.2} / {mid:.2} / {hi:.2} dB");
     }
 }

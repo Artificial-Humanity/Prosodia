@@ -132,7 +132,13 @@ final class ReaderViewModel {
         let director: any Stage.DirectorInference
         let actor: any Stage.VocalActor
         
-        if let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) {
+        var built: (any Stage.VocalActor)?
+        do {
+            built = try VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir, conditioning: nil)
+        } catch {
+            print("Warning: vocal actor build failed: \(error)")
+        }
+        if let resolved = built {
             actor = resolved
         } else {
             actor = StubVocalActor()
