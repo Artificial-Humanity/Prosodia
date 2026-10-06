@@ -422,9 +422,14 @@ void uniffi_actor_fn_free_litertactorengine(void*_Nonnull ptr, RustCallStatus *_
 void*_Nonnull uniffi_actor_fn_constructor_litertactorengine_new(RustBuffer model_path, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CONSTRUCTOR_LITERTACTORENGINE_NEW_WITH_CONDITIONING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CONSTRUCTOR_LITERTACTORENGINE_NEW_WITH_CONDITIONING
+void*_Nonnull uniffi_actor_fn_constructor_litertactorengine_new_with_conditioning(RustBuffer model_path, RustBuffer conditioning, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_FORWARD
-RustBuffer uniffi_actor_fn_method_litertactorengine_forward(void*_Nonnull ptr, RustBuffer phoneme_ids, RustBuffer style, float speed, RustBuffer vat, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_actor_fn_method_litertactorengine_forward(void*_Nonnull ptr, RustBuffer phoneme_ids, RustBuffer style, float speed, RustBuffer controls, RustBuffer duration_scales, RustBuffer f0_bias, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_LITERTACTORENGINE_GET_TOKEN_LIMIT
@@ -465,6 +470,11 @@ RustBuffer uniffi_actor_fn_method_prosodiaactorengine_process_and_synthesize(voi
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORENGINE_RECLAIM_MEMORY
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORENGINE_RECLAIM_MEMORY
 void uniffi_actor_fn_method_prosodiaactorengine_reclaim_memory(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORENGINE_SET_SPEAKER
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_METHOD_PROSODIAACTORENGINE_SET_SPEAKER
+void uniffi_actor_fn_method_prosodiaactorengine_set_speaker(void*_Nonnull ptr, RustBuffer row, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_CLONE_PROSODIAACTORPIPELINE
@@ -686,6 +696,11 @@ RustBuffer uniffi_actor_fn_func_normalize_style_pack(RustBuffer pack, RustCallSt
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_BLEND_STRING
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_BLEND_STRING
 RustBuffer uniffi_actor_fn_func_parse_blend_string(RustBuffer input, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_ROLE_CONDITIONING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_ROLE_CONDITIONING
+RustBuffer uniffi_actor_fn_func_parse_role_conditioning(RustBuffer models_json, RustBuffer role, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_FN_FUNC_PARSE_SAFETENSORS
@@ -1008,6 +1023,12 @@ uint16_t uniffi_actor_checksum_func_parse_blend_string(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_ROLE_CONDITIONING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_ROLE_CONDITIONING
+uint16_t uniffi_actor_checksum_func_parse_role_conditioning(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_SAFETENSORS
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_FUNC_PARSE_SAFETENSORS
 uint16_t uniffi_actor_checksum_func_parse_safetensors(void
@@ -1065,6 +1086,12 @@ uint16_t uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORENGINE_RECLAIM_MEMORY
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORENGINE_RECLAIM_MEMORY
 uint16_t uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORENGINE_SET_SPEAKER
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_METHOD_PROSODIAACTORENGINE_SET_SPEAKER
+uint16_t uniffi_actor_checksum_method_prosodiaactorengine_set_speaker(void
     
 );
 #endif
@@ -1215,6 +1242,12 @@ uint16_t uniffi_actor_checksum_constructor_defaultmodelassetmanager_new(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_LITERTACTORENGINE_NEW
 #define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_LITERTACTORENGINE_NEW
 uint16_t uniffi_actor_checksum_constructor_litertactorengine_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_LITERTACTORENGINE_NEW_WITH_CONDITIONING
+#define UNIFFI_FFIDEF_UNIFFI_ACTOR_CHECKSUM_CONSTRUCTOR_LITERTACTORENGINE_NEW_WITH_CONDITIONING
+uint16_t uniffi_actor_checksum_constructor_litertactorengine_new_with_conditioning(void
     
 );
 #endif
