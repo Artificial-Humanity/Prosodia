@@ -48,13 +48,12 @@ Notes:
 For real speech in the harness on macOS, models are resolved via `prosodia_models.json` (`modelsBase: ../models`). The shared library lives at `/data/models` on ai-lab-0 (`/Volumes/data/models` from the Mac over NFS; renamed from `/data/reference/models` in the 2026-07-23 /data reorganization — the old workspace-root `Reference/models` symlink was removed with the umbrella repo):
 
 ```text
-/data/models/                         # this listing is the record (org/repo layout since 2026-07-12; /data/models since the 2026-07-23 /data reorg)
+/data/models/                         # Prosodia's entries only — other folders here belong to other projects (org/repo layout)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
 ├── sonora.tflite                     # Active Actor model — Sonora baseline-ljspeech-22k float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2; registry artifact renamed from v1-ljspeech 2026-07-22) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
-│   ├── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
-│   └── gemma-4-26B-A4B-it-qat-q4_0-gguf/  # Gemma 4 26B-A4B MoE (128 experts/8 active, 256K ctx), QAT q4_0 GGUF, Apache-2.0 — was the OFFLINE server-side Director for Sonora book_ingest labeling (ollama, :11434), since superseded there by a larger Gemma 4; NOT an on-device/Tuner model
+│   └── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 └── shivammehta25/
