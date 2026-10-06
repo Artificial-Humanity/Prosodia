@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import Kit
+import Actor
 import Stage
 
 // MARK: - ProductionRunner
@@ -28,42 +29,173 @@ final class ProductionRunner {
     private var cachedDirectorEmotionMode: EmotionSourceMode?
     private var cachedDirectorNarrationMode: Stage.NarrationMode?
 
-    /// Resolves the real StyleTTS2 actor, or `nil` when its model files are missing.
+    /// The actor role Speak renders with: `actor` or an `actor-*` key in
+    /// prosodia_models.json. The model path, ``canSpeak`` and the conditioning follow it.
+    private(set) var actorRole: String
+    /// What the role's model takes: split or not, and its trained VAT channels.
+    private(set) var roleCapabilities: ActorRoleCapabilities = .monolith
+    /// The role's `conditioning` block, parsed by the Rust core; nil when the role has
+    /// none or the config is the built-in fallback.
+    private(set) var conditioning: RoleConditioning?
+    /// Why the role cannot speak: a block that cannot be read, or an engine that
+    /// refused the model or the block. Shown in the Actor section.
+    private(set) var roleError: String?
+    /// The selected speaker row; nil is the role's `defaultSpeaker`.
+    private(set) var selectedSpeaker: UInt32?
+    /// The actor build in flight, at most one: Speak and the warm-up both await it.
+    /// `id` tells a finished build whether this entry is still its own.
+    private var buildTask: (role: String, id: Int, task: Task<(any Stage.VocalActor)?, Never>)?
+    private var buildCount = 0
+    /// The last speaker change; each change waits for the one before it.
+    private var speakerTask: Task<Void, Never>?
+    /// Set by ``stopActive()`` so a Speak still waiting for its actor does not start.
+    private var stopRequested = false
+
+    private static let actorRoleKey = "harnessActorRole"
+
+    /// The speaker as feedback and Copy Config record it: "LibriTTS-R <id>" for a
+    /// picked row, "default (row N)" for the role's default, "—" when the role has
+    /// no speaker table (no `conditioning` block).
+    var speakerDescription: String {
+        guard let conditioning = conditioning else { return "—" }
+        guard let row = selectedSpeaker else { return "default (row \(conditioning.defaultSpeaker))" }
+        let labels = conditioning.speakerLabels
+        return Int(row) < labels.count ? "LibriTTS-R \(labels[Int(row)])" : "row \(row)"
+    }
+
+    init() {
+        let stored = UserDefaults.standard.string(forKey: Self.actorRoleKey)
+        let roles = ProsodiaModelsManager.shared.actorRoles
+        actorRole = stored.flatMap { roles.contains($0) ? $0 : nil } ?? "actor"
+        refreshRole()
+    }
+
+    /// Switches the actor role: re-reads its facts, resets the speaker to the new
+    /// role's default (a row chosen for one model must never reach another), drops
+    /// the cached actor and warms up the new one.
+    func selectActorRole(_ role: String) {
+        guard role != actorRole else { return }
+        actorRole = role
+        UserDefaults.standard.set(role, forKey: Self.actorRoleKey)
+        selectedSpeaker = nil
+        refreshRole()
+        if let previous = cachedActor {
+            cachedActor = nil
+            Task { await previous.reclaimMemory() }
+        }
+        warmUpActor()
+    }
+
+    /// Selects a speaker row (nil = the role's default) and applies it to the cached
+    /// actor; actors built later get it when they are built.
+    func selectSpeaker(_ row: UInt32?) {
+        selectedSpeaker = row
+        applySpeaker()
+    }
+
+    /// Applies the current ``selectedSpeaker`` to the cached actor. Each call runs after
+    /// the one before it and reads the speaker when it runs, so the latest choice wins.
+    @discardableResult
+    private func applySpeaker() -> Task<Void, Never> {
+        let previous = speakerTask
+        let task = Task {
+            await previous?.value
+            guard let actor = cachedActor else { return }
+            await actor.setSpeaker(selectedSpeaker)
+        }
+        speakerTask = task
+        return task
+    }
+
+    /// Re-reads the selected role: its conditioning block (parsed by Rust from the
+    /// loaded prosodia_models.json text) and whether its path is a split model.
+    private func refreshRole() {
+        conditioning = nil
+        roleError = nil
+        if let text = ProsodiaModelsManager.shared.rawText {
+            do {
+                conditioning = try parseRoleConditioning(modelsJson: text, role: actorRole)
+            } catch {
+                roleError = "\(actorRole): its conditioning block cannot be read — \(error)"
+            }
+        }
+        roleCapabilities = ActorRoleCapabilities(
+            isSplit: LiteRtVocalActorProvider.isSplitModelDirectory(modelPath),
+            hasConditioning: conditioning != nil,
+            trainedVat: Set(conditioning?.trainedVat ?? [])
+        )
+    }
+
+    /// Resolves the real actor for the selected role, or `nil` when its model files
+    /// are missing or the engine refuses them (the reason goes to ``roleError``).
     ///
     /// Returns `nil` rather than falling back to a placeholder renderer: a missing
     /// production model must surface as a disabled "Speak" affordance (see ``canSpeak``),
     /// never as the stub's audible 440 Hz test tone masquerading as synthesized speech.
     /// Only a genuinely resolved actor is cached, so dropping the model into `Models/`
     /// and re-triggering Speak picks it up without an app relaunch.
-    private func getActor() -> (any Stage.VocalActor)? {
-        if let cached = cachedActor {
-            return cached
+    private func getActor() async -> (any Stage.VocalActor)? {
+        if cachedActor == nil {
+            _ = await actorBuild(priority: .userInitiated).value
         }
-        let modelFile = Self.resolvedModelPath
-        let voiceDir = Self.resolvedVoiceDirectory
-
-        guard let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) else {
-            return nil
-        }
-        cachedActor = resolved
-        return resolved
+        guard let actor = cachedActor else { return nil }
+        // The speaker is set before anything renders with this actor.
+        await applySpeaker().value
+        return actor
     }
 
+    /// The build of the selected role's actor: the one in flight, or a new one.
+    ///
+    /// The engine is built off the main actor: with a conditioning block it loads and
+    /// checks the graphs while it is built. The result is cached here, once, and only
+    /// while the role is still selected and nothing is cached; a surplus actor is
+    /// reclaimed. The task returns the role's cached actor, or `nil`.
+    private func actorBuild(priority: TaskPriority) -> Task<(any Stage.VocalActor)?, Never> {
+        let role = actorRole
+        if let build = buildTask, build.role == role {
+            return build.task
+        }
+        let modelFile = modelPath
+        let voiceDir = Self.resolvedVoiceDirectory
+        let roleConditioning = conditioning
+        buildCount += 1
+        let id = buildCount
+        let task = Task { () async -> (any Stage.VocalActor)? in
+            let built: (any Stage.VocalActor)?
+            do {
+                built = try await Task.detached(priority: priority) {
+                    try VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir, conditioning: roleConditioning)
+                }.value
+            } catch {
+                if buildTask?.id == id { buildTask = nil }
+                if actorRole == role {
+                    roleError = "\(role): the engine refused it — \(error)"
+                }
+                return nil
+            }
+            if buildTask?.id == id { buildTask = nil }
+            guard let made = built else { return nil }
+            guard actorRole == role, cachedActor == nil else {
+                await made.reclaimMemory()
+                return actorRole == role ? cachedActor : nil
+            }
+            cachedActor = made
+            applySpeaker()
+            return made
+        }
+        buildTask = (role: role, id: id, task: task)
+        return task
+    }
 
-    /// Loads the actor and runs one throwaway forward in the background so the
+    /// Builds the actor in the background and runs one throwaway forward so the
     /// first Speak doesn't pay the model load and XNNPACK weight packing.
     /// No-op when the model is absent or an actor is already cached.
     func warmUpActor() {
         guard cachedActor == nil, canSpeak else { return }
-        let modelFile = Self.resolvedModelPath
-        let voiceDir = Self.resolvedVoiceDirectory
+        let build = actorBuild(priority: .utility)
         Task.detached(priority: .utility) {
-            guard let resolved = VocalActorRegistry.shared.makeActor(for: modelFile, voiceDirectoryURL: voiceDir) else { return }
-            _ = resolved.render(payload: encodeDirective(directive: ProsodyDirective(preset: .baseline), text: "Hi."))
-            await MainActor.run { [weak self] in
-                guard let self, self.cachedActor == nil else { return }
-                self.cachedActor = resolved
-            }
+            guard let actor = await build.value else { return }
+            _ = actor.render(payload: encodeDirective(directive: ProsodyDirective(preset: .baseline), text: "Hi."))
         }
     }
 
@@ -74,7 +206,7 @@ final class ProductionRunner {
         // after the first Speak. Building a stub is free; only the Gemma path
         // needs caching.
         guard config.emotionMode == .director else {
-            return config.makeDirector(model: model)
+            return config.makeDirector(model: model, capabilities: roleCapabilities)
         }
         if let cached = cachedDirector,
            cachedDirectorModel == model,
@@ -83,7 +215,7 @@ final class ProductionRunner {
             return cached
         }
         
-        let rawDirector = config.makeDirector(model: model)
+        let rawDirector = config.makeDirector(model: model, capabilities: roleCapabilities)
         let director: any Stage.DirectorInference
         if config.emotionMode == .director, let model = model {
             director = CachingDirectorEngine(base: rawDirector, modelId: model.id, narrationMode: config.mlxNarrationMode)
@@ -111,8 +243,9 @@ final class ProductionRunner {
     func reclaimMemory() async {
         await reclaimDirectorMemory()
         if let actor = cachedActor {
-            await actor.reclaimMemory()
+            // Dropped before the await, so no Speak picks up an actor being reclaimed.
             cachedActor = nil
+            await actor.reclaimMemory()
         }
     }
 
@@ -147,22 +280,28 @@ final class ProductionRunner {
         ProsodiaModelsManager.shared.modelsBase
     }
 
-    nonisolated static var resolvedModelPath: URL {
-        ProsodiaModelsManager.shared.url(forRole: "actor")
+    /// The model path of an actor role.
+    nonisolated static func modelPath(forRole role: String) -> URL {
+        ProsodiaModelsManager.shared.url(forRole: role)
             ?? modelsBase.appendingPathComponent("actor.tflite")
+    }
+
+    /// The selected role's model path.
+    var modelPath: URL {
+        Self.modelPath(forRole: actorRole)
     }
 
     nonisolated static var resolvedVoiceDirectory: URL {
         ProsodiaModelsManager.shared.url(forRole: "voices") ?? modelsBase
     }
 
-    /// Whether a real StyleTTS2 actor model is present and resolvable.
+    /// Whether the selected role can speak: no ``roleError``, and a real actor model
+    /// is present and resolvable.
     ///
     /// Gates every "Speak" control. When false, the harness still previews VAD/voice-blend
-    /// metadata via the silent stub, and the section footer tells the user to add the model
-    /// under `Models/` — instead of emitting a misleading placeholder tone.
+    /// metadata via the silent stub, and the section footer says why.
     var canSpeak: Bool {
-        VocalActorRegistry.shared.canMakeActor(for: Self.resolvedModelPath)
+        roleError == nil && VocalActorRegistry.shared.canMakeActor(for: modelPath)
     }
 
     /// Synthesizes one sample passage with the configured Director and Actor.
@@ -172,9 +311,10 @@ final class ProductionRunner {
         if config.canUseMlx {
             guard let model, model.isAvailable else { return }
         }
-        guard let actor = getActor() else { return }
-
+        // Speaking from here on, through the actor build, so a second Speak and the
+        // role and speaker pickers wait until this one is done.
         isSpeaking = true
+        stopRequested = false
         activeModel = model
         defer {
             isSpeaking = false
@@ -182,6 +322,7 @@ final class ProductionRunner {
                 await preview(config: config, model: model)
             }
         }
+        guard let actor = await getActor(), !stopRequested else { return }
 
         let document = InMemoryBookDocument(chapters: [text])
         let director = getDirector(config: config, model: model)
@@ -198,6 +339,7 @@ final class ProductionRunner {
     }
 
     func stopActive() async {
+        stopRequested = true
         await activePlaybackController?.stop()
         activePlaybackController = nil
         await activePreviewController?.stop()

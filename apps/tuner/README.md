@@ -66,12 +66,17 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
 > (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`): host-side Euler ODE, real per-token
 > durations from `logw` (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
-> The `actor-split` role in `prosodia_models.json` has the path
-> `"../Sonora/huggingface/baseline-ljspeech-22k/litert-split"` (relative to `modelsBase`, so it
-> resolves to the workspace's `Sonora/huggingface/` checkout). To audition it, set the `actor`
-> role's path to that exact value. That set is single-speaker, 22.05 kHz. The multi-speaker
-> 24 kHz `derisk-energy-24k` export is the `actor-split-24k` role; the runtime loads it, and the
-> apps use speaker 0 with neutral VAT until speaker and VAT selection reach the FFI.
+> The **Actor role** picker at the top of the harness chooses what Speak renders with: `actor` (the
+> e2e monolith), `actor-split` (`baseline-ljspeech-22k`, single-speaker, 22.05 kHz) or
+> `actor-split-24k` (`derisk-energy-24k`, 247 speakers, 24 kHz). On `actor-split-24k` a **Speaker**
+> picker lists the LibriTTS-R readers (default "LibriTTS-R 229", row 22), and only **Energy** — the
+> one VAT channel that model trained — is live: Valence and Tension are held at 0, the value sent. A
+> split role without a `conditioning` block (`actor-split`) holds all three at 0. **Volume** is
+> loudness (a mel-domain gain on split roles, a PCM gain on the monolith) and is bounded to
+> 0.252–1.995 (−12…+6 dB) on split roles. **Energy** changes the voice itself only on a split role
+> that trains it (`actor-split-24k`); on the `actor` monolith, which has no `vat` input, Energy does
+> not reach the model and moves only the `AcousticMatrix`-derived speed and volume. Feedback logs
+> and Copy Config record the actor role and the speaker.
 
 > [!IMPORTANT]
 > **Model pins.** `prosodia_models.json` records the registry checkout's git revision
@@ -85,6 +90,11 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > `baseline-ljspeech-22k/checkpoint_epoch=199_e2e_float32.tflite` and `config.json` is
 > `baseline-ljspeech-22k/config.json`, so the registry revision does not cover them; only their
 > hashes do.
+> The `conditioning` block of `actor-split-24k` (trained VAT channels, default speaker, speaker
+> labels) is not covered by these pins. The test
+> `controls::tests::speaker_labels_match_their_sonora_source` checks the labels against Sonora's
+> `speakers.json` (path and sha256 in the block) when that file exists;
+> `PROSODIA_REQUIRE_SONORA_SOURCES=1` turns its skip into a failure.
 
 > [!NOTE]
 > **Model paths resolve through `prosodia_models.json`** (repo root — role-based config, commit

@@ -16,7 +16,7 @@ public protocol ProsodiaActorBackend: AnyObject, Sendable {
         phonemeIds: [Int32],
         refS: StyleVector,
         speed: Float,
-        vat: [Float]?,
+        controls: SynthesisControls,
         durationScales: [Float]?,
         f0Bias: [Float]?
     ) throws -> ActorEngineOutput

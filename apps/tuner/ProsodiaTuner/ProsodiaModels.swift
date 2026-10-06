@@ -57,6 +57,10 @@ public final class ProsodiaModelsManager: Sendable {
     public let modelsBase: URL
     /// Where the config was loaded from (nil when running on fallback).
     public let configFileURL: URL?
+    /// The text of the loaded `prosodia_models.json`, for the Rust parser of per-role
+    /// blocks (`parseRoleConditioning`); nil on the built-in fallback, which has no
+    /// conditioning.
+    public let rawText: String?
 
     private init() {
         let fileManager = FileManager.default
@@ -77,10 +81,12 @@ public final class ProsodiaModelsManager: Sendable {
 
         var loaded: ProsodiaModels?
         var loadedFrom: URL?
+        var loadedText: String?
         for url in candidates where fileManager.fileExists(atPath: url.path) {
             do {
                 let data = try Data(contentsOf: url)
                 loaded = try JSONDecoder().decode(ProsodiaModels.self, from: data)
+                loadedText = String(data: data, encoding: .utf8)
                 loadedFrom = url
                 print("[ProsodiaModelsManager] Loaded model roles from \(url.path)")
                 break
@@ -95,6 +101,7 @@ public final class ProsodiaModelsManager: Sendable {
         let config = loaded ?? .fallback
         self.config = config
         self.configFileURL = loadedFrom
+        self.rawText = loadedText
 
         // `.standardized` removes `..` lexically. `.standardizedFileURL` would first
         // resolve symlinks in any path containing `..`, so with `models` symlinked
@@ -132,6 +139,16 @@ public final class ProsodiaModelsManager: Sendable {
     /// Director roles in seeding order, restricted to configured entries.
     public var directorRoles: [String] {
         (config.directorRoleOrder ?? []).filter { config.roles[$0] != nil }
+    }
+
+    /// Actor roles: the key `actor` and keys starting with `actor-`, `actor` first.
+    public var actorRoles: [String] {
+        config.roles.keys
+            .filter { $0 == "actor" || $0.hasPrefix("actor-") }
+            .sorted { lhs, rhs in
+                if lhs == "actor" || rhs == "actor" { return lhs == "actor" && rhs != "actor" }
+                return lhs < rhs
+            }
     }
 
     /// Role whose configured artifact has the given filename, if any — used to

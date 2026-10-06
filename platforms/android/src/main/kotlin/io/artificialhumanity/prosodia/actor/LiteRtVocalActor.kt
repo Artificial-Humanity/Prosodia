@@ -4,6 +4,7 @@ import uniffi.actor.ActorEngineOutput
 import uniffi.actor.PipelineOutput
 import uniffi.actor.ProsodiaSpeechEngine
 import uniffi.actor.StyleVector
+import uniffi.actor.SynthesisControls
 
 /**
  * Bridges the UniFFI callback interface for ProsodiaSpeechEngine to the LiteRtActorEngine backend.
@@ -19,7 +20,7 @@ class KotlinSpeechEngine(
         phonemeIds: List<Int>,
         style: StyleVector,
         speed: Float,
-        vat: List<Float>?,
+        controls: SynthesisControls,
         durationScales: List<Float>?,
         f0Bias: List<Float>?
     ): ActorEngineOutput {
@@ -27,7 +28,7 @@ class KotlinSpeechEngine(
             phonemeIds = phonemeIds,
             style = style,
             speed = speed,
-            vat = vat,
+            controls = controls,
             durationScales = durationScales,
             f0Bias = f0Bias
         )

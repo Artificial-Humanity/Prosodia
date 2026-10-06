@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use stage::prosody_payload::ProsodySpan;
 use crate::g2p::{ProsodiaG2PProcessor, TokenPhonemes, MToken};
 use crate::asset_manager::StyleVector;
-use crate::engine::ProsodiaSpeechEngine;
+use crate::engine::{ProsodiaSpeechEngine, SynthesisControls};
 use crate::voice_loader::VoiceLoader;
 
 static WARNED_PHONEMES: Lazy<Mutex<HashSet<char>>> = Lazy::new(|| Mutex::new(HashSet::new()));
@@ -431,7 +431,7 @@ impl ProsodiaActorPipeline {
                     self.tokenize(&trimmed_phonemes, is_matcha),
                     style,
                     speed,
-                    None,
+                    SynthesisControls::default(),
                     chunk_duration_scales,
                     resolved_f0_bias,
                 )
@@ -633,7 +633,7 @@ impl ProsodiaActorPipeline {
                     self.tokenize(&mapped_phonemes, is_matcha),
                     style,
                     speed,
-                    None,
+                    SynthesisControls::default(),
                     Some(duration_scales),
                     Some(f0_bias),
                 )
@@ -779,7 +779,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None, None)
+                .forward(self.tokenize(&chunk, is_matcha), style, speed, SynthesisControls::default(), None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -856,7 +856,7 @@ impl ProsodiaActorPipeline {
             last_style = Some(style.clone());
 
             let output = speech_engine
-                .forward(self.tokenize(&chunk, is_matcha), style, speed, None, None, None)
+                .forward(self.tokenize(&chunk, is_matcha), style, speed, SynthesisControls::default(), None, None)
                 .map_err(|e| PipelineError::SpeechEngine {
                     msg: e.to_string(),
                 })?;
@@ -1066,7 +1066,7 @@ mod tests {
             phoneme_ids: Vec<i32>,
             _style: StyleVector,
             _speed: f32,
-            _vat: Option<Vec<f32>>,
+            _controls: SynthesisControls,
             _duration_scales: Option<Vec<f32>>,
             _f0_bias: Option<Vec<f32>>,
         ) -> Result<ActorEngineOutput, SpeechEngineError> {
@@ -1222,7 +1222,7 @@ mod tests {
             phoneme_ids: Vec<i32>,
             _style: StyleVector,
             _speed: f32,
-            _vat: Option<Vec<f32>>,
+            _controls: SynthesisControls,
             _duration_scales: Option<Vec<f32>>,
             _f0_bias: Option<Vec<f32>>,
         ) -> Result<ActorEngineOutput, SpeechEngineError> {

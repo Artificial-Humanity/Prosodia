@@ -36,6 +36,7 @@ macro_rules! checksums {
 checksums! {
     uniffi_actor_checksum_constructor_defaultmodelassetmanager_new,
     uniffi_actor_checksum_constructor_litertactorengine_new,
+    uniffi_actor_checksum_constructor_litertactorengine_new_with_conditioning,
     uniffi_actor_checksum_constructor_prosodiaactorengine_new,
     uniffi_actor_checksum_constructor_prosodiaactorpipeline_new,
     uniffi_actor_checksum_constructor_prosodiaspeech_new,
@@ -46,6 +47,7 @@ checksums! {
     uniffi_actor_checksum_func_chunk_tokens,
     uniffi_actor_checksum_func_normalize_style_pack,
     uniffi_actor_checksum_func_parse_blend_string,
+    uniffi_actor_checksum_func_parse_role_conditioning,
     uniffi_actor_checksum_func_parse_safetensors,
     uniffi_actor_checksum_func_slice_style_row,
     uniffi_actor_checksum_method_audiochunkcallback_on_audio_chunk,
@@ -60,6 +62,7 @@ checksums! {
     uniffi_actor_checksum_method_modelassetmanager_resolve_casting_profile,
     uniffi_actor_checksum_method_prosodiaactorengine_process_and_synthesize,
     uniffi_actor_checksum_method_prosodiaactorengine_reclaim_memory,
+    uniffi_actor_checksum_method_prosodiaactorengine_set_speaker,
     uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_phonemes,
     uniffi_actor_checksum_method_prosodiaactorpipeline_chunk_tokens,
     uniffi_actor_checksum_method_prosodiaactorpipeline_prewarm,

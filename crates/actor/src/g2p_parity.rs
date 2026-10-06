@@ -33,7 +33,7 @@
 //!   contractions, so a mismatch here is distance from the spec and not
 //!   necessarily an audible error. Do not tune toward the old behaviour.
 
-use crate::engine::{ActorEngineOutput, ProsodiaActorEngine, ProsodiaSpeechEngine, SpeechEngineError};
+use crate::engine::{ActorEngineOutput, ProsodiaActorEngine, ProsodiaSpeechEngine, SpeechEngineError, SynthesisControls};
 use crate::g2p::{MToken, ProsodiaG2PProcessor, ProsodiaSpeech};
 use crate::pipeline::{PipelineOutput, ProsodiaActorPipeline};
 use crate::asset_manager::StyleVector;
@@ -71,7 +71,7 @@ impl ProsodiaSpeechEngine for Recorder {
         phoneme_ids: Vec<i32>,
         _style: StyleVector,
         _speed: f32,
-        _vat: Option<Vec<f32>>,
+        _controls: SynthesisControls,
         _duration_scales: Option<Vec<f32>>,
         _f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {

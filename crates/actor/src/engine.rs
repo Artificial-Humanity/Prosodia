@@ -7,7 +7,7 @@ use crate::tflite;
 const MATCHA_CFM_TEMPERATURE: f32 = 0.667;
 const STYLETTS2_HOP_SIZE: f64 = 512.0;
 const DEFAULT_TOKEN_DURATION: i32 = 8;
-const DEFAULT_VAT: [f32; 3] = [0.5, 0.5, 0.5];
+pub(crate) const DEFAULT_VAT: [f32; 3] = [0.5, 0.5, 0.5];
 
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct ActorEngineOutput {
@@ -21,6 +21,19 @@ pub enum SpeechEngineError {
     Inference { msg: String },
 }
 
+/// Per-call synthesis controls, passed through `forward`. The Swift and
+/// Kotlin bridges pass the record through without reading it, so a new field
+/// changes the record and the bindings, not the bridges.
+#[derive(Clone, Debug, Default, PartialEq, uniffi::Record)]
+pub struct SynthesisControls {
+    /// Row of the model's speaker table; `None` means the role's default.
+    pub speaker: Option<u32>,
+    /// [valence, arousal, tension] for the whole call.
+    pub vat: Option<Vec<f32>>,
+    /// Gain in dB for the whole call; `None` means 0 dB.
+    pub gain_db: Option<f32>,
+}
+
 #[uniffi::export(callback_interface)]
 pub trait ProsodiaSpeechEngine: Send + Sync {
     fn synthesize(&self, input: PipelineOutput) -> ActorEngineOutput;
@@ -30,7 +43,7 @@ pub trait ProsodiaSpeechEngine: Send + Sync {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
-        vat: Option<Vec<f32>>,
+        controls: SynthesisControls,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError>;
@@ -55,24 +68,48 @@ pub trait AudioSink: Send + Sync {
 pub struct ProsodiaActorEngine {
     pub pipeline: Arc<crate::pipeline::ProsodiaActorPipeline>,
     pub speech_engine: Box<dyn ProsodiaSpeechEngine>,
+    /// The speaker row the app selected; `None` is the role's default. Read
+    /// once at the start of each span.
+    speaker: Mutex<Option<u32>>,
 }
 
 #[uniffi::export]
 impl ProsodiaActorEngine {
     #[uniffi::constructor]
     pub fn new(pipeline: Arc<crate::pipeline::ProsodiaActorPipeline>, speech_engine: Box<dyn ProsodiaSpeechEngine>) -> Arc<Self> {
-        Arc::new(Self { pipeline, speech_engine })
+        Arc::new(Self { pipeline, speech_engine, speaker: Mutex::new(None) })
+    }
+
+    /// Selects the speaker row for the spans that start after this call;
+    /// `None` restores the role's default.
+    pub fn set_speaker(&self, row: Option<u32>) {
+        *self.speaker.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = row;
     }
 
     pub fn process_and_synthesize(&self, span: stage::prosody_payload::ProsodySpan) -> Result<ActorEngineOutput, SpeechEngineError> {
+        // One set of controls per span, built before any work: the speaker the
+        // app selected, the span's VAT, and its `G:` in dB (`GB:` stays
+        // dropped). G is read from the span, not from
+        // `PipelineOutput.gain_multiplier`, whose default of 1.0 hides an
+        // absent `G:`.
+        let gain_db = match span.acoustics.as_ref().and_then(|a| a.gain_multiplier) {
+            Some(g) => Some(
+                crate::controls::gain_db_from_multiplier(g).map_err(|msg| SpeechEngineError::Inference { msg })?,
+            ),
+            None => None,
+        };
+        let controls = SynthesisControls {
+            speaker: *self.speaker.lock().unwrap_or_else(|poisoned| poisoned.into_inner()),
+            vat: Some(vec![
+                span.emotion.valence as f32,
+                span.emotion.arousal as f32,
+                span.emotion.tension as f32,
+            ]),
+            gain_db,
+        };
+
         let is_matcha = self.speech_engine.is_matcha();
         let pipeline_out = self.pipeline.process_span(span.clone());
-
-        let vat = Some(vec![
-            span.emotion.valence as f32,
-            span.emotion.arousal as f32,
-            span.emotion.tension as f32,
-        ]);
 
         let duration_scales: Option<Vec<f32>> = span.acoustics.as_ref().and_then(|a| {
             a.token_duration_scales.as_ref().map(|v| v.iter().map(|&x| x as f32).collect())
@@ -131,7 +168,7 @@ impl ProsodiaActorEngine {
                 phoneme_ids,
                 pipeline_out.style.clone(),
                 pipeline_out.speed_multiplier as f32,
-                vat.clone(),
+                controls.clone(),
                 if single_chunk { duration_scales.clone() } else { None },
                 if single_chunk { f0_bias.clone() } else { None },
             )?;
@@ -190,21 +227,59 @@ pub struct LiteRtActorEngine {
     /// directory (textenc/decoder/vocoder graphs + emb.bin + config.json)
     /// instead of a single .tflite file.
     split: Mutex<Option<crate::split_engine::SplitGraphEngine>>,
+    /// The role's conditioning facts, checked against the graphs at every
+    /// split load. `None` treats no VAT channel as trained and defaults to
+    /// speaker row 0 (fail closed).
+    conditioning: Option<crate::controls::RoleConditioning>,
+    /// The controls `forward_split` last resolved, for the seam tests.
+    #[cfg(test)]
+    last_resolved: Mutex<Option<crate::controls::ResolvedControls>>,
 }
 
 #[uniffi::export]
 impl LiteRtActorEngine {
     #[uniffi::constructor]
     pub fn new(model_path: String) -> Arc<Self> {
-        Arc::new(Self {
-            model_path,
-            inner: Mutex::new(None),
-            split: Mutex::new(None),
-        })
+        Self::build(model_path, None)
+    }
+
+    /// An engine with its role's conditioning facts (`parse_role_conditioning`).
+    /// With a block, `model_path` must be a split-model directory, and the
+    /// graphs load now, so a block that does not fit them is refused here
+    /// rather than at the first render. `None` is the same as `new`.
+    #[uniffi::constructor]
+    pub fn new_with_conditioning(
+        model_path: String,
+        conditioning: Option<crate::controls::RoleConditioning>,
+    ) -> Result<Arc<Self>, SpeechEngineError> {
+        let engine = Self::build(model_path, conditioning);
+        if engine.conditioning.is_some() {
+            if !engine.is_split() {
+                return Err(SpeechEngineError::Inference {
+                    msg: format!(
+                        "conditioning refused: {} is not a split-model directory, and only split roles take a conditioning block",
+                        engine.model_path
+                    ),
+                });
+            }
+            drop(engine.get_or_init_split()?);
+        }
+        Ok(engine)
     }
 }
 
 impl LiteRtActorEngine {
+    fn build(model_path: String, conditioning: Option<crate::controls::RoleConditioning>) -> Arc<Self> {
+        Arc::new(Self {
+            model_path,
+            inner: Mutex::new(None),
+            split: Mutex::new(None),
+            conditioning,
+            #[cfg(test)]
+            last_resolved: Mutex::new(None),
+        })
+    }
+
     fn is_split(&self) -> bool {
         crate::split_engine::is_split_model_dir(std::path::Path::new(&self.model_path))
     }
@@ -220,6 +295,11 @@ impl LiteRtActorEngine {
             let engine =
                 crate::split_engine::SplitGraphEngine::new(std::path::Path::new(&self.model_path))
                     .map_err(|msg| SpeechEngineError::Inference { msg })?;
+            if let Some(conditioning) = &self.conditioning {
+                crate::controls::validate_conditioning(conditioning, engine.model_facts()).map_err(|msg| {
+                    SpeechEngineError::Inference { msg: format!("{}: {msg}", self.model_path) }
+                })?;
+            }
             *guard = Some(engine);
         }
         Ok(guard)
@@ -229,25 +309,30 @@ impl LiteRtActorEngine {
         &self,
         phoneme_ids: Vec<i32>,
         speed: f32,
+        controls: &SynthesisControls,
         duration_scales: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
         let guard = self.get_or_init_split()?;
         let engine = guard.as_ref().unwrap();
-        // mel_gain_db (the energy channel) is not routed from the payload yet:
-        // wiring G:/per-frame energy through ProsodiaSpeechEngine::forward is a
-        // cross-stack FFI signature change (Swift + Kotlin implementers) that
-        // lands with the milestone-3 VAT conditioning rework of this seam.
+        // Speaker, VAT and gain, checked against the role's conditioning and
+        // the graphs; refused, never adjusted. The gain is Volume — a constant
+        // mel-domain envelope in dB — not the trained energy channel vat[1].
+        let resolved =
+            crate::controls::resolve_controls(controls, self.conditioning.as_ref(), engine.model_facts())
+                .map_err(|msg| SpeechEngineError::Inference { msg })?;
+        #[cfg(test)]
+        {
+            *self.last_resolved.lock().unwrap() = Some(resolved.clone());
+        }
         let out = engine
             .forward(
                 &phoneme_ids,
                 speed,
                 duration_scales.as_deref(),
-                None,
+                resolved.mel_gain_db.as_deref(),
                 MATCHA_CFM_TEMPERATURE,
                 None,
-                // Speaker 0, neutral VAT: speaker selection and the payload's
-                // VAT reach the split runtime in a later change.
-                crate::split_engine::Conditioning::NEUTRAL,
+                crate::split_engine::Conditioning { speaker: resolved.speaker, vat: resolved.vat.as_deref() },
             )
             .map_err(|msg| SpeechEngineError::Inference { msg })?;
         // Same output contract as the monolithic Matcha path: resample the
@@ -365,17 +450,17 @@ impl LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
-        vat: Option<Vec<f32>>,
+        controls: SynthesisControls,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
         if self.is_split() {
-            // Multi-graph Plan A path. The split recipe is single-speaker with
-            // no F0 predictor input yet: style/vat/f0_bias do not apply (the
-            // VAT-conditioned actor is milestone 3); duration_scales DO apply,
-            // host-side, on the realized durations.
-            let _ = (&style, &vat, &f0_bias);
-            return self.forward_split(phoneme_ids, speed, duration_scales);
+            // Multi-graph Plan A path: speaker, VAT and gain (Volume) are
+            // resolved against the role's conditioning in `forward_split`;
+            // duration_scales apply host-side on the realized durations. The
+            // split graphs take no style or F0 input.
+            let _ = (&style, &f0_bias);
+            return self.forward_split(phoneme_ids, speed, &controls, duration_scales);
         }
         let mut wrapper_guard = self.get_or_init_interpreter()?;
         let wrapper = wrapper_guard.as_mut().unwrap();
@@ -435,6 +520,11 @@ impl LiteRtActorEngine {
                     msg: "LiteRT actor model lacks expected phonemes/x input tensor.".to_string(),
                 });
             }
+
+            // Controls on a monolith: no speaker table, VAT only as the graph's
+            // own input takes it, gain on the PCM after the graph.
+            let mono = crate::controls::resolve_monolith_controls(&controls, vat_index != -1)
+                .map_err(|msg| SpeechEngineError::Inference { msg })?;
 
             // 2. Handle input tensor sizing
             if is_matcha {
@@ -617,10 +707,7 @@ impl LiteRtActorEngine {
                 if vat_index != -1 {
                     let vat_tensor = tflite::TfLiteInterpreterGetInputTensor(interpreter, vat_index);
                     if !vat_tensor.is_null() {
-                        let vat_data = match vat {
-                            Some(ref v) if v.len() == 3 => [v[0], v[1], v[2]],
-                            _ => DEFAULT_VAT,
-                        };
+                        let vat_data = mono.vat.unwrap_or(DEFAULT_VAT);
                         tflite::TfLiteTensorCopyFromBuffer(
                             vat_tensor,
                             vat_data.as_ptr() as *const std::ffi::c_void,
@@ -764,6 +851,8 @@ impl LiteRtActorEngine {
                 }
             }
 
+            crate::controls::apply_pcm_gain(&mut output_pcm, mono.gain);
+
             Ok(ActorEngineOutput {
                 audio: output_pcm,
                 pred_dur,
@@ -786,11 +875,11 @@ impl LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
-        vat: Option<Vec<f32>>,
+        controls: SynthesisControls,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
-        self.forward_impl(phoneme_ids, style, speed, vat, duration_scales, f0_bias)
+        self.forward_impl(phoneme_ids, style, speed, controls, duration_scales, f0_bias)
     }
 
     pub fn reclaim_memory(&self) {
@@ -806,6 +895,16 @@ impl LiteRtActorEngine {
     }
 }
 
+/// Test-only access, outside every exported `impl`, so test builds export no
+/// extra symbol.
+#[cfg(test)]
+impl LiteRtActorEngine {
+    /// The controls `forward_split` last resolved.
+    fn last_resolved_controls(&self) -> Option<crate::controls::ResolvedControls> {
+        self.last_resolved.lock().unwrap().clone()
+    }
+}
+
 impl ProsodiaSpeechEngine for LiteRtActorEngine {
     fn synthesize(&self, _input: PipelineOutput) -> ActorEngineOutput {
         panic!("synthesize(input:) is deprecated, use forward instead");
@@ -816,11 +915,11 @@ impl ProsodiaSpeechEngine for LiteRtActorEngine {
         phoneme_ids: Vec<i32>,
         style: StyleVector,
         speed: f32,
-        vat: Option<Vec<f32>>,
+        controls: SynthesisControls,
         duration_scales: Option<Vec<f32>>,
         f0_bias: Option<Vec<f32>>,
     ) -> Result<ActorEngineOutput, SpeechEngineError> {
-        self.forward_impl(phoneme_ids, style, speed, vat, duration_scales, f0_bias)
+        self.forward_impl(phoneme_ids, style, speed, controls, duration_scales, f0_bias)
     }
 
     fn reclaim_memory(&self) {
@@ -990,11 +1089,11 @@ mod tests {
                 phoneme_ids: Vec<i32>,
                 style: StyleVector,
                 speed: f32,
-                vat: Option<Vec<f32>>,
+                controls: SynthesisControls,
                 duration_scales: Option<Vec<f32>>,
                 f0_bias: Option<Vec<f32>>,
             ) -> Result<ActorEngineOutput, SpeechEngineError> {
-                <LiteRtActorEngine as ProsodiaSpeechEngine>::forward(&self.0, phoneme_ids, style, speed, vat, duration_scales, f0_bias)
+                <LiteRtActorEngine as ProsodiaSpeechEngine>::forward(&self.0, phoneme_ids, style, speed, controls, duration_scales, f0_bias)
             }
             fn reclaim_memory(&self) {
                 <LiteRtActorEngine as ProsodiaSpeechEngine>::reclaim_memory(&self.0)
@@ -1019,6 +1118,7 @@ mod tests {
         let engine = ProsodiaActorEngine {
             pipeline,
             speech_engine: Box::new(EngineWrap(LiteRtActorEngine::new(model_path.to_string()))),
+            speaker: Mutex::new(None),
         };
 
         let span = stage::prosody_payload::ProsodySpan {
@@ -1111,7 +1211,7 @@ mod tests {
         println!("our ids: {:?}", ids);
 
         let engine = LiteRtActorEngine::new(model_path.to_string());
-        let out = engine.forward(ids, out_pipe.style, 1.0, None, None, None).expect("forward failed");
+        let out = engine.forward(ids, out_pipe.style, 1.0, SynthesisControls::default(), None, None).expect("forward failed");
         let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
         println!("our render: {} samples ({:.2}s), peak {:.4}", out.audio.len(), out.audio.len() as f32 / 24000.0, peak);
         let sr: u32 = 24000;
@@ -1153,7 +1253,7 @@ mod tests {
         for (model, out_name) in [(model_path, "../../target/ref_render_test.wav")] {
             let engine = LiteRtActorEngine::new(model.to_string());
             let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
-            let out = engine.forward(ids.clone(), style, 1.0, None, None, None).expect("forward failed");
+            let out = engine.forward(ids.clone(), style, 1.0, SynthesisControls::default(), None, None).expect("forward failed");
             let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
             println!("{model}: {} samples ({:.2}s), peak {:.4}", out.audio.len(), out.audio.len() as f32 / 24000.0, peak);
             let sr: u32 = 24000;
@@ -1195,7 +1295,7 @@ mod tests {
             phoneme_ids.clone(),
             style,
             1.0,
-            None,
+            SynthesisControls::default(),
             None,
             None,
         ).expect("Forward execution failed");
@@ -1208,6 +1308,46 @@ mod tests {
         assert!(!output.audio.is_empty(), "Expected non-empty output audio");
         assert!(peak > 0.001, "Output audio is silent (peak {})", peak);
         assert_eq!(output.pred_dur.len(), phoneme_ids.len(), "Expected one duration per phoneme id");
+    }
+
+    /// RMS of `a` in dB.
+    fn rms_db(a: &[f32]) -> f64 {
+        let ms = a.iter().map(|&s| (s as f64) * (s as f64)).sum::<f64>() / a.len().max(1) as f64;
+        10.0 * ms.max(1e-20).log10()
+    }
+
+    /// The monolith path on the staged Matcha e2e graph: a speaker is
+    /// refused, and +6 dB raises RMS with every sample inside ±1. The graph
+    /// samples its own noise, so the audio check is direction only, on means
+    /// of several renders; the exact gain is pinned by the unit tests of
+    /// `resolve_monolith_controls` and `apply_pcm_gain`.
+    #[test]
+    fn monolith_refuses_a_speaker_and_boosts_into_the_clip() {
+        let Some((model_path, _)) = staged_actor() else { return };
+        let engine = LiteRtActorEngine::new(model_path);
+        let ids = vec![12, 15, 18, 5, 9];
+        let style = || StyleVector { data: vec![0.0; 64], shape: vec![64] };
+        let err = engine
+            .forward(ids.clone(), style(), 1.0, SynthesisControls { speaker: Some(1), ..Default::default() }, None, None)
+            .err()
+            .expect("speaker 1 on a model without a speaker table must be refused");
+        assert!(err.to_string().contains("speaker 1"), "{err}");
+        let renders = |gain_db: Option<f32>| -> Vec<Vec<f32>> {
+            (0..8)
+                .map(|_| {
+                    engine
+                        .forward(ids.clone(), style(), 1.0, SynthesisControls { gain_db, ..Default::default() }, None, None)
+                        .expect("monolith forward")
+                        .audio
+                })
+                .collect()
+        };
+        let mean_db = |r: &[Vec<f32>]| r.iter().map(|a| rms_db(a)).sum::<f64>() / r.len() as f64;
+        let (base, boosted) = (renders(None), renders(Some(6.0)));
+        let delta = mean_db(&boosted) - mean_db(&base);
+        println!("monolith gain: requested +6 dB, mean RMS moved {delta:.2} dB");
+        assert!(boosted.iter().flatten().all(|s| s.abs() <= 1.0), "a boosted sample escaped the ±1 clip");
+        assert!(delta > 0.0, "+6 dB did not raise mean RMS: it moved {delta:.2} dB");
     }
 
     /// The split-model directory `dir`, or `None` with a message when this
@@ -1224,6 +1364,223 @@ mod tests {
         None
     }
 
+    /// One G2P token per word; each word is its own phoneme string.
+    struct WordG2p;
+    impl crate::g2p::ProsodiaG2PProcessor for WordG2p {
+        fn process(&self, text: String) -> Vec<crate::g2p::MToken> {
+            text.split_whitespace()
+                .map(|w| crate::g2p::MToken {
+                    text: w.to_string(),
+                    tag: String::new(),
+                    whitespace: " ".to_string(),
+                    phonemes: Some(w.to_string()),
+                })
+                .collect()
+        }
+    }
+
+    struct NoVoicePacks;
+    impl crate::voice_loader::VoiceAssetProvider for NoVoicePacks {
+        fn load_voice_bytes(&self, _voice_name: String) -> Option<Vec<u8>> {
+            None
+        }
+    }
+
+    /// A speech engine that renders nothing and records the controls of
+    /// every forward. `on_forward` runs inside each forward, before it
+    /// returns; `limit` is the reported token limit (0 = unbounded).
+    struct ControlsRecorder {
+        calls: Arc<Mutex<Vec<SynthesisControls>>>,
+        limit: i32,
+        on_forward: Box<dyn Fn() + Send + Sync>,
+    }
+
+    impl ProsodiaSpeechEngine for ControlsRecorder {
+        fn synthesize(&self, _input: PipelineOutput) -> ActorEngineOutput {
+            ActorEngineOutput { audio: Vec::new(), pred_dur: Vec::new() }
+        }
+
+        fn forward(
+            &self,
+            phoneme_ids: Vec<i32>,
+            _style: StyleVector,
+            _speed: f32,
+            controls: SynthesisControls,
+            _duration_scales: Option<Vec<f32>>,
+            _f0_bias: Option<Vec<f32>>,
+        ) -> Result<ActorEngineOutput, SpeechEngineError> {
+            self.calls.lock().unwrap().push(controls);
+            (self.on_forward)();
+            Ok(ActorEngineOutput { audio: vec![0.0; 4], pred_dur: vec![1; phoneme_ids.len()] })
+        }
+
+        fn reclaim_memory(&self) {}
+
+        fn get_token_limit(&self) -> i32 {
+            self.limit
+        }
+    }
+
+    /// A `ProsodiaActorEngine` over a `ControlsRecorder`, with a letters-and-
+    /// space vocab, and the recorder's call log.
+    fn recording_engine(
+        limit: i32,
+        on_forward: Box<dyn Fn() + Send + Sync>,
+    ) -> (Arc<ProsodiaActorEngine>, Arc<Mutex<Vec<SynthesisControls>>>) {
+        let vocab: std::collections::HashMap<String, i32> = " abcdefghijklmnopqrstuvwxyz"
+            .chars()
+            .enumerate()
+            .map(|(i, c)| (c.to_string(), i as i32 + 1))
+            .collect();
+        let pipeline = crate::pipeline::ProsodiaActorPipeline::new(
+            Box::new(WordG2p),
+            crate::voice_loader::VoiceLoader::new(Box::new(NoVoicePacks)),
+            serde_json::json!({ "vocab": vocab }).to_string(),
+            24000,
+            "en-us".to_string(),
+        )
+        .unwrap();
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let engine = ProsodiaActorEngine::new(
+            pipeline,
+            Box::new(ControlsRecorder { calls: calls.clone(), limit, on_forward }),
+        );
+        (engine, calls)
+    }
+
+    fn span(
+        text: &str,
+        vat: (f64, f64, f64),
+        acoustics: Option<stage::prosody::ProsodyAcoustics>,
+    ) -> stage::prosody_payload::ProsodySpan {
+        stage::prosody_payload::ProsodySpan {
+            text: text.to_string(),
+            emotion: stage::prosody::EmotionVector { valence: vat.0, arousal: vat.1, tension: vat.2 },
+            leading_pause: 0.0,
+            acoustics,
+        }
+    }
+
+    /// The span's VAT moves into the record; the app has set no speaker and
+    /// the payload carries no `G:`, so neither reaches the engine.
+    #[test]
+    fn process_and_synthesize_sends_the_span_vat_without_speaker_or_gain() {
+        let (engine, calls) = recording_engine(0, Box::new(|| {}));
+        engine
+            .process_and_synthesize(span("the quick brown fox", (0.25, -0.5, 0.75), None))
+            .unwrap();
+        assert_eq!(
+            *calls.lock().unwrap(),
+            vec![SynthesisControls { speaker: None, vat: Some(vec![0.25, -0.5, 0.75]), gain_db: None }]
+        );
+    }
+
+    const LONG_TEXT: &str = "the quick brown fox jumps over the lazy dog while the cat sleeps by the warm fire tonight";
+
+    fn acoustics(gain: Option<f64>, gain_bias: Option<f64>, speaker_lock: Option<&str>) -> stage::prosody::ProsodyAcoustics {
+        stage::prosody::ProsodyAcoustics {
+            speed_multiplier: Some(1.1),
+            speed_bias: None,
+            gain_multiplier: gain,
+            gain_bias,
+            casting_profile: None,
+            speaker_lock: speaker_lock.map(str::to_string),
+            pause_multiplier: None,
+            pronunciation_override: None,
+            pitch: None,
+            token_duration_scales: None,
+            token_f0_biases: None,
+        }
+    }
+
+    #[test]
+    fn process_and_synthesize_converts_g_to_db() {
+        let (engine, calls) = recording_engine(0, Box::new(|| {}));
+        engine
+            .process_and_synthesize(span("hello there", (0.0, 0.0, 0.0), Some(acoustics(Some(0.5), None, None))))
+            .unwrap();
+        let db = calls.lock().unwrap()[0].gain_db.expect("G: 0.5 is a gain");
+        assert!((db + 6.0206).abs() < 1e-3, "G 0.5 became {db} dB");
+    }
+
+    #[test]
+    fn process_and_synthesize_refuses_a_g_that_is_not_positive_and_finite() {
+        for g in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            let (engine, calls) = recording_engine(0, Box::new(|| {}));
+            let err = engine
+                .process_and_synthesize(span("hello there", (0.0, 0.0, 0.0), Some(acoustics(Some(g), None, None))))
+                .err()
+                .expect("a G that is not positive and finite must be refused");
+            assert!(err.to_string().contains("gain multiplier G"), "G {g}: {err}");
+            assert!(calls.lock().unwrap().is_empty(), "G {g}: the engine ran");
+        }
+    }
+
+    /// `GB:`, `LK:` and acoustics without `G:` become no gain and no speaker.
+    /// A 0 dB gain is not harmless: on the monolith it engages the +/-1 clip.
+    /// The speaker comes from the app only.
+    #[test]
+    fn gain_bias_speaker_lock_and_other_acoustics_send_no_gain_or_speaker() {
+        let (engine, calls) = recording_engine(0, Box::new(|| {}));
+        engine
+            .process_and_synthesize(span("hello there", (0.0, 0.0, 0.0), Some(acoustics(None, Some(0.2), Some("229")))))
+            .unwrap();
+        let calls = calls.lock().unwrap();
+        assert_eq!((calls[0].speaker, calls[0].gain_db), (None, None));
+    }
+
+    #[test]
+    fn every_chunk_of_a_span_gets_the_same_controls() {
+        let (engine, calls) = recording_engine(12, Box::new(|| {}));
+        engine.set_speaker(Some(3));
+        engine
+            .process_and_synthesize(span(LONG_TEXT, (0.0, 0.5, 0.0), Some(acoustics(Some(1.2), None, None))))
+            .unwrap();
+        let calls = calls.lock().unwrap();
+        assert!(calls.len() > 1, "expected the span to be chunked, got {} forward(s)", calls.len());
+        assert!(calls.iter().all(|c| *c == calls[0]), "controls differ across chunks: {calls:?}");
+        assert_eq!(calls[0].speaker, Some(3));
+        assert_eq!(calls[0].vat, Some(vec![0.0, 0.5, 0.0]));
+        assert!((calls[0].gain_db.unwrap() - 1.5836).abs() < 1e-3);
+    }
+
+    #[test]
+    fn set_speaker_applies_from_the_next_span_and_none_restores_the_default() {
+        let (engine, calls) = recording_engine(0, Box::new(|| {}));
+        let speak = || engine.process_and_synthesize(span("hello there", (0.0, 0.0, 0.0), None)).unwrap();
+        speak();
+        engine.set_speaker(Some(7));
+        speak();
+        engine.set_speaker(None);
+        speak();
+        let speakers: Vec<Option<u32>> = calls.lock().unwrap().iter().map(|c| c.speaker).collect();
+        assert_eq!(speakers, vec![None, Some(7), None]);
+    }
+
+    /// A speaker change while a multi-chunk span renders applies from the next
+    /// span; the span in flight keeps one speaker.
+    #[test]
+    fn a_speaker_change_during_a_span_waits_for_the_next_span() {
+        let slot: Arc<std::sync::OnceLock<std::sync::Weak<ProsodiaActorEngine>>> = Arc::new(std::sync::OnceLock::new());
+        let hook = slot.clone();
+        let (engine, calls) = recording_engine(
+            12,
+            Box::new(move || {
+                if let Some(engine) = hook.get().and_then(|weak| weak.upgrade()) {
+                    engine.set_speaker(Some(9));
+                }
+            }),
+        );
+        slot.set(Arc::downgrade(&engine)).unwrap();
+        engine.set_speaker(Some(3));
+        engine.process_and_synthesize(span(LONG_TEXT, (0.0, 0.0, 0.0), None)).unwrap();
+        let first: Vec<SynthesisControls> = calls.lock().unwrap().drain(..).collect();
+        assert!(first.len() > 1, "expected the span to be chunked");
+        assert!(first.iter().all(|c| c.speaker == Some(3)), "the speaker changed inside a span: {first:?}");
+        engine.process_and_synthesize(span("next", (0.0, 0.0, 0.0), None)).unwrap();
+        assert_eq!(calls.lock().unwrap()[0].speaker, Some(9));
+    }
+
     /// End-to-end dispatch through LiteRtActorEngine with a split-model
     /// DIRECTORY path: detection, token limit, forward, 24 kHz resample.
     /// Skips when the `Sonora/huggingface` registry checkout is absent.
@@ -1237,7 +1594,7 @@ mod tests {
         let ids = vec![0, 12, 0, 15, 0, 18, 0, 5, 0, 9, 0];
         let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
         let out = engine
-            .forward(ids.clone(), style, 1.0, None, None, None)
+            .forward(ids.clone(), style, 1.0, SynthesisControls::default(), None, None)
             .expect("split dispatch forward");
         let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
         println!(
@@ -1263,13 +1620,127 @@ mod tests {
         let ids = vec![0, 12, 0, 15, 0, 18, 0, 5, 0, 9, 0];
         let style = StyleVector { data: vec![0.0; 64], shape: vec![64] };
         let out = engine
-            .forward(ids.clone(), style, 1.0, None, None, None)
+            .forward(ids.clone(), style, 1.0, SynthesisControls::default(), None, None)
             .expect("24 kHz split dispatch forward");
         let peak = out.audio.iter().fold(0.0f32, |m, s| m.max(s.abs()));
         println!("24k split dispatch: {} samples, peak {peak:.4}", out.audio.len());
         assert!(!out.audio.is_empty() && peak > 0.001, "silent output (peak {peak})");
         assert_eq!(out.audio.len() % 256, 0, "24 kHz output was resampled");
         assert_eq!(out.pred_dur.len(), ids.len());
+    }
+
+    const DERISK_SPLIT: &str = "../../../Sonora/huggingface/derisk-energy-24k/litert-split";
+
+    /// The committed `prosodia_models.json` block for `role`.
+    fn committed_conditioning(role: &str) -> Option<crate::controls::RoleConditioning> {
+        crate::controls::parse_role_conditioning(crate::controls::committed_models_json(), role.to_string())
+            .expect("the committed block parses")
+    }
+
+    fn short_ids() -> Vec<i32> {
+        vec![0, 12, 0, 15, 0, 18, 0, 5, 0, 9, 0]
+    }
+
+    fn zero_style() -> StyleVector {
+        StyleVector { data: vec![0.0; 64], shape: vec![64] }
+    }
+
+    #[test]
+    fn conditioning_constructor_refuses_a_non_split_path() {
+        let block = crate::controls::RoleConditioning {
+            trained_vat: vec![1],
+            default_speaker: 0,
+            speaker_labels: Vec::new(),
+            evidence: "test".to_string(),
+        };
+        let err = LiteRtActorEngine::new_with_conditioning("/nonexistent/sonora.tflite".to_string(), Some(block))
+            .err()
+            .expect("a block on a non-split path must be refused");
+        assert!(err.to_string().contains("not a split-model directory"), "{err}");
+        assert!(
+            LiteRtActorEngine::new_with_conditioning("/nonexistent/sonora.tflite".to_string(), None).is_ok(),
+            "no block is accepted on every path"
+        );
+    }
+
+    /// The committed `actor-split-24k` block passes load validation on the
+    /// real derisk graphs, and a block that does not fit them is refused when
+    /// the engine is built.
+    #[test]
+    fn conditioning_block_is_validated_against_the_derisk_graphs() {
+        let Some(dir) = split_dir(DERISK_SPLIT) else { return };
+        let block = committed_conditioning("actor-split-24k").expect("actor-split-24k has a block");
+        assert!(LiteRtActorEngine::new_with_conditioning(dir.to_string(), Some(block.clone())).is_ok());
+        for (bad, fact) in [
+            (crate::controls::RoleConditioning { default_speaker: 247, ..block.clone() }, "defaultSpeaker"),
+            (crate::controls::RoleConditioning { trained_vat: vec![3], ..block.clone() }, "trainedVat"),
+            (crate::controls::RoleConditioning { speaker_labels: vec!["19".to_string()], ..block.clone() }, "speaker labels"),
+        ] {
+            let err = LiteRtActorEngine::new_with_conditioning(dir.to_string(), Some(bad))
+                .err()
+                .expect("a block that does not fit the graphs must be refused");
+            assert!(err.to_string().contains(fact), "{fact}: {err}");
+        }
+    }
+
+    /// Through the conditioning constructor and `forward`: `speaker: None`
+    /// resolves to the role's default (row 22), an explicit row is used, and
+    /// a nonzero valence is refused.
+    #[test]
+    fn conditioned_split_defaults_the_speaker_and_refuses_untrained_vat() {
+        let Some(dir) = split_dir(DERISK_SPLIT) else { return };
+        let engine =
+            LiteRtActorEngine::new_with_conditioning(dir.to_string(), committed_conditioning("actor-split-24k")).unwrap();
+        let render = |controls: SynthesisControls| engine.forward(short_ids(), zero_style(), 1.0, controls, None, None);
+        render(SynthesisControls { vat: Some(vec![0.0, 0.5, 0.0]), ..Default::default() }).expect("energy is trained");
+        assert_eq!(engine.last_resolved_controls().unwrap().speaker, 22);
+        render(SynthesisControls { speaker: Some(100), ..Default::default() }).expect("an explicit speaker");
+        assert_eq!(engine.last_resolved_controls().unwrap().speaker, 100);
+        let err = render(SynthesisControls { vat: Some(vec![0.3, 0.0, 0.0]), ..Default::default() })
+            .err()
+            .expect("valence is untrained on derisk-energy-24k");
+        assert!(err.to_string().contains("vat[0] (valence)"), "{err}");
+    }
+
+    /// Volume through the seam: the exact −6 dB envelope reaches the graph,
+    /// and it lowers the output. The noise on this path is random, so the
+    /// audio check is direction only, on means of several renders; the exact
+    /// dB is pinned by the fixed-noise `SplitGraphEngine` test.
+    #[test]
+    fn conditioned_split_volume_lowers_rms() {
+        let Some(dir) = split_dir(DERISK_SPLIT) else { return };
+        let engine =
+            LiteRtActorEngine::new_with_conditioning(dir.to_string(), committed_conditioning("actor-split-24k")).unwrap();
+        let render = |gain_db: Option<f32>| -> f64 {
+            let controls = SynthesisControls { gain_db, ..Default::default() };
+            rms_db(&engine.forward(short_ids(), zero_style(), 1.0, controls, None, None).expect("split forward").audio)
+        };
+        render(Some(-6.0));
+        let max_mel = engine.split.lock().unwrap().as_ref().expect("graphs loaded").model_facts().max_mel;
+        assert_eq!(engine.last_resolved_controls().unwrap().mel_gain_db, Some(vec![-6.0; max_mel]));
+        let mean_db = |gain_db: Option<f32>| -> f64 { (0..6).map(|_| render(gain_db)).sum::<f64>() / 6.0 };
+        let (quiet, base) = (mean_db(Some(-6.0)), mean_db(None));
+        println!("seam volume: requested -6 dB, mean RMS moved {:.2} dB", quiet - base);
+        assert!(quiet < base, "-6 dB did not lower mean RMS: {quiet:.2} dB vs {base:.2} dB at 0 dB");
+    }
+
+    /// `reclaim_memory` drops the graphs, not the role: after it, the role's
+    /// default speaker (row 22) and its refusals still apply.
+    #[test]
+    fn conditioning_survives_reclaim_memory() {
+        let Some(dir) = split_dir(DERISK_SPLIT) else { return };
+        let engine =
+            LiteRtActorEngine::new_with_conditioning(dir.to_string(), committed_conditioning("actor-split-24k")).unwrap();
+        engine.reclaim_memory();
+        engine
+            .forward(short_ids(), zero_style(), 1.0, SynthesisControls::default(), None, None)
+            .expect("reload and render");
+        assert_eq!(engine.last_resolved_controls().unwrap().speaker, 22);
+        let err = engine
+            .forward(short_ids(), zero_style(), 1.0, SynthesisControls { vat: Some(vec![0.0, 0.0, 0.2]), ..Default::default() }, None, None)
+            .err()
+            .expect("tension stays refused after a reload");
+        assert!(err.to_string().contains("vat[2] (tension)"), "{err}");
     }
 
     #[test]

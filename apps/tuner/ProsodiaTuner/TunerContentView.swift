@@ -27,12 +27,15 @@ struct TunerContentView: View {
     @State private var previewTask: Task<Void, Never>? = nil
 
     private var footerText: String {
+        if let error = runner.roleError {
+            return "Speak is off: \(error)"
+        }
         if runner.canSpeak {
             if config.canUseMlx {
                 let name = store.selected?.displayName ?? "add a Director model below"
-                return "Preview = metadata only. Speak = StyleTTS2 actor audio via \(name)."
+                return "Preview = metadata only. Speak = actor audio for the selected role via \(name)."
             }
-            return "Preview = metadata only. Speak = StyleTTS2 actor audio with the emotion above."
+            return "Preview = metadata only. Speak = actor audio for the selected role with the emotion above."
         }
         return "Preview shows VAD and acoustics. Add the actor model under /Models to enable Speak."
     }
@@ -44,6 +47,7 @@ struct TunerContentView: View {
 
         NavigationStack {
             List {
+                actorRoleSection
                 emotionSection(config: config, presetStore: presetStore)
                 if config.emotionMode == .director {
                     directorModelSection(store: store)
@@ -93,6 +97,11 @@ struct TunerContentView: View {
                     await runner.preview(config: config, model: store.selected)
                 }
             }
+            .onChange(of: runner.actorRole) { _, _ in
+                Task {
+                    await runner.preview(config: config, model: store.selected)
+                }
+            }
             .onChange(of: config.globalConfig) { _, newConfig in
                 // Sync to the thread-safe config manager immediately
                 ProsodiaConfigManager.shared.config = newConfig
@@ -114,7 +123,9 @@ struct TunerContentView: View {
                 FeedbackSheet(
                     segment: identifiable.segment,
                     store: store,
-                    config: config
+                    config: config,
+                    actorRole: runner.actorRole,
+                    speaker: runner.speakerDescription
                 ) {
                     feedbackSegment = nil
                 }
@@ -168,24 +179,77 @@ struct TunerContentView: View {
         }
     }
 
+    /// The actor role, its speaker, and why it cannot speak when it cannot.
+    @ViewBuilder
+    private var actorRoleSection: some View {
+        Section {
+            Picker("Actor role", selection: Binding(
+                get: { runner.actorRole },
+                set: { runner.selectActorRole($0) }
+            )) {
+                ForEach(ProsodiaModelsManager.shared.actorRoles, id: \.self) { role in
+                    Text(ProsodiaModelsManager.shared.display(forRole: role)).tag(role)
+                }
+            }
+            .disabled(runner.isSpeaking)
+
+            if let conditioning = runner.conditioning, !conditioning.speakerLabels.isEmpty {
+                let defaultSpeaker = conditioning.defaultSpeaker
+                Picker("Speaker", selection: Binding(
+                    get: { runner.selectedSpeaker ?? defaultSpeaker },
+                    set: { runner.selectSpeaker($0) }
+                )) {
+                    ForEach(Array(conditioning.speakerLabels.enumerated()), id: \.offset) { row, readerID in
+                        Text("LibriTTS-R \(readerID)").tag(UInt32(row))
+                    }
+                }
+                .disabled(runner.isSpeaking)
+            }
+
+            if let error = runner.roleError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            } else if runner.roleCapabilities.isSplit && !runner.roleCapabilities.hasConditioning {
+                Text("This role has no conditioning data in prosodia_models.json, so Valence, Energy and Tension are held at 0.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Actor")
+        }
+    }
+
+    /// A VAT slider: disabled and showing 0 — the value sent — when the selected role
+    /// does not take `channel`.
+    private func vatPresetSlider(_ title: String, value: Binding<Double>, channel: UInt32, range: ClosedRange<Double>) -> some View {
+        let sends = runner.roleCapabilities.sends(channel)
+        return presetSlider(
+            title,
+            value: Binding(get: { sends ? value.wrappedValue : 0 }, set: { value.wrappedValue = $0 }),
+            range: range
+        )
+        .disabled(!sends)
+    }
+
     @ViewBuilder
     private func presetEditor(config: AuditionConfiguration, presetStore: AuditionPresetStore) -> some View {
         @Bindable var config = config
         let preset = config.activePreset
-        
+        let caps = runner.roleCapabilities
+
         let speedMin = min(config.globalConfig.speedMin, config.globalConfig.speedMax)
         let speedMax = max(config.globalConfig.speedMin, config.globalConfig.speedMax)
         let speedRange = speedMin...speedMax
 
-        let gainMin = min(config.globalConfig.gainMin, config.globalConfig.gainMax)
-        let gainMax = max(config.globalConfig.gainMin, config.globalConfig.gainMax)
-        let gainRange = gainMin...gainMax
+        let volumeLimits = config.volumeLimits
+        let gainRange = caps.volumeRange(within: volumeLimits)
 
         TextField("Preset name", text: $config.activePreset.name)
 
-        presetSlider("Valence", value: $config.activePreset.valence, range: -1.0...1.0)
-        presetSlider("Arousal", value: $config.activePreset.arousal, range: -1.0...1.0)
-        presetSlider("Tension", value: $config.activePreset.tension, range: 0.0...1.0)
+        vatPresetSlider("Valence", value: $config.activePreset.valence, channel: 0, range: -1.0...1.0)
+        vatPresetSlider("Energy", value: $config.activePreset.arousal, channel: 1, range: -1.0...1.0)
+        vatPresetSlider("Tension", value: $config.activePreset.tension, channel: 2, range: 0.0...1.0)
         presetSlider(
             "Speed",
             value: Binding(
@@ -197,8 +261,12 @@ struct TunerContentView: View {
         presetSlider(
             "Volume",
             value: Binding(
-                get: { min(max(config.activePreset.volume, gainMin), gainMax) },
-                set: { config.activePreset.volume = $0 }
+                // The value sent: sentVolume clamps to gainRange, the slider's range.
+                get: { config.activePreset.sentVolume(for: caps, volumeLimits: volumeLimits) },
+                set: {
+                    config.activePreset.volume = $0
+                    config.activePreset.volumeIsDerived = false
+                }
             ),
             range: gainRange
         )
@@ -250,7 +318,7 @@ struct TunerContentView: View {
             }
         }
 
-        blendSummary(for: preset.emotion, acoustics: preset.acoustics)
+        blendSummary(for: preset.sentEmotion(for: caps), acoustics: preset.acoustics(for: caps, volumeLimits: volumeLimits))
     }
 
     private func presetSlider(
@@ -489,11 +557,8 @@ struct TunerContentView: View {
                 value: Binding(
                     get: {
                         if config.emotionMode == .preset {
-                            let maxCoord = max(
-                                abs(config.activePreset.valence),
-                                abs(config.activePreset.arousal),
-                                abs(config.activePreset.tension)
-                            )
+                            let sent = config.activePreset.sentEmotion(for: runner.roleCapabilities)
+                            let maxCoord = max(abs(sent.valence), abs(sent.arousal), abs(sent.tension))
                             let maxEffective = maxCoord > 0 ? (1.0 / maxCoord) : 10.0
                             return min(config.globalConfig.expressiveness, maxEffective)
                         } else {
@@ -502,11 +567,8 @@ struct TunerContentView: View {
                     },
                     set: { newValue in
                         if config.emotionMode == .preset {
-                            let maxCoord = max(
-                                abs(config.activePreset.valence),
-                                abs(config.activePreset.arousal),
-                                abs(config.activePreset.tension)
-                            )
+                            let sent = config.activePreset.sentEmotion(for: runner.roleCapabilities)
+                            let maxCoord = max(abs(sent.valence), abs(sent.arousal), abs(sent.tension))
                             let maxEffective = maxCoord > 0 ? (1.0 / maxCoord) : 10.0
                             config.globalConfig.expressiveness = min(newValue, maxEffective)
                         } else {
@@ -518,7 +580,7 @@ struct TunerContentView: View {
             )
 
             globalKnobSlider(
-                "Speed Arousal Gain",
+                "Speed Energy Gain",
                 value: Binding(
                     get: { min(max(config.globalConfig.speedArousalGain, 0.0), 1.0) },
                     set: { config.globalConfig.speedArousalGain = $0 }
@@ -563,7 +625,7 @@ struct TunerContentView: View {
             )
 
             globalKnobSlider(
-                "Volume Arousal Gain",
+                "Volume Energy Gain",
                 value: Binding(
                     get: { min(max(config.globalConfig.gainArousalGain, 0.0), 1.0) },
                     set: { config.globalConfig.gainArousalGain = $0 }
@@ -619,8 +681,13 @@ struct TunerContentView: View {
             HStack(spacing: 16) {
                 Button {
                     let encoder = JSONEncoder()
-                    encoder.outputFormatting = .prettyPrinted
-                    if let data = try? encoder.encode(config.globalConfig),
+                    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                    let export = TunerConfigExport(
+                        actorRole: runner.actorRole,
+                        speaker: runner.speakerDescription,
+                        config: config.globalConfig
+                    )
+                    if let data = try? encoder.encode(export),
                        let jsonString = String(data: data, encoding: .utf8) {
                         #if canImport(AppKit)
                         let pasteboard = NSPasteboard.general
@@ -678,6 +745,14 @@ struct TunerContentView: View {
     }
 }
 
+/// What Copy Config puts on the clipboard: the global knobs, with the actor role and
+/// speaker they were tuned against.
+private struct TunerConfigExport: Encodable {
+    let actorRole: String
+    let speaker: String
+    let config: ProsodiaConfig
+}
+
 struct IdentifiableSegment: Identifiable {
     let id = UUID()
     let segment: StubVocalActor.RenderedSegment
@@ -687,6 +762,9 @@ struct FeedbackSheet: View {
     let segment: StubVocalActor.RenderedSegment
     let store: DirectorModelStore
     let config: AuditionConfiguration
+    /// The actor role and speaker the feedback is logged against.
+    let actorRole: String
+    let speaker: String
     let onDismiss: () -> Void
 
     @State private var rating = 4
@@ -732,6 +810,12 @@ struct FeedbackSheet: View {
                             .foregroundStyle(.secondary)
                         
                         Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+                            GridRow {
+                                Text("Actor")
+                                    .foregroundStyle(.secondary)
+                                    .font(.body.weight(.medium))
+                                Text("\(actorRole) | Speaker: \(speaker)")
+                            }
                             GridRow {
                                 Text("Parameters")
                                     .foregroundStyle(.secondary)
@@ -859,6 +943,8 @@ struct FeedbackSheet: View {
                             spans: segment.spans,
                             mode: config.emotionMode.rawValue,
                             modelName: config.emotionMode == .director ? store.selected?.displayName : nil,
+                            actorRole: actorRole,
+                            speaker: speaker,
                             globalConfig: config.globalConfig
                         )
 
