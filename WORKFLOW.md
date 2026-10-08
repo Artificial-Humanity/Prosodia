@@ -8,9 +8,13 @@ for the developer role and commit identity.
 1. Branch off local `main`. All work happens on a branch named `<type>/<short-slug>`,
    matching the commit type: `fix/`, `feat/`, `docs/` or `chore/`.
 2. When code work is complete, use `superpowers:requesting-code-review` to dispatch
-   a review. Documentation-only commits need no review.
-3. Use `superpowers:receiving-code-review` to evaluate findings. Address them,
-   then commit the fixes.
+   the review to a fresh subagent. Documentation-only commits need no review.
+3. Use `superpowers:receiving-code-review` to evaluate findings. Remediation is
+   subagent-driven too: dispatch the accepted findings to a fresh implementer
+   subagent, then dispatch a fresh subagent for a scoped re-review of the fix diff.
+   Repeat until no accepted finding remains open. The resident coordinates, rules on
+   each finding, and checks every subagent's claimed result against git before it
+   accepts the result.
 4. Open a pull request against `main` with `gh pr create`. `main` requires one
    approving review, and the machine account cannot approve its own pull request, so
    the owner approves every one. `.github/workflows/request-admin-review.yml` requests
@@ -27,8 +31,8 @@ required. `gh pr checks` can fail because the token cannot read check runs.
 
 * Review source, build configuration and dependency manifests: `crates/`, `bindings/`,
   `platforms/`, `apps/`, `Cargo.toml`, `Cargo.lock` and build scripts.
-* A reviewer reports findings. The reviewing agent makes fixes only when the owner
-  explicitly requests them.
+* A reviewer subagent reports findings and does not fix them. Fixes come from a
+  separate implementer subagent (step 3).
 * Keep findings in the review itself. File findings that the cycle cannot resolve
   as issues; do not create separate review documents.
 
