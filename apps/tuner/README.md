@@ -4,16 +4,13 @@ Welcome to the **Rehearsal Studio**!
 
 `ProsodiaTuner` is the auditioning sandbox, mixing board, and parameter tuner for **Project Prosodia**. This is where we call our **Director** (LLM) and **Actor** (TTS) onto the stage, adjust Valence-Arousal-Tension (VAD) sliders, A/B test models, and tweak our acoustic matrix to ensure the show is spectacular.
 
-> [!NOTE]
-> The former production app target was removed to leave a clean slate for later. The one remaining target and scheme, `ProsodiaTuner`, is the parameter-tuning harness and testing workbench.
-
 ---
 
 ## 🛠️ Rehearsal Workspace
 
 The project contains the following components:
 
-- `ProsodiaTuner` app: The tuning tool and auditioning environment.
+- `ProsodiaTuner` app (the only target and scheme): The tuning tool and auditioning environment.
 - `ProsodiaTuner.xcodeproj`: The Xcode configuration project (no test target; the engine's tests are the Rust crates' `cargo test`).
 
 The app links the consolidated `platforms/apple` Swift package (`../../platforms/apple`), which exposes the `Stage` (Stage Manager), `Actor`, and `Director` engine modules.
@@ -45,25 +42,25 @@ Notes:
 
 ## 💻 Local Models for the Harness
 
-For real speech in the harness on macOS, models are resolved via `prosodia_models.json` (`modelsBase: ../models`). The shared library lives at `/data/models` on ai-lab-0 (`/Volumes/data/models` from the Mac over NFS; renamed from `/data/reference/models` in the 2026-07-23 /data reorganization — the old workspace-root `Reference/models` symlink was removed with the umbrella repo):
+For real speech in the harness on macOS, models are resolved via `prosodia_models.json` (`modelsBase: ../models`). The shared library lives at `/data/models` on ai-lab-0 (`/Volumes/data/models` from the Mac over NFS):
 
 ```text
 /data/models/                         # Prosodia's entries only — other folders here belong to other projects (org/repo layout)
 ├── config.json                       # Actor vocab (locked 178 symbols) + native sample rate — stays at root (engine reads it next to the model)
-├── sonora.tflite                     # Active Actor model — Sonora baseline-ljspeech-22k float32 e2e (fidelity-fixed 2026-07-12; renamed from styletts2_lite.tflite 2026-07-13 — it is a Matcha-architecture model, not StyleTTS2; registry artifact renamed from v1-ljspeech 2026-07-22) — stays at root
+├── sonora.tflite                     # `actor` role model — Sonora baseline-ljspeech-22k float32 e2e (Matcha architecture) — stays at root
 ├── Google/
 │   ├── gemma-4-E2B-it.litertlm       # Gemma 4 E2B LiteRT-LM (Default Director model)
 │   └── gemma-4-E4B-it.litertlm       # Gemma 4 E4B LiteRT-LM
 ├── litert-community/
 │   └── Matcha-TTS/                   # HF clone — split-graph fp16 TFLite + espeak-free G2P assets
 └── shivammehta25/
-    └── Matcha-TTS/                   # Clean upstream clone (reference). The old spike workspace was rescued + pruned 2026-07-13 (history: github.com/Artificial-Humanity/StyleTTS2FineTune; ONNX: Prosodia-Storage bucket archive/)
+    └── Matcha-TTS/                   # Clean upstream clone (reference)
 ```
 
-The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `/data/models`: it is a working artifact registry, not a reference model. It's checked out at `Sonora/huggingface/` (superseding the `Registry/Sonora/` gitignored-clone layout from the retired umbrella-workspace era).
+The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkpoints + TFLite exports, `baseline-ljspeech-22k/` incl. `litert-split/`) is **not** under `/data/models`: it is a working artifact registry, not a reference model. It's checked out at `Sonora/huggingface/`.
 
 > [!TIP]
-> **Plan A multi-graph runtime (2026-07-13):** the engine also accepts a split-model **directory**
+> **Split-graph runtime:** the engine also accepts a split-model **directory**
 > (textenc/decoder/vocoder graphs + `emb.bin` + `config.json`): host-side Euler ODE, real per-token
 > durations from `logw` (the `DS:` contract channel is live), no 50-token limit (256), fp16 graphs.
 > The **Actor role** picker at the top of the harness chooses what Speak renders with: `actor` (the
@@ -97,12 +94,10 @@ The Sonora HF registry (huggingface.co/artificial-humanity/Sonora — our checkp
 > `PROSODIA_REQUIRE_SONORA_SOURCES=1` turns its skip into a failure.
 
 > [!NOTE]
-> **Model paths resolve through `prosodia_models.json`** (repo root — role-based config, commit
-> `2425594`, desktop build-checked 2026-07-13): the apps look up `actor`, `voices`, and `director-*`
-> roles instead of hard-coding filenames, so the `Google/` Gemma location is handled by config.
-> `ProsodiaModels.swift` still carries a built-in fallback with model paths for when the config file
-> is not found. `config.json` and `sonora.tflite` remain at the `/data/models` root because the Rust
-> engine reads the config adjacent to the model file.
+> **Model paths resolve through `prosodia_models.json`** (repo root, role-based): the apps look up
+> `actor`, `voices`, and `director-*` roles instead of hard-coding filenames, so the `Google/` Gemma
+> location is handled by config. `ProsodiaModels.swift` carries a built-in fallback with model paths
+> for when the config file is not found.
 
 Without the required model files present, the harness can still compute and preview VAD, speed, volume, and voice-blend metadata using the stub Actor.
 
