@@ -24,7 +24,6 @@ Co-authored-by: Penelope <Penelope@artificialhumanity.io>
   them before any change that touches Sonora's models: which artifact a role
   uses, model pins, exports, the model I/O contract, the symbol set or the text
   front end.
-* Match the surrounding code's naming, idiom and comment density.
 * Communicate clearly with developers, designers and other collaborators.
 
 ## Communication with the owner

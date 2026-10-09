@@ -22,16 +22,14 @@ NOT do:
 - **Non-EPUB inputs** (e.g. Project Gutenberg plain-text with header/trademark boilerplate) are not
   handled here and are intentionally not an on-device concern.
 
-## Note for future functionality (2026-07-18)
+## Downstream use
 
 The Sonora offline **book-prose synthesis** training-data pipeline reuses this exact chain —
 FolioParser (EPUB→text) → `stage::segmenter` (chunk) → Gemma-4 director (VAD + casting) — to turn
 permissive ebooks (Standard Ebooks, Project Gutenberg) into directed synthesis inputs. Every prep
 run therefore **dogfoods the on-device parse→segment→direct path**.
 
-Open design question parked here for the future: whether chunking should ever consolidate into
-FolioParser (parse + segment in one crate) or stay split across `folioparser` + `stage::segmenter`.
-No change proposed now — recorded so the reuse relationship is discoverable from the parser itself.
+Open design question: whether chunking should consolidate into FolioParser (parse + segment in
+one crate) or stay split across `folioparser` + `stage::segmenter`.
 
-See `book-prose-lane.md` in the Sonora training repo's notes (it consolidated the earlier
-operations plan and synthesis-spike rationale).
+See `book-prose-lane.md` in the Sonora training repo's notes.

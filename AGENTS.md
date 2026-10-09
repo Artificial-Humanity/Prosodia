@@ -72,9 +72,7 @@ Git history is the archive; do not maintain a separate changelog.
 
 ### 5. Code Review Execution Standards
 
-Follow [WORKFLOW.md](WORKFLOW.md) for review scope and conduct. Keep findings in the
-review, not in timestamped `notes/code-review-*.md` files. File unresolved findings
-as issues.
+Follow [WORKFLOW.md](WORKFLOW.md) for review scope and conduct.
 
 ## Coding Guidelines
 

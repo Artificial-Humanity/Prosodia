@@ -3,9 +3,9 @@
 Repository layout and module responsibilities — the single source of truth for topology
 of **this repo**.
 
-Project Prosodia is one of the flat, independent Artificial-Humanity repos (the umbrella
-meta-repo was retired 2026-07-22; siblings live side by side in the workspace folder, among
-them `Sonora/github` + `Sonora/huggingface`, whose exported actor models Prosodia consumes).
+Project Prosodia is one of the flat, independent Artificial-Humanity repos. Its siblings live
+side by side in the workspace folder, among them `Sonora/github` + `Sonora/huggingface`, whose
+exported actor models Prosodia consumes.
 The shared model library lives at `/data/models` on ai-lab-0, resolved via
 `prosodia_models.json` (`modelsBase: ../models`). Internal engineering notes are kept in a
 separate private repository; `notes/` in a local checkout is an untracked link to them.
