@@ -16,12 +16,12 @@ for the developer role and commit identity.
    each finding, and checks every subagent's claimed result against git before it
    accepts the result.
 4. Open a pull request against `main` with `gh pr create`. `main` requires one
-   approving review, and the machine account cannot approve its own pull request, so
-   the owner approves every one. `.github/workflows/request-admin-review.yml` requests
-   the owner's review and assigns the owner when a pull request opens as ready for
-   review. Documentation-only changes skip step 2 but still go through a pull request.
-5. Merge the pull request after the owner approves it. Direct pushes, force-pushes and
-   deletion of `main` are blocked.
+   approving review: a subordinate agent requests review from the Project Lead, and the
+   Project Lead requests review from the Lab Manager (`jarvis`). Documentation-only
+   changes skip step 2 but still go through a pull request.
+5. The pull-request author merges the pull request once the required review approval is
+   in place. Reviewers do not merge another agent's pull request. Direct pushes,
+   force-pushes and deletion of `main` are blocked.
 
 Read the live branch rules with
 `gh api repos/Artificial-Humanity/Prosodia/rules/branches/main`. No status checks are
