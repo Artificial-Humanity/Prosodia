@@ -7,14 +7,14 @@ for the developer role and commit identity.
 
 1. Branch off local `main`. All work happens on a branch named `<type>/<short-slug>`,
    matching the commit type: `fix/`, `feat/`, `docs/` or `chore/`.
-2. When code work is complete, use `superpowers:requesting-code-review` to dispatch
-   the review to a fresh subagent. Documentation-only commits need no review.
-3. Use `superpowers:receiving-code-review` to evaluate findings. Remediation is
-   subagent-driven too: dispatch the accepted findings to a fresh implementer
-   subagent, then dispatch a fresh subagent for a scoped re-review of the fix diff.
-   Repeat until no accepted finding remains open. The resident coordinates, rules on
-   each finding, and checks every subagent's claimed result against git before it
-   accepts the result.
+2. Execute multi-task implementation plans with the `subagent-dev` skill. When code
+   work is complete, use the `code-review` skill to dispatch the review to a fresh
+   read-only subagent. Documentation-only commits need no review.
+3. Follow `code-review` to evaluate findings and drive remediation through fresh
+   subagents: dispatch the accepted findings to a fresh fixer subagent, then dispatch
+   a fresh subagent for a scoped re-review of the fix diff (at most three rounds).
+   The resident coordinates, rules on each finding, and checks every subagent's
+   claimed result against git before it accepts the result.
 4. Open a pull request against `main` with `gh pr create`. `main` requires one
    approving review: a subordinate agent requests review from the Project Lead, and the
    Project Lead requests review from the Lab Manager (`jarvis`). Documentation-only
